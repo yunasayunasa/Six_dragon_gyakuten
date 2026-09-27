@@ -2,6 +2,8 @@
 
 2Dの紙素材を3D空間へ置き、カメラ・被写界深度・照明・軽量な舞台演出を検証するGodotプロジェクトです。完成ゲームではありません。1 unit = 1 m。
 
+**Webデモ:** [GitHub Pagesで開く](https://yunasayunasa.github.io/Six_dragon_gyakuten/)（HTTPS、iPhoneではSafariを使用）。公開版はCompatibility描画のため、PCのForward+版と比べてDOFなど一部の表現が省略されます。iPhone実機の描画・性能は確認中です。
+
 ## 起動
 
 1. Godot **4.7.2**で、このフォルダの `project.godot` をインポートします。
@@ -30,25 +32,11 @@ Windowsでインストール済みのGodotから直接実行する例：
 
 ## スマートフォンから開く場合
 
-Web書き出しは `exports/web/` と、親フォルダの `PaperHD2D-Web.zip` にあります。ZIPをHTTPS対応の静的ホストへ展開する場合は、`index.html` が公開URLのルートに来るように置き、`.wasm` を `application/wasm` として配信します。`export_presets.cfg` は単一スレッドのWeb設定です。スマートフォンから遊ぶには、この書き出しを**端末が信頼するHTTPS**で配信する必要があります。同じWi-Fi上の単純なHTTP配信ではGodotがSecure Contextエラーで起動しません。
+公開版は [GitHub Pages](https://yunasayunasa.github.io/Six_dragon_gyakuten/) から開けます。ローカルCAのインストールは不要です。
 
-同じWi-FiのiPhoneで試すためのローカルCAとHTTPSサーバーも用意しています。2026-09-28のローカルテスト後、サーバーとFirewall規則は停止・削除しました。**iPhone実機の表示・性能は未確認です。** ローカル配信を再開する場合は、管理者PowerShellでこのフォルダから次を実行します（Privateネットワーク・ローカルサブネット・TCP 8769・専用Node実行ファイルに限定）。
+このリポジトリのWeb書き出しは `docs/` にあります。再書き出しは `export_presets.cfg` の単一スレッドWeb設定を使用します。別のHTTPS静的ホストへ置く場合は、`index.html` と同じ階層に他の書き出しファイルを配置し、`.wasm` を `application/wasm` として配信します。スマートフォンから遊ぶには**端末が信頼するHTTPS**が必要です。同じWi-Fi上の単純なHTTP配信ではGodotがSecure Contextエラーで起動しません。
 
-```powershell
-pwsh -NoProfile -File tools/lan_firewall.ps1 -Action Enable
-```
-
-次に通常のPowerShellでサーバーを起動し、確認中はウィンドウを開いたままにします。現在の証明書は `192.168.0.148` 用です。PCのIPv4アドレスが変わった場合は、証明書の再発行とiPhoneへの再インストールが必要です。中止は **Ctrl+C** です。
-
-```powershell
-pwsh -NoProfile -File tools/serve_lan.ps1 -LanIp 192.168.0.148
-```
-
-Safariで `https://192.168.0.148:8769/iphone-ca.cer` へアクセスし、このPCの「PaperHD2D Local CA」の公開証明書だけをダウンロードします。証明書の警告を通過できない場合は、同じファイル `.godot/tls/iphone-ca.cer` を別の信頼できる方法でiPhoneへ転送してください。Appleの[プロファイルのインストール手順](https://support.apple.com/ja-jp/102400)に従い、設定の「プロファイルがダウンロードされました」からインストールします。その後、[証明書信頼設定](https://support.apple.com/ja-jp/102390)でこのローカルCAのSSL/TLS完全信頼を有効にします。**秘密鍵（`.key`）は転送しません。**
-
-ローカル接続URLは `https://192.168.0.148:8769/` です。バックグラウンドで起動した場合は `pwsh -NoProfile -File tools/stop_lan.ps1`、上記の通常PowerShellで起動した場合はCtrl+Cで止めます。管理者PowerShellで `pwsh -NoProfile -File tools/lan_firewall.ps1 -Action Disable` を実行すると、このプロジェクトの受信規則だけを削除できます。iPhoneからローカルCAプロファイルも削除できます。証明書は30日で期限切れになります。ローカルURLは現在稼働していません。
-
-PCだけで確認する場合は、`tools/serve-web.cjs` で書き出しを配信できます。`PAPERHD2D_HOST` / `PAPERHD2D_PORT` と、HTTPS用の `PAPERHD2D_TLS_CERT` / `PAPERHD2D_TLS_KEY` を環境変数で指定します。開発用証明書・秘密鍵は `.godot/tls/` に置き、公開用ファイルには含めません。端末接続を始める前に証明書と受信規則を個別に設定・検証してください。実機性能は [PerformanceNotes.md](PerformanceNotes.md) のとおり未測定です。
+同じWi-Fiのローカル配信で使ったサーバーとFirewall規則は停止・削除済みです。公開リポジトリにローカルCAの証明書・秘密鍵は含めていません。iPhone実機の表示・性能は [PerformanceNotes.md](PerformanceNotes.md) のとおり未確認です。
 
 室内からの逆移動や永続化は今回の範囲外です。再確認はRを使用します。効果音の音源は未収録のため無音です。
 
