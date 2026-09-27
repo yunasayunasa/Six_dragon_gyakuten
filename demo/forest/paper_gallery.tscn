@@ -1,0 +1,33 @@
+[gd_scene load_steps=8 format=3]
+[ext_resource type="Script" path="res://core/paper/billboard_object.gd" id="1"]
+[ext_resource type="Script" path="res://core/paper/cross_plane_object.gd" id="2"]
+[ext_resource type="Script" path="res://core/paper/paper_mesh.gd" id="3"]
+[ext_resource type="Texture2D" path="res://assets/props/grass.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/props/tree.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/architecture/door.svg" id="6"]
+[sub_resource type="PlaneMesh" id="Ground"]
+size = Vector2(12,8)
+[node name="PaperGallery" type="Node3D"]
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Ground")
+[node name="BillboardGrass" type="Node3D" parent="."]
+position = Vector3(-3,0,0)
+script = ExtResource("1")
+texture = ExtResource("4")
+paper_height = 1.2
+[node name="CrossPlaneTree" type="Node3D" parent="."]
+script = ExtResource("2")
+texture = ExtResource("5")
+paper_height = 3.0
+[node name="PaperDoor" type="Node3D" parent="."]
+position = Vector3(3,0,0)
+script = ExtResource("3")
+texture = ExtResource("6")
+paper_height = 2.5
+paper_thickness = 0.08
+[node name="Camera" type="Camera3D" parent="."]
+position = Vector3(0,5,10)
+rotation_degrees = Vector3(-20,0,0)
+current = true
+[node name="Light" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-45,-20,0)

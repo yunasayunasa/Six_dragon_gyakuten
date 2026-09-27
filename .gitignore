@@ -1,0 +1,8 @@
+.godot/
+*.tmp
+validation/*.log
+exports/
+validation/*.pid
+validation/edge*profile/
+validation/files.sha256
+validation/delivery-audit.json

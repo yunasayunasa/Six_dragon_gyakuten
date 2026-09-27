@@ -1,0 +1,222 @@
+[
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "41_grass_small.png",
+    "output": "assets/props/grass.png",
+    "size": [
+      768,
+      603
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "42_flower_patch_small.png",
+    "output": "assets/props/flowers.png",
+    "size": [
+      768,
+      512
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "35_sign_hanging_small.png",
+    "output": "assets/props/sign.png",
+    "size": [
+      768,
+      702
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "50_vine_hanging_small.png",
+    "output": "assets/props/vine.png",
+    "size": [
+      512,
+      768
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "48_crystal_small_blue.png",
+    "output": "assets/props/item.png",
+    "size": [
+      768,
+      593
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "52_window_outside_forest.png",
+    "output": "assets/props/window.png",
+    "size": [
+      768,
+      432
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "03_book_stack_small.png",
+    "output": "assets/props/books.png",
+    "size": [
+      768,
+      512
+    ]
+  },
+  {
+    "source": "Billboard_Assets_55_Transparent_PNG.zip",
+    "member": "17_lamp_small.png",
+    "output": "assets/props/lamp.png",
+    "size": [
+      744,
+      768
+    ]
+  },
+  {
+    "source": "Cross_Plane_Priority12_Transparent_PNG.zip",
+    "member": "07_tree_medium_A.png",
+    "output": "assets/props/tree.png",
+    "size": [
+      1024,
+      804
+    ]
+  },
+  {
+    "source": "Cross_Plane_Priority12_Transparent_PNG.zip",
+    "member": "05_tree_small_A.png",
+    "output": "assets/props/tree_small.png",
+    "size": [
+      1024,
+      804
+    ]
+  },
+  {
+    "source": "Cross_Plane_Priority12_Transparent_PNG.zip",
+    "member": "01_bush_large_A.png",
+    "output": "assets/props/bush.png",
+    "size": [
+      1024,
+      851
+    ]
+  },
+  {
+    "source": "Cross_Plane_Priority12_Transparent_PNG.zip",
+    "member": "16_rock_cluster_A.png",
+    "output": "assets/props/rock.png",
+    "size": [
+      1024,
+      791
+    ]
+  },
+  {
+    "source": "HD2D_Seamless_Priority18_Part1.zip",
+    "member": "Seamless/T01_village_dirt.png",
+    "output": "assets/ground/dirt.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  {
+    "source": "HD2D_Seamless_Priority18_Part1.zip",
+    "member": "Seamless/T03_forest_ground.png",
+    "output": "assets/ground/grass.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  {
+    "source": "HD2D_Seamless_Priority18_Part1.zip",
+    "member": "Seamless/T07_ship_deck.png",
+    "output": "assets/ground/wood.png",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  {
+    "source": "HD2D_Decals_Priority18.zip",
+    "member": "Decals/D02_moss.png",
+    "output": "assets/ground/moss.png",
+    "size": [
+      512,
+      341
+    ]
+  },
+  {
+    "derived": true,
+    "source": "User attachment: ウィルナス-walk.zip",
+    "output": "assets/character/source_walk.png",
+    "grid": [
+      5,
+      5
+    ],
+    "cell": [
+      256,
+      256
+    ]
+  },
+  {
+    "derived": true,
+    "source": "assets/character/source_walk.png",
+    "output": [
+      "assets/character/walk.png",
+      "assets/character/walk_edge.png"
+    ],
+    "crop_per_cell": [
+      64,
+      20,
+      192,
+      228
+    ],
+    "edge_pixels": 2
+  },
+  {
+    "derived": true,
+    "source": "assets/props/bush.png",
+    "output": "assets/props/bush_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/flowers.png",
+    "output": "assets/props/flowers_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/grass.png",
+    "output": "assets/props/grass_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/item.png",
+    "output": "assets/props/item_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/rock.png",
+    "output": "assets/props/rock_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/sign.png",
+    "output": "assets/props/sign_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/tree.png",
+    "output": "assets/props/tree_edge.png",
+    "operation": "alpha dilation, baked outline"
+  },
+  {
+    "derived": true,
+    "source": "assets/props/tree_small.png",
+    "output": "assets/props/tree_small_edge.png",
+    "operation": "alpha dilation, baked outline"
+  }
+]

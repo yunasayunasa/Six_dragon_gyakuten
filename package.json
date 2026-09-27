@@ -1,0 +1,8 @@
+{
+  "name": "paper-hd2d-verification-bridge",
+  "private": true,
+  "description": "Dependency-free bridge for the existing ai-harness. Game runtime is Godot only.",
+  "scripts": {
+    "verify": "pwsh -NoProfile -File tools/verify.ps1"
+  }
+}

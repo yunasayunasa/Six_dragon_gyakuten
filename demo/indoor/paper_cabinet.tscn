@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+[ext_resource type="Script" path="res://core/paper/paper_mesh.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/props/cabinet.svg" id="2"]
+[node name="PaperCabinet" type="Node3D"]
+script = ExtResource("1")
+texture = ExtResource("2")
+paper_height = 2.8
+paper_thickness = 0.08

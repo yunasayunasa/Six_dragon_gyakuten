@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="CameraProfile" load_steps=2 format=3]
+[ext_resource type="Script" path="res://presentation/camera/camera_profile.gd" id="1"]
+[resource]
+script = ExtResource("1")
+profile_name = "Exploration"
+position_offset = Vector3(0,7.2,12.8)
+rotation_degrees = Vector3(-27,0,0)
+fov = 38.0

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="CameraProfile" load_steps=2 format=3]
+[ext_resource type="Script" path="res://presentation/camera/camera_profile.gd" id="1"]
+[resource]
+script = ExtResource("1")
+profile_name = "Indoor"
+position_offset = Vector3(0,5.5,10)
+rotation_degrees = Vector3(-27,0,0)
+framing_offset = Vector3(0,0,0)
+fov = 39.0

@@ -1,0 +1,312 @@
+{
+  "audio_hooks": {
+    "Door": 1,
+    "Footstep": 37,
+    "StageFall": 1,
+    "StageRise": 1,
+    "Treasure": 1,
+    "WireMove": 1
+  },
+  "complete": true,
+  "dof_enabled": true,
+  "renderer": "forward_plus",
+  "samples": [
+    {
+      "draw_calls": 104.0,
+      "fps": 120.0,
+      "objects": 385.0
+    },
+    {
+      "draw_calls": 110.0,
+      "fps": 96.0,
+      "objects": 391.0
+    },
+    {
+      "draw_calls": 112.0,
+      "fps": 96.0,
+      "objects": 393.0
+    },
+    {
+      "draw_calls": 117.0,
+      "fps": 120.0,
+      "objects": 398.0
+    },
+    {
+      "draw_calls": 123.0,
+      "fps": 120.0,
+      "objects": 368.0
+    },
+    {
+      "draw_calls": 112.0,
+      "fps": 119.0,
+      "objects": 357.0
+    },
+    {
+      "draw_calls": 104.0,
+      "fps": 119.0,
+      "objects": 349.0
+    },
+    {
+      "draw_calls": 103.0,
+      "fps": 120.0,
+      "objects": 348.0
+    },
+    {
+      "draw_calls": 103.0,
+      "fps": 120.0,
+      "objects": 348.0
+    },
+    {
+      "draw_calls": 103.0,
+      "fps": 91.0,
+      "objects": 348.0
+    },
+    {
+      "draw_calls": 103.0,
+      "fps": 91.0,
+      "objects": 384.0
+    },
+    {
+      "draw_calls": 111.0,
+      "fps": 120.0,
+      "objects": 392.0
+    },
+    {
+      "draw_calls": 128.0,
+      "fps": 120.0,
+      "objects": 409.0
+    },
+    {
+      "draw_calls": 135.0,
+      "fps": 119.0,
+      "objects": 416.0
+    },
+    {
+      "draw_calls": 137.0,
+      "fps": 119.0,
+      "objects": 418.0
+    },
+    {
+      "draw_calls": 147.0,
+      "fps": 120.0,
+      "objects": 428.0
+    },
+    {
+      "draw_calls": 155.0,
+      "fps": 120.0,
+      "objects": 436.0
+    },
+    {
+      "draw_calls": 161.0,
+      "fps": 120.0,
+      "objects": 442.0
+    },
+    {
+      "draw_calls": 178.0,
+      "fps": 120.0,
+      "objects": 423.0
+    },
+    {
+      "draw_calls": 171.0,
+      "fps": 120.0,
+      "objects": 416.0
+    },
+    {
+      "draw_calls": 154.0,
+      "fps": 120.0,
+      "objects": 399.0
+    },
+    {
+      "draw_calls": 154.0,
+      "fps": 120.0,
+      "objects": 399.0
+    },
+    {
+      "draw_calls": 155.0,
+      "fps": 120.0,
+      "objects": 400.0
+    },
+    {
+      "draw_calls": 154.0,
+      "fps": 120.0,
+      "objects": 399.0
+    },
+    {
+      "draw_calls": 154.0,
+      "fps": 96.0,
+      "objects": 399.0
+    },
+    {
+      "draw_calls": 154.0,
+      "fps": 96.0,
+      "objects": 399.0
+    },
+    {
+      "draw_calls": 154.0,
+      "fps": 120.0,
+      "objects": 399.0
+    },
+    {
+      "draw_calls": 157.0,
+      "fps": 120.0,
+      "objects": 450.0
+    },
+    {
+      "draw_calls": 172.0,
+      "fps": 120.0,
+      "objects": 465.0
+    },
+    {
+      "draw_calls": 182.0,
+      "fps": 120.0,
+      "objects": 475.0
+    },
+    {
+      "draw_calls": 181.0,
+      "fps": 120.0,
+      "objects": 474.0
+    },
+    {
+      "draw_calls": 186.0,
+      "fps": 120.0,
+      "objects": 479.0
+    },
+    {
+      "draw_calls": 187.0,
+      "fps": 120.0,
+      "objects": 480.0
+    },
+    {
+      "draw_calls": 187.0,
+      "fps": 120.0,
+      "objects": 480.0
+    },
+    {
+      "draw_calls": 187.0,
+      "fps": 120.0,
+      "objects": 480.0
+    },
+    {
+      "draw_calls": 188.0,
+      "fps": 120.0,
+      "objects": 481.0
+    },
+    {
+      "draw_calls": 188.0,
+      "fps": 120.0,
+      "objects": 481.0
+    },
+    {
+      "draw_calls": 184.0,
+      "fps": 120.0,
+      "objects": 477.0
+    },
+    {
+      "draw_calls": 182.0,
+      "fps": 120.0,
+      "objects": 475.0
+    },
+    {
+      "draw_calls": 173.0,
+      "fps": 120.0,
+      "objects": 418.0
+    },
+    {
+      "draw_calls": 165.0,
+      "fps": 98.0,
+      "objects": 410.0
+    },
+    {
+      "draw_calls": 164.0,
+      "fps": 98.0,
+      "objects": 409.0
+    },
+    {
+      "draw_calls": 53.0,
+      "fps": 120.0,
+      "objects": 298.0
+    },
+    {
+      "draw_calls": 53.0,
+      "fps": 120.0,
+      "objects": 340.0
+    },
+    {
+      "draw_calls": 54.0,
+      "fps": 109.0,
+      "objects": 341.0
+    },
+    {
+      "draw_calls": 54.0,
+      "fps": 109.0,
+      "objects": 341.0
+    },
+    {
+      "draw_calls": 53.0,
+      "fps": 120.0,
+      "objects": 297.0
+    },
+    {
+      "draw_calls": 50.0,
+      "fps": 120.0,
+      "objects": 294.0
+    },
+    {
+      "draw_calls": 50.0,
+      "fps": 120.0,
+      "objects": 294.0
+    },
+    {
+      "draw_calls": 50.0,
+      "fps": 120.0,
+      "objects": 294.0
+    },
+    {
+      "draw_calls": 53.0,
+      "fps": 120.0,
+      "objects": 297.0
+    },
+    {
+      "draw_calls": 52.0,
+      "fps": 120.0,
+      "objects": 296.0
+    },
+    {
+      "draw_calls": 52.0,
+      "fps": 106.0,
+      "objects": 296.0
+    },
+    {
+      "draw_calls": 52.0,
+      "fps": 106.0,
+      "objects": 296.0
+    },
+    {
+      "draw_calls": 52.0,
+      "fps": 120.0,
+      "objects": 296.0
+    },
+    {
+      "draw_calls": 52.0,
+      "fps": 120.0,
+      "objects": 296.0
+    },
+    {
+      "draw_calls": 52.0,
+      "fps": 120.0,
+      "objects": 336.0
+    },
+    {
+      "draw_calls": 56.0,
+      "fps": 120.0,
+      "objects": 340.0
+    },
+    {
+      "draw_calls": 56.0,
+      "fps": 120.0,
+      "objects": 340.0
+    }
+  ],
+  "seconds": 30.045,
+  "stage_index": 2
+}

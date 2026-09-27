@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="448" viewBox="0 0 256 448">
+<defs><linearGradient id="wood" x2="1" y2="1"><stop stop-color="#9c6935"/><stop offset="1" stop-color="#453324"/></linearGradient></defs>
+<rect x="2" y="2" width="252" height="444" rx="9" fill="#d5bc7e"/>
+<rect x="11" y="10" width="234" height="428" rx="6" fill="url(#wood)" stroke="#342e26" stroke-width="8"/>
+<path d="M64 16V435M128 16V435M192 16V435" stroke="#382b22" stroke-width="5"/>
+<path d="M27 25L40 423M87 30L95 420M150 30L145 425M211 28L220 420" stroke="#c29854" stroke-opacity=".4" stroke-width="3"/>
+<path d="M17 98H240M17 353H240" stroke="#263735" stroke-width="22"/>
+<path d="M35 98H48M210 98H224M35 353H48M210 353H224" stroke="#cead68" stroke-width="5"/>
+<circle cx="205" cy="243" r="12" fill="#d8b75d" stroke="#332f26" stroke-width="5"/>
+</svg>

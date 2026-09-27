@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="LightingProfile" load_steps=2 format=3]
+[ext_resource type="Script" path="res://presentation/lighting/lighting_profile.gd" id="1"]
+[resource]
+script = ExtResource("1")
+profile_name = "IndoorWarm"
+ambient_color = Color(0.73,0.60,0.48,1)
+ambient_energy = 0.45
+sun_energy = 0.12
+local_energy = 2.4
+window_energy = 1.8
+fog_density = 0.002
+fog_color = Color(0.30,0.24,0.20,1)

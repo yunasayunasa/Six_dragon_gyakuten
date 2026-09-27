@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="DOFProfile" load_steps=2 format=3]
+[ext_resource type="Script" path="res://presentation/dof/dof_profile.gd" id="1"]
+[resource]
+script = ExtResource("1")
+profile_name = "StageEvent"
+amount = 0.16
+sharp_half_width = 1.5
+transition_distance = 6.0
+focus_seconds = 1.4

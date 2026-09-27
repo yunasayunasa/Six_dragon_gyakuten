@@ -1,0 +1,6 @@
+{
+  "phase": 10,
+  "status": "PASS",
+  "seconds": 15.52,
+  "scope": "requested phase only; headless functional check, not visual acceptance"
+}
