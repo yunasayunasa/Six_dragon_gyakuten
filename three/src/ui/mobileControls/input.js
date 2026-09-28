@@ -1,10 +1,10 @@
 const DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyW: 'up', KeyA: 'left', KeyS: 'down' };
 
-export function createInput({ toggleDOF, quality, stats, stage, benchmark, canInput = () => true }, {
+export function createInput({ toggleDOF, quality, stats, stage, benchmark, mute = () => {}, debug = () => {}, canInput = () => true }, {
   windowTarget = window, documentTarget = document,
 } = {}) {
   const keys = new Set(), pointers = new Map(), listeners = [];
-  const actions = { KeyD: toggleDOF, KeyQ: quality, F3: stats, KeyE: stage, Space: stage, KeyB: benchmark };
+  const actions = { KeyD: toggleDOF, KeyQ: quality, KeyM: mute, F4: debug, F3: stats, KeyE: stage, Space: stage, KeyB: benchmark };
   const listen = (target, type, handler) => {
     target.addEventListener(type, handler);
     listeners.push([target, type, handler]);
@@ -41,10 +41,10 @@ export function createInput({ toggleDOF, quality, stats, stage, benchmark, canIn
     listen(button, 'contextmenu', (event) => event.preventDefault());
   }
   for (const [selector, action] of [
-    ['#dof', toggleDOF], ['#quality', quality], ['#stats-toggle', benchmark], ['#stage', stage],
+    ['#dof', toggleDOF], ['#quality', quality], ['#audio', mute], ['#debug', debug], ['#stats-toggle', benchmark], ['#stage', stage],
   ]) {
     const button = documentTarget.querySelector(selector);
-    listen(button, 'click', () => { if (canInput()) action(); });
+    if (button) listen(button, 'click', () => { if (canInput()) action(); });
   }
   return {
     has: (direction) => canInput() && ([...keys].some((key) => DIRECTIONS[key] === direction) || [...pointers.values()].some((held) => held.direction === direction)),

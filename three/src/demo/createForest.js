@@ -54,5 +54,5 @@ export function createForest(scene, t) {
   const wire = new StageProp(new PaperObject(t.lamp, { height: 1.9 }), { pivot: [0, 1.9, 0] });
   wire.position.fromArray(P.stageWire); wire.landing.copy(wire.position); wire.visible = false; scene.add(wire);
   const pond = createPond(P.pond); scene.add(pond.group);
-  return { sign, wire, door, pond, billboards, occluders };
+  return { sign, wire, door, pond, billboards, occluders, treeBatch };
 }

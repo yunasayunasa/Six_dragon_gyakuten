@@ -44,20 +44,30 @@ mainでも同Workflowが存在する場合に動きますが、現作業はthree
 実装済み: Paper Object、Cross Plane、Player、8方向対応SpriteAnimator、Grid Collision / Navigation / LOS、
 Camera、DOF、Lighting/Fog、Water、Rise/Fall/DropFromWire、Thin Cylinder Wire、
 Occlusion、静的SceneryBatch、AudioDirector、Mobile Controls、Lifecycle、性能表示・計測。
-Tartmanのコードやゲーム固有データはコピーしていません。
+Tartmanリポジトリからコード・素材はコピーしていません。今回の添付素材はdemo層だけに置きます。
 
-## Regression Demo
+## Acceptance Demo / Regression Demo
 
 `src/main.js` → `src/demo/startDemo.js` が既存の森＋家＋池を起動します。
+既定はAcceptance Demoです。旧5×5キャラクターと池だけの通行制限を確認するには
+`?demo=regression` を付けます。Paper、DOF、Water、Stage、Cameraの構成は両方で共通です。
 配置は `createForest.js`、イベント進行は `StageEvents.js`、設定は `demoProfiles.js`、
-素材読込は `demoAssets.js`。素材は従来どおりRepositoryルートの `assets/` を参照し、
-Viteでハッシュ付きURLになります。素材の複製・生成はありません。
+素材読込は `demoAssets.js`。従来素材はRepositoryルートの `assets/` を参照します。
+Acceptance専用のプレイヤー画像・紙SEは、ユーザー提供ファイルを `src/demo/assets/` に置きました。
+敵画像、接触SE、BGMは今回使わず、Engine層へ素材をコピーしていません。
+
+提供されたプレイヤー画像は**8方向×8コマのJPG**で、透過PNGではありません。
+起動時に各セルの外縁につながる白背景だけを一度CanvasTextureで透過します。
+元のJPGは変更しません。Idleは各方向の先頭コマ、Walkは各方向8コマです。
+実機では方向・足元位置・白い服の欠け・縁の残りを目視確認してください。
 
 |操作|PC|スマホ|
 |---|---|---|
 |移動|矢印、補助W/A/S|左下4方向ボタン|
 |DOF切替|D|DOFボタン|
 |Quality切替|Q|Qualityボタン|
+|音のON/OFF|M|音ボタン|
+|経路/LOS Debug|F4|Debugボタン|
 |Stage再演|E / Space|舞台ボタン|
 |Stats表示|F3|通常表示|
 |Benchmark開始/中止|B|5分計測ボタン|
@@ -72,8 +82,14 @@ focus・再表示・pageshow後の最初のフレームは経過時間0として
 移動ボタンの複数同時押し、pointercancel、lostpointercapture、長押し時のメニュー抑止を維持。
 入力欄を編集しているときのゲーム用キー操作は無視します。
 AudioDirectorはCue URLの登録、Master/BGM/SE/Voice/Ambientの音量、Mute、Pauseを提供します。
-このデモには音源がないため、Stage/WaterのHookは発火しますが音は鳴りません。
-音源を登録するゲームでは、最初のタップ等のユーザー操作内で `unlock()` を呼んでください。
+Acceptanceでは「紙を広げる1.mp3」をStageRise/StageFall/WireMoveのSEへ登録しています。
+最初のタップまたはキー操作でWeb Audioをunlockし、舞台ボタンで看板Riseを起動すると再生します。
+音ボタンでMuteを切り替えられます。blur/非表示中はAudioContextを停止し、復帰時に再開します。
+
+AcceptanceのCollisionMapは池、家、大木の幹、Scene外周を明示的に設定します。
+看板・扉のStage MotionはCollisionを変更しません。DebugをONにすると通行不可セル、
+Playerから池越しの目標地点への経路、独立したLOS線を表示します。
+Debugは既定OFF。開発用 `window.__paperAB.setDebugTarget(x, z)` で目標変更可能です。
 
 ## Profile
 
@@ -87,7 +103,7 @@ Core / Presentation / Runtime / Performanceからdemoをimportしません。
 - `presentation/lighting/defaultProfiles.js`: 従来の照明・Fog既定値。
 - Stage Motion / Water Profileは従来の各Presentationディレクトリに維持。
 - `core/world/WalkableGrid.js`: 座標原点・cellSize・通行/視界maskを注入。`WorldCollision`は半径と分割移動、`GridPathfinder`は小規模4方向BFS。
-- `core/character/SpriteAnimator.js`: clipごとの開始コマ、fps、ループ、方向行を指定。現デモの5×5表示は維持。8方向シートは差し替え時にProfileで設定します。
+- `core/character/SpriteAnimator.js`: clipごとの開始コマ、fps、ループ、方向行を指定。Acceptanceは提供8方向JPG、Regressionは従来の5×5 PNGを使用します。
 - `presentation/occlusion/OcclusionDirector.js`: 登録した個別Objectだけを画面上の重なりで透過。透過中はDOF深度から除外します。
 - `core/scene/SceneryBatch.js`: 同一Geometry/Materialの静的景観をInstancedMesh化。動くStagePropや個別透過が必要なObjectは含めません。
 
@@ -122,16 +138,36 @@ Frame Timeはフレーム間隔でGPU時間ではなく、Geometries/Texturesも
 |操作遅延 Good/Slight delay/Bad|未確認|未確認|
 |Safari Stable/Reload/Crash|未確認|未確認|
 
+### Acceptance実機記録欄
+
+|項目|記録|
+|---|---|
+|Device|未確認|
+|Quality|未確認|
+|DPR|未確認|
+|DOF|未確認|
+|5min Avg FPS|未確認|
+|5min Min FPS|未確認|
+|10min|未確認|
+|Heat|未確認|
+|Input|未確認|
+|Audio|未確認|
+|Sprite 8-dir / Idle / Walk|未確認|
+|Occlusion / DOF Depth|未確認|
+|Safari|未確認|
+|Crash / Reload|未確認|
+
 ## 検証と限界
 
 Unit Testは各共通モジュールの境界動作に限定しています。
 今回、5分実時間計測や全操作の自動巡回は行いません。公開後は起動確認のみです。
-DOF、水、Stage等の実機操作は従来のRegression Demoで確認してください。
+DOF、水、Stage、8方向の実機操作はユーザーがAcceptance Demoで確認してください。
 
 維持する技術的制約：PaperBokehPassはThree Addon内部フィールドを使用。
 水面はDOF深度から除外し、約0.029m下の不透明な池底で代替。
 Scene全体の自動破棄は未実装です。OcclusionDirectorとAudioDirectorは個別の `dispose()` を提供します。
-音源・8方向シートはデモに含まれず、iPhone実機での長時間性能も未確認です。
+8方向の元画像はJPGで、透過PNGそのものを使用した評価ではありません。
+iPhone実機での長時間性能は未確認です。
 Engineコードはdemo非依存ですが、デモ素材は同Repositoryの `../assets/` へ依存します。
 
 設計は [ARCHITECTURE.md](ARCHITECTURE.md)、移植予定は

@@ -5,7 +5,8 @@
 
 ```text
 main.js → demo/startDemo.js
-             ├─ demoAssets / demoProfiles / createForest
+             ├─ demoAssets / demoProfiles / createForest / createDemoWorld
+             ├─ AcceptanceDebug → GridPathfinder / GridVisibility
              ├─ StageEvents → StageDirector / DOFDirector
              ├─ DemoBenchmarkScenario → BenchmarkRecorder
              ├─ Core / Presentation / Runtime defaults
@@ -18,14 +19,15 @@ main.js → demo/startDemo.js
 - Presentation: Camera、DOF、Lighting、Stage、Water、Occlusion、Audio Hook/Director。
 - Runtime: Quality既定値、既定OFFのQualityManager、ApplicationLifecycle。
 - Performance: カウンター読込・時間集計だけ。Player、Forest、Stage、DOMを知らない。
-- UI: 入力Adapterと表示。今回操作や配置を変えない。
-- Demo: Forest、トリガー、Stage進行、計測中の自動走行、具象設定。
+- UI: 入力Adapterと表示。4方向移動ボタンは維持し、音・Debug切替だけ追加。
+- Demo: Forest、明示的CollisionMap、Debug、トリガー、Stage進行、計測中の自動走行、具象設定。
 
 ApplicationLifecycleはブラウザのblur/focus、visibilitychange、pagehide/pageshow、
 手動pauseと経過時間を扱います。描画自体は継続しても、更新dtとBenchmark sampleは
 停止中に進めません。Demoが入力resetをcallbackで接続し、RuntimeからUIへはimportしません。
 再開直後の最初のframeはdt=0です。AudioDirectorの停止・再開もcallbackで接続します。
-デモに音源は同梱しません。
+Acceptance専用のユーザー提供紙SEはdemoから登録し、Engineは音源名や用途を知りません。
+8方向JPGの白背景除去もdemoの初期化時に一度行い、EngineのSpriteAnimatorは通常のTextureを受け取ります。
 
 Mobile Inputは既存の4方向ボタンとキー割当を維持します。押下したpointerごとに方向と
 capture元を保持し、cancel/blur/非表示/手動pauseで解除します。編集可能な要素へ

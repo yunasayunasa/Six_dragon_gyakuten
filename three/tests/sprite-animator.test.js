@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Texture } from 'three';
 import { SpriteAnimator } from '../src/core/character/SpriteAnimator.js';
+import { ACCEPTANCE_PLAYER_PROFILE } from '../src/demo/demoProfiles.js';
 
 test('flat atlas retains the demo frame order and idle frame', () => {
   const texture = new Texture();
@@ -29,4 +30,19 @@ test('direction rows and optional action clips stay within the atlas', () => {
   animator.setState('Attack'); animator.update(2);
   assert.equal(animator.frame, 7);
   assert.equal(texture.offset.y, 1 - 11 / 16);
+});
+
+test('acceptance sheet selects front, right, back and left rows without mirroring', () => {
+  const texture = new Texture();
+  const { columns, rows, clips, directionRows } = ACCEPTANCE_PLAYER_PROFILE;
+  const animator = new SpriteAnimator(texture, { columns, rows, clips, directionRows });
+  animator.setState('Walk');
+  for (const [x, z, row] of [[0, 1, 0], [1, 0, 6], [0, -1, 4], [-1, 0, 2]]) {
+    animator.setFacing(x, z);
+    assert.equal(texture.offset.y, 1 - (row + 1) / rows);
+  }
+  animator.update(2 / clips.Walk.fps);
+  assert.equal(animator.frame, 2);
+  animator.setState('Idle');
+  assert.equal(animator.frame, 0);
 });

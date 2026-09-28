@@ -3,7 +3,7 @@ const BUSES = ['bgm', 'se', 'voice', 'ambient'];
 // AudioContext is created only after unlock(), normally inside a user gesture.
 // Cue names and URLs belong to the game/demo, never to the engine.
 export class AudioDirector {
-  constructor({ contextFactory = () => new AudioContext(), fetcher = fetch } = {}) {
+  constructor({ contextFactory = () => new AudioContext(), fetcher = (url) => fetch(url) } = {}) {
     this.contextFactory = contextFactory;
     this.fetcher = fetcher;
     this.context = null;

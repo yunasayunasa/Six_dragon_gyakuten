@@ -38,3 +38,18 @@ test('regression scene blocks walking through the pond without hiding it', () =>
   assert.equal(collision.grid.blocksSightCell(cell.x, cell.z), false);
   assert.equal(collision.grid.canOccupy(-3, 2, 0.2), true);
 });
+
+test('acceptance map registers house, trunks and boundary while routing around the visible pond', () => {
+  const collision = createDemoCollision({ acceptance: true });
+  const { grid, radius } = collision;
+  assert.equal(grid.canOccupy(-5.2, -0.6, radius), false);
+  assert.equal(hasGridLineOfSight(grid, { x: -3, z: 2 }, { x: -7.6, z: -1.8 }), true);
+  assert.equal(grid.canOccupy(5.8, -7.5, radius), false);
+  assert.equal(hasGridLineOfSight(grid, { x: 5, z: -5 }, { x: 5.8, z: -8 }), false);
+  assert.equal(grid.canOccupy(-7, -3, radius), false);
+  assert.equal(grid.canOccupy(-8.8, 2, radius), false);
+  const route = findGridPath(grid, { x: -3, z: 2 }, { x: -7.6, z: -1.8 }, { radius });
+  assert.ok(route.length > 1);
+  assert.ok(route.every(({ x, z }) => grid.canOccupy(x, z, radius)));
+  assert.ok(route.every(({ x, z }) => Math.hypot(x + 5.2, z + 0.6) > 0.7));
+});

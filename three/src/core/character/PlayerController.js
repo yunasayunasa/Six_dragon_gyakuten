@@ -40,7 +40,7 @@ export class PlayerController extends Group {
     this.position.x = MathUtils.clamp(this.position.x, P.bounds[0], P.bounds[1]);
     this.position.z = MathUtils.clamp(this.position.z, P.bounds[2], P.bounds[3]);
     this.paper.rotation.y = Math.atan2(camera.position.x - this.position.x, camera.position.z - this.position.z);
-    if (x) this.paper.mesh.scale.x = x < 0 ? -1 : 1;
+    if (x && !P.directionRows) this.paper.mesh.scale.x = x < 0 ? -1 : 1;
     this.animator.setState(x || z ? 'Walk' : 'Idle');
     if (P.directionRows && (x || z)) {
       const cameraYaw = Math.atan2(camera.position.x - this.position.x, camera.position.z - this.position.z);
