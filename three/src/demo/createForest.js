@@ -3,7 +3,7 @@ import { PaperObject } from '../core/paper/PaperObject.js';
 import { CrossPlaneObject } from '../core/paper/CrossPlaneObject.js';
 import { StageProp } from '../presentation/stage/StageProp.js';
 import { createPond } from '../presentation/water/createPond.js';
-import { SCENE_PROFILE as P } from './profiles.js';
+import { SCENE_PROFILE as P } from './demoProfiles.js';
 export function createForest(scene, t) {
   const billboards = [];
   t.ground.repeat.set(22, 22);

@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { STAGE_PROFILE as P, SCENE_PROFILE } from './profiles.js';
+import { STAGE_PROFILE as P, SCENE_PROFILE } from './demoProfiles.js';
 import { smooth } from '../presentation/dof/math.js';
 export class StageEvents {
   constructor(props, stage, dof, player) {

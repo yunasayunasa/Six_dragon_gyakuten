@@ -1,13 +1,15 @@
 import { Group, Mesh, PlaneGeometry, MeshBasicMaterial, Vector3, MathUtils } from 'three';
 import { PaperObject } from '../paper/PaperObject.js';
-import { PLAYER_PROFILE as P } from '../../demo/profiles.js';
+import { PLAYER_PROFILE } from './defaultProfiles.js';
 export class PlayerController extends Group {
-  constructor(textures) {
+  constructor(textures, profile = PLAYER_PROFILE) {
     super();
+    this.profile = { ...PLAYER_PROFILE, ...profile };
+    const P = this.profile;
     this.position.fromArray(P.start);
     this.atlas = textures.player.clone();
     this.atlas.repeat.set(1 / P.columns, 1 / P.rows);
-    this.paper = new PaperObject(this.atlas, { height: P.height, width: P.height * 128 / 208 });
+    this.paper = new PaperObject(this.atlas, { height: P.height, width: P.height * P.aspect });
     this.add(this.paper);
     const shadow = new Mesh(new PlaneGeometry(1.55, 1.1), new MeshBasicMaterial({ map: textures.shadow, transparent: true, opacity: 0.45, depthWrite: false }));
     shadow.rotation.x = -Math.PI / 2;
@@ -20,10 +22,12 @@ export class PlayerController extends Group {
     this.animate(0);
   }
   animate(frame) {
+    const P = this.profile;
     this.frame = frame;
     this.atlas.offset.set(frame % P.columns / P.columns, 1 - (Math.floor(frame / P.columns) + 1) / P.rows);
   }
   update(dt, input, camera, locked) {
+    const P = this.profile;
     const x = locked ? 0 : Number(input.has('right')) - Number(input.has('left'));
     const z = locked ? 0 : Number(input.has('down')) - Number(input.has('up'));
     this.velocity.set(x, 0, z).normalize().multiplyScalar(P.speed);

@@ -5,7 +5,8 @@ import { axialDistance, damp } from '../src/presentation/dof/math.js';
 import { StageDirector } from '../src/presentation/stage/StageDirector.js';
 import { StageProp } from '../src/presentation/stage/StageProp.js';
 import { PaperBokehPass } from '../src/presentation/dof/PaperBokehPass.js';
-import { BenchmarkController } from '../src/performance/BenchmarkController.js';
+import { DemoBenchmarkScenario } from '../src/demo/DemoBenchmarkScenario.js';
+import { PerformanceMonitor } from '../src/performance/PerformanceMonitor.js';
 test('Bokeh focus uses view depth, not radial distance', () => {
   const camera = new PerspectiveCamera(); camera.position.set(0, 0, 10); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
   assert.equal(axialDistance(camera, new Vector3(0, 0, 0)), 10);
@@ -38,11 +39,11 @@ test('benchmark excludes ten-second warm-up from five-minute totals', () => {
   const dof = { enabled: true, quality: 'LOW', pixelRatio: 0.85, setProfile() {}, focusTo() {} };
   const director = new StageDirector();
   const make = () => { const prop = new Group(); prop.landing = new Vector3(); prop.foldAngle = -Math.PI / 2; prop.prepare = () => {}; prop.updateWire = () => {}; return prop; };
-  const b = new BenchmarkController(renderer, player, director, events, dof, { sign: make(), wire: make(), door: make() });
+  const b = new DemoBenchmarkScenario(new PerformanceMonitor(renderer), player, director, events, dof, { sign: make(), wire: make(), door: make() });
   assert.equal(b.start(), true); b.update(10); b.sample(10);
-  assert.equal(b.phase, 'measuring'); assert.equal(b.frames, 0);
+  assert.equal(b.phase, 'measuring'); assert.equal(b.recorder.frames, 0);
   for (let i = 0; i < 300; i++) { b.update(1); b.sample(1); }
-  assert.equal(b.phase, 'done'); assert.equal(b.frames, 300); assert.equal(b.result.drawCalls, 7);
+  assert.equal(b.phase, 'done'); assert.equal(b.recorder.frames, 300); assert.equal(b.result.drawCalls, 7);
   assert.equal(b.result.averageFPS, 1); assert.equal(b.result.geometriesStart, 2); assert.equal(events.suspendAuto, false);
 });
 test('alpha-aware depth retains map and restores materials on render failure', () => {
