@@ -2,6 +2,58 @@
 
 公開URL: https://yunasayunasa.github.io/Six_dragon_gyakuten/
 
+## Phase 2 — iPhone Safari実機記録（未計測）
+
+同じ端末・横画面・同じ場面でDOFを切り替えてください。URLパラメータでDPRとDOF画質を独立指定できます（手順はREADME）。各設定で10秒のWarm-up後、5分Benchmarkを実行します。FPSはブラウザの値であり、ソフトウェア描画の自動テスト値をここへ転記しません。
+
+|設定|DOF|FPS 平均 / 最低|Frame Time 平均 / 最大 ms|Draw Calls|Triangles|Geometries / Textures|メモ|
+|---|---|---|---|---|---|---|---|
+|MobileLow: DPR 0.85 / DOF Low|ON|—|—|—|—|—|—|
+|MobileLow: DPR 0.85 / DOF Low|OFF|—|—|—|—|—|—|
+|独立比較: DPR 1.00 / DOF Low|ON|—|—|—|—|—|—|
+|MobileMedium: DPR 1.00 / DOF Medium|ON|—|—|—|—|—|—|
+
+|Benchmark 5分（条件を記入）|値|
+|---|---|
+|端末 / OS / Safari版 / コミット|—|
+|DPR / DOF Quality / DOF ON/OFF|—|
+|Average FPS / Minimum FPS（1秒区間）|— / —|
+|Average Frame Time / Maximum Frame Time|— / — ms|
+|Draw Calls / Triangles|— / —|
+|Geometries / Textures|— / —|
+|Visible Stutter|未確認|
+|Crash|未確認|
+|Heat（None / Mild / Warm / Hot）|未記録|
+|Safari（Stable / Reload / Crash）|未記録|
+|Input（Good / Slight delay / Bad）|未記録|
+
+5分・10分時点で温度体感、FPS低下、遅延、Safari再読み込み・クラッシュを手動記録します。Safariの実メモリ量と端末温度は取得しません。途中で設定を切り替えたBenchmarkは`MIXED`となるため、比較表に使う際は再実行してください。
+
+### Water + DOF深度の確認
+
+半透明の水面をBokehの深度プリパスから外し、約0.03m下にある不透明な楕円の底がDepthを提供します。水面が透明でも背景地面の深度を全面に書き換えません。ローカルのChromiumソフトウェアWebGL・MobileLow設定で4条件の画像を目視確認し、描画エラー0、四角い深度境界やPlayerの不自然な切り抜きは見られませんでした。これはiPhone Safariの確認を代替しません。
+
+同じローカルブラウザでDPR 0.85 / DOF LOW、DPR 1.00 / DOF LOW、DPR 1.00 / DOF MEDIUMの独立設定も確認しました。ここで表示されたソフトウェア描画FPSはiPhone性能の比較値に使いません。
+
+|Player位置|Focus位置|ローカル画像確認|iPhone実機|
+|---|---|---|---|
+|池より手前|池より手前|PASS|未確認|
+|池より手前|池より奥|PASS|未確認|
+|池より奥|池より手前|PASS|未確認|
+|池より奥|池より奥|PASS|未確認|
+
+### Godotとの比較欄
+
+|環境|表示・DOF|FPS / Frame Time|長時間安定性|記録の出所|
+|---|---|---|---|---|
+|Godot PC Forward+|—|—|—|—|
+|Godot Web / iPhone|—|—|—|—|
+|Three.js Web / iPhone|—|—|—|—|
+
+現フェーズの実機値が揃うまで優劣を判定しません。Phase 1のiPhone約60fpsはユーザー報告であり、下の旧記録欄には端末条件と数値が保存されていません。
+
+## Phase 1 — 以前の記録
+
 ## 計測方法
 
 1. 端末型番、OS、ブラウザ、表示サイズ、コミット、電源状態を記録。横画面で初期位置から動かず、読み込み後10秒待つ。

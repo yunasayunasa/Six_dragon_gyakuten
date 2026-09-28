@@ -4,10 +4,16 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { PaperBokehPass } from './PaperBokehPass.js';
 import { DOF_PROFILES, QUALITY_PROFILES } from '../../demo/profiles.js';
 import { axialDistance, damp } from './math.js';
+import { Vector3 } from 'three';
 export class DOFDirector {
   constructor(renderer, scene, camera, mobile) {
     this.renderer = renderer; this.camera = camera; this.mobile = mobile;
-    this.quality = mobile ? 'MEDIUM' : 'HIGH'; this.enabled = true;
+    this.quality = mobile ? 'LOW' : 'HIGH'; this.enabled = true;
+    this.pixelRatioCap = null;
+    this.profileName = 'Exploration'; this.focusCommand = null;
+    this.aperture = DOF_PROFILES.Exploration.aperture;
+    this.maxBlur = DOF_PROFILES.Exploration.maxBlur;
+    this.worldPoint = new Vector3();
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(new RenderPass(scene, camera));
     this.bokeh = new PaperBokehPass(scene, camera, { focus: 19, aperture: DOF_PROFILES.Exploration.aperture, maxblur: DOF_PROFILES.Exploration.maxBlur });
@@ -15,21 +21,44 @@ export class DOFDirector {
     this.composer.addPass(new OutputPass());
     this.initialized = false;
   }
-  update(dt, target, eventBlend) {
-    const a = DOF_PROFILES.Exploration, b = DOF_PROFILES.Event;
+  focusTo(object, duration = 0.8) { this.focusCommand = { object, from: this.bokeh.uniforms.focus.value, duration, elapsed: 0 }; }
+  focusDistanceTo(distance, duration = 0.8) {
+    if (!Number.isFinite(distance) || distance <= 0) throw Error('Focus distance must be positive');
+    this.focusCommand = { distance, from: this.bokeh.uniforms.focus.value, duration, elapsed: 0 };
+  }
+  setProfile(name) {
+    if (!DOF_PROFILES[name]) throw Error(`Unknown DOF profile: ${name}`);
+    this.profileName = name;
+  }
+  targetDistance(object) {
+    const point = typeof object.focusPoint === 'function' ? object.focusPoint() : object.getWorldPosition(this.worldPoint);
+    return axialDistance(this.camera, point);
+  }
+  update(dt, explorationTarget) {
+    const profile = DOF_PROFILES[this.profileName];
     const uniforms = this.bokeh.uniforms;
-    const distance = axialDistance(this.camera, target);
-    // Initialize before the first frame; every subsequent focus change eases.
-    uniforms.focus.value = this.initialized ? damp(uniforms.focus.value, distance, a.response + (b.response - a.response) * eventBlend, dt) : distance;
+    const command = this.focusCommand;
+    const distance = command ? (command.object ? this.targetDistance(command.object) : command.distance) : this.targetDistance(explorationTarget);
+    if (!this.initialized) uniforms.focus.value = distance;
+    else if (command) {
+      command.elapsed = Math.min(command.duration, command.elapsed + dt);
+      const t = command.duration <= 0 ? 1 : command.elapsed / command.duration;
+      const eased = t * t * (3 - 2 * t);
+      uniforms.focus.value = command.from + (distance - command.from) * eased;
+    } else uniforms.focus.value = damp(uniforms.focus.value, distance, profile.response, dt);
     this.initialized = true;
-    uniforms.aperture.value = a.aperture + (b.aperture - a.aperture) * eventBlend;
-    uniforms.maxblur.value = (a.maxBlur + (b.maxBlur - a.maxBlur) * eventBlend) * QUALITY_PROFILES[this.quality].blurScale;
+    this.aperture = damp(this.aperture, profile.aperture, 5, dt);
+    this.maxBlur = damp(this.maxBlur, profile.maxBlur, 5, dt);
+    uniforms.aperture.value = this.aperture;
+    uniforms.maxblur.value = this.maxBlur * QUALITY_PROFILES[this.quality].blurScale;
   }
   setEnabled(value) { this.enabled = value; this.bokeh.enabled = value; }
-  cycleQuality() { const names = Object.keys(QUALITY_PROFILES); this.quality = names[(names.indexOf(this.quality) + 1) % names.length]; }
+  setQuality(name) { if (!QUALITY_PROFILES[name]) throw Error(`Unknown DOF quality: ${name}`); this.quality = name; }
+  cycleQuality() { const names = this.mobile ? ['LOW', 'MEDIUM', 'HIGH'] : ['HIGH', 'MEDIUM', 'LOW']; this.quality = names[(names.indexOf(this.quality) + 1) % names.length]; }
+  setPixelRatioCap(cap) { if (cap !== null && (!Number.isFinite(cap) || cap < 0.5 || cap > 2)) throw Error('DPR cap must be 0.5–2'); this.pixelRatioCap = cap; }
   resize(width, height) {
     const profile = QUALITY_PROFILES[this.quality];
-    this.pixelRatio = Math.min(window.devicePixelRatio || 1, profile[this.mobile ? 'mobile' : 'desktop']);
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, this.pixelRatioCap ?? profile[this.mobile ? 'mobile' : 'desktop']);
     this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.setSize(width, height, false);
     this.composer.setPixelRatio(this.pixelRatio);

@@ -2,7 +2,7 @@
 
 **現在の公開版: [Three.jsデモ](https://yunasayunasa.github.io/Six_dragon_gyakuten/)**
 
-`threejs-ab` ブランチの `three/` が比較用の最小版です。Godot版は `main` と既存ファイルに保持しています。森＋家の1画面で、透過PNGと3D地面、距離ベースDOF、Rise演出の成立を確認します。戦闘・室内・宝箱・PWAは追加していません。
+`threejs-ab` ブランチの `three/` が比較用の最小版です。Godot版は `main` と既存ファイルに保持しています。森＋家の1画面で、Rise / Fall / Wire Drop、距離ベースDOF、軽い3D池を同時に検証します。戦闘・室内・宝箱・PWAは追加していません。
 
 ## Three.js版の起動
 
@@ -15,7 +15,7 @@ npm run dev --prefix three
 npm run verify --prefix three
 ```
 
-`verify` は焦点距離・補間・Stage順序・透過深度の復元テストとVite本番ビルドを実行します。ビルド出力は `three/dist/`。`npm run preview --prefix three` で本番出力を確認できます。
+`verify` は焦点距離・複数Stage Motion・BenchmarkのWarm-up・透過深度の最小テストとVite本番ビルドを実行します。ビルド出力は `three/dist/`。`npm run preview --prefix three` で本番出力を確認できます。
 
 ## 操作と比較
 
@@ -23,25 +23,40 @@ npm run verify --prefix three
 |---|---|---|
 |移動|矢印キー（W/A/Sも補助対応）|左下の4方向ボタン|
 |DOF ON/OFF|D / 上部ボタン|上部DOFボタン|
-|HIGH → MEDIUM → LOW|Q / 上部ボタン|上部画質ボタン|
-|Rise再演|E / Space / 舞台ボタン|右下の舞台ボタン|
-|性能表示の表示・非表示|F3 / 計測ボタン|計測ボタン|
+|画質切替|Q / 上部ボタン|上部画質ボタン|
+|舞台イベント|E / Space / 舞台ボタン|右下の舞台ボタン|
+|5分Benchmark開始・中止|B / 5分計測ボタン|5分計測ボタン|
+|性能表示の表示・非表示|F3|表示は初期状態でON|
 
-指定のDキーをDOF専用とするため、完全なWASD操作ではなく矢印操作を採用しました。看板近くに歩くと最初のRiseが自動開始します。イベント中は移動を止め、焦点を舞台へ寄せ、木が起き、短く保持してプレイヤーへ戻ります。舞台ボタンで同じ演出を再比較できます。
+指定のDキーをDOF専用とするため、完全なWASD操作ではなく矢印操作を採用しました。看板→吊りランタン→家の扉に近づくと、それぞれRise→Wire Drop→Fallが始まります。焦点は対象へ移り、動作後にPlayerへ戻ります。舞台ボタンは3イベントを順に再演します。DOF切替は演出中も可能です。音源はなく、`StageRise` / `StageFall` / `WireMove` / `WireStop` / `WaterAmbient` の呼び出し口だけ用意しています。
 
-iPhoneはSafariでURLを開き、横向きで確認してください。MEDIUMから開始します。重ければLOWへ下げ、最後にDOFをOFFにしてください。固定URLは通常のHTTPSなのでローカル証明書の信頼操作は不要です。iPhone実機の起動・FPS・発熱・PCとの見た目の差は未検証で、[COMPARISON.md](COMPARISON.md) に記録欄を用意しています。
+iPhoneはSafariでURLを開き、横向きで確認してください。Phase 2は**LOW / DPR上限0.85**で開始し、MEDIUM / DPR上限1.0へ切り替えて比較します。固定URLは通常のHTTPSなのでローカル証明書の信頼操作は不要です。前フェーズについてiPhone Safariで約60fpsとの報告を受けていますが、このフェーズの実機のFPS・発熱・安定性は[COMPARISON.md](COMPARISON.md)へ別に記録してください。
+
+### 5分Benchmark
+
+「5分計測」は、最初の約10秒をWarm-upとして集計から外し、その後300秒を計測します。Player移動とRise / Fall / Wire Drop / Focus移動を繰り返し、池は常時表示します。最後に平均FPS、1秒区間の最低FPS、平均・最大Frame Time、平均Draw Calls / Triangles、Geometries / Texturesの計測開始時→終了時を表示します。途中でDOF・画質・DPRを変えた結果には`MIXED`が付くので、比較には設定ごとに別実行してください。タブを背景へ移した時間は集計しません。数値はブラウザのフレーム間隔と`renderer.info`であり、GPU時間・端末温度・実メモリ容量ではありません。
+
+|iPhone実機の経過|本体温度体感（None / Mild / Warm / Hot）|FPS低下|操作遅延（Good / Slight delay / Bad）|Safari再読み込み / クラッシュ|
+|---|---|---|---|---|
+|5分|未記録|未記録|未記録|未記録|
+|10分|未記録|未記録|未記録|未記録|
+
+### DPRとDOF画質の独立比較
+
+URL末尾へ`?dpr=0.85&dofQuality=LOW`、`?dpr=1.00&dofQuality=LOW`、`?dpr=1.00&dofQuality=MEDIUM`のいずれかを付けて開きます。計測欄に実際のDPRとDOF画質を表示します。`dpr`は端末の物理DPRを超えず、Bokehのサンプル数は全設定で同じです。このURL指定は技術検証用で、UIを増やしません。
 
 ## 描画と調整箇所
 
-- `three/src/demo/profiles.js`: DOF、画質、カメラ、移動、Stageの数値。
+- `three/src/demo/profiles.js`: DOF、画質、カメラ、移動の数値。Stageの動作値は`three/src/presentation/stage/stageProfiles.js`。
 - `three/src/core/`: 足元Pivotの紙Plane、CrossPlane、Sprite SheetのIdle/Walk、移動と接地影。
-- `three/src/presentation/`: Camera / DOF / Lighting / Stage。`EffectComposer → RenderPass → PaperBokehPass → OutputPass`。
+- `three/src/presentation/`: Camera / DOF / Lighting / Stage / Water / Audio Hook。`EffectComposer → RenderPass → PaperBokehPass → OutputPass`。
 - `PaperBokehPass` は標準 `BokehPass` のぼかしシェーダーをそのまま使用します。深度プリパスのみ、PNGのalphaTestとアニメーションUVを反映する材質へ交換します。これにより透明な四角形を誤って深度へ書きません。接地影は深度から除外します。
-- Focusはカメラの視線方向の距離です。初期描画を除き指数補間し、Stageの対象切替もsmoothstepで補間します。CSS blurは使用していません。
-- HIGH / MEDIUM / LOWは描画解像度と最大ぼけ量を変更します。Bokehのサンプル数は同一です。DPR上限はPC 2 / 1.25 / 0.85、タッチ端末1.5 / 1.25 / 0.85です。標準Bokehを先に評価するため独自低解像度ぼかしパイプラインは未追加です。
+- Focusはカメラの視線方向の距離です。`focusTo`は対象のWorld Positionを毎フレーム距離へ変換し、`focusDistanceTo`も滑らかに補間します。CSS blurは使用していません。
+- HIGH / MEDIUM / LOWのDPR上限はPC 2 / 1.25 / 0.85、タッチ端末1.5 / 1.0 / 0.85です。DOF画質はblur量を調整し、Bokehのサンプル数は同一です。独立比較用のDPR指定を除き、画質ボタンが両者を切り替えます。
+- 池は薄い水面Shaderと楕円の底を各1 Meshで描画します。水面だけを深度プリパスから外し、その約0.03m下の不透明な底がBokehのDepthを担います。Player前後×Focus前後の4条件をローカルブラウザで確認しています。実機Safariの見た目は別途確認してください。
 - リアルタイム影なし、Hemisphere＋Directional、標準Fog。地面は繰り返しTexture、道は独立Overlay Meshです。
 - 元の `assets/` を直接再利用し、Viteが参照素材をハッシュ付きファイルにします。Service Workerなし。背景等の小さなSVGはViteによりバンドルへ埋め込まれます。
-- 性能表示は全描画Passを合計した `renderer.info` と約0.5秒平均のFPS/frame intervalです。GPU処理時間ではありません。Three.js本体を含むJSの500KB警告は残しています（gzip約143KB）。
+- 性能表示は全描画Passを合計した `renderer.info` と約0.5秒平均のFPS/frame intervalです。GPU処理時間ではありません。Three.js本体を含むJSの500KB警告は残しています。
 
 ## GitHub Pages自動公開
 
@@ -49,7 +64,7 @@ iPhoneはSafariでURLを開き、横向きで確認してください。MEDIUM�
 
 公開先はリポジトリにつき1つのため、このブランチのデプロイで固定URLの内容がThree.js版になります。Godotへ戻す場合はGitHub Settings → PagesでDeploy from a branch、`main` / `docs`へ戻します。Three版を再公開する場合はSourceをGitHub Actionsへ戻し、このworkflowを実行します。
 
-検証用 `three/tests/browser-smoke.mjs` は既に起動したChromiumのCDP（既定localhost:9231）に接続します。通常利用には不要です。画質撮影・矢印移動・Rise復帰・タッチ入力・横縦リサイズを確認し、結果をGit対象外の `three/test-results/` に保存します。ソフトウェア描画結果を端末性能として扱わないでください。
+検証用 `three/tests/browser-smoke.mjs` は既に起動したChromiumのCDP（既定localhost:9232）に接続します。通常利用には不要です。池のPlayer前後×Focus前後4条件を撮影し、結果をGit対象外の `three/test-results/` に保存します。ソフトウェア描画結果を端末性能として扱わないでください。
 
 ---
 

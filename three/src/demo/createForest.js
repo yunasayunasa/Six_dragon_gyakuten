@@ -1,6 +1,8 @@
 import { Mesh, PlaneGeometry, BoxGeometry, CylinderGeometry, MeshLambertMaterial, MeshBasicMaterial, Group, DoubleSide } from 'three';
 import { PaperObject } from '../core/paper/PaperObject.js';
 import { CrossPlaneObject } from '../core/paper/CrossPlaneObject.js';
+import { StageProp } from '../presentation/stage/StageProp.js';
+import { createPond } from '../presentation/water/createPond.js';
 import { SCENE_PROFILE as P } from './profiles.js';
 export function createForest(scene, t) {
   const billboards = [];
@@ -33,13 +35,15 @@ export function createForest(scene, t) {
   const walls = new Mesh(new BoxGeometry(4, 3, 3), new MeshLambertMaterial({ color: 0xc4a678 })); walls.position.y = 1.5; house.add(walls);
   const roof = new Mesh(new CylinderGeometry(0, 3.6, 2.2, 4), new MeshLambertMaterial({ color: 0x64524a })); roof.rotation.y = Math.PI / 4; roof.scale.z = 0.86; roof.position.y = 4; house.add(roof);
   for (const x of [-1.87, 1.87]) { const beam = new Mesh(new BoxGeometry(0.16, 3.2, 3.15), new MeshLambertMaterial({ color: 0x625543 })); beam.position.set(x, 1.6, 0); house.add(beam); }
-  const door = new PaperObject(t.door, { height: 2.4, width: 1.35 }); door.position.set(-0.6, 0.02, 1.515); house.add(door);
+  const doorPaper = new PaperObject(t.door, { height: 2.4, width: 1.35 });
+  doorPaper.position.set(-0.6, 0.02, 1.515);
+  const door = new StageProp(doorPaper, { foldAngle: Math.PI / 2 }); house.add(door);
   const window = new Mesh(new PlaneGeometry(0.8, 0.9), new MeshBasicMaterial({ color: 0xf6cf7f, side: DoubleSide })); window.position.set(1, 1.9, 1.52); house.add(window);
   scene.add(house);
-  const stage = paper('smallTree', P.stage[0], P.stage[2], 4.3);
-  stage.position.y = 0.035; // Avoid coplanar depth fighting while folded flat.
-  // A small ground marker makes the automatic trigger discoverable.
-  const marker = paper('sign', 2.2, -1.9, 1.1);
-  marker.rotation.y = -0.15;
-  return { stage, billboards };
+  const sign = new StageProp(new PaperObject(t.sign, { height: 2.6 }));
+  sign.position.fromArray(P.stageSign); sign.landing.copy(sign.position); sign.rotation.x = sign.foldAngle; scene.add(sign);
+  const wire = new StageProp(new PaperObject(t.lamp, { height: 1.9 }), { pivot: [0, 1.9, 0] });
+  wire.position.fromArray(P.stageWire); wire.landing.copy(wire.position); wire.visible = false; scene.add(wire);
+  const pond = createPond(P.pond); scene.add(pond.group);
+  return { sign, wire, door, pond, billboards };
 }

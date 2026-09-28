@@ -1,7 +1,7 @@
-export function createInput({ toggleDOF, quality, stats, stage }) {
+export function createInput({ toggleDOF, quality, stats, stage, benchmark }) {
   const keys = new Set(), pointers = new Map();
   const directions = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyW: 'up', KeyA: 'left', KeyS: 'down' };
-  const actions = { KeyD: toggleDOF, KeyQ: quality, F3: stats, KeyE: stage, Space: stage };
+  const actions = { KeyD: toggleDOF, KeyQ: quality, F3: stats, KeyE: stage, Space: stage, KeyB: benchmark };
   window.addEventListener('keydown', (event) => {
     if (directions[event.code] || actions[event.code]) event.preventDefault();
     if (directions[event.code]) keys.add(event.code);
@@ -16,7 +16,7 @@ export function createInput({ toggleDOF, quality, stats, stage }) {
   }
   document.querySelector('#dof').onclick = toggleDOF;
   document.querySelector('#quality').onclick = quality;
-  document.querySelector('#stats-toggle').onclick = stats;
+  document.querySelector('#stats-toggle').onclick = benchmark;
   document.querySelector('#stage').onclick = stage;
   return { has: (direction) => [...keys].some((key) => directions[key] === direction) || [...pointers.values()].includes(direction) };
 }
