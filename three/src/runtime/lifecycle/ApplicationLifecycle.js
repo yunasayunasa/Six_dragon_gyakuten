@@ -1,10 +1,11 @@
 // Owns browser suspension and the frame clock. Rendering may continue while
 // updates and benchmark samples are paused.
 export class ApplicationLifecycle {
-  constructor({ windowTarget = window, documentTarget = document, onSuspend = () => {} } = {}) {
+  constructor({ windowTarget = window, documentTarget = document, onSuspend = () => {}, onResume = () => {} } = {}) {
     this.windowTarget = windowTarget;
     this.documentTarget = documentTarget;
     this.onSuspend = onSuspend;
+    this.onResume = onResume;
     this.manualPaused = false;
     this.blurred = false;
     this.pageHidden = false;
@@ -40,6 +41,7 @@ export class ApplicationLifecycle {
     // document.hidden has already changed when visibilitychange is delivered.
     this.lastTime = null;
     if (this.documentTarget.hidden) this.onSuspend();
+    else if (this.active) this.onResume();
   }
 
   setPaused(value) { this.setBrowserState('manualPaused', Boolean(value)); }
@@ -48,6 +50,7 @@ export class ApplicationLifecycle {
     if (wasActive === this.active) return;
     this.lastTime = null;
     if (!this.active) this.onSuspend();
+    else this.onResume();
   }
 
   tick(now) {

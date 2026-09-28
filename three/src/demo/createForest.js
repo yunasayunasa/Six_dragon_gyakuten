@@ -1,6 +1,7 @@
 import { Mesh, PlaneGeometry, BoxGeometry, CylinderGeometry, MeshLambertMaterial, MeshBasicMaterial, Group, DoubleSide } from 'three';
 import { PaperObject } from '../core/paper/PaperObject.js';
 import { CrossPlaneObject } from '../core/paper/CrossPlaneObject.js';
+import { SceneryBatch } from '../core/scene/SceneryBatch.js';
 import { StageProp } from '../presentation/stage/StageProp.js';
 import { createPond } from '../presentation/water/createPond.js';
 import { SCENE_PROFILE as P } from './demoProfiles.js';
@@ -22,15 +23,23 @@ export function createForest(scene, t) {
   };
   const far = paper('mountains', 0, -30, 16, false, 0xe0e4cf); far.position.y = -1; far.mesh.material.fog = false;
   // Fixed placements make desktop/mobile A/B repeatable (no random layouts).
-  for (const [x, z, h] of [[-14,-15,11],[-8,-17,12],[-2,-18,10],[5,-19,12],[13,-16,11],[-11,-9,8],[-5,-11,8],[0,-12,7],[12,-10,8]]) paper('tree', x, z, h, false, 0xc9dbba);
+  const farTrees = [[-14,-15,11],[-8,-17,12],[-2,-18,10],[5,-19,12],[13,-16,11],[-11,-9,8],[-5,-11,8],[0,-12,7],[12,-10,8]];
+  const treeGeometry = new PlaneGeometry(1, 1); treeGeometry.translate(0, 0.5, 0);
+  const treeMaterial = new MeshLambertMaterial({ map: t.tree, alphaTest: 0.45, side: DoubleSide, color: 0xc9dbba });
+  const treeBatch = new SceneryBatch(treeGeometry, treeMaterial, farTrees.length);
+  const treeAspect = t.tree.image.width / t.tree.image.height;
+  for (const [x, z, h] of farTrees) treeBatch.add([x, 0, z], [h * treeAspect, h, 1]);
+  scene.add(treeBatch.mesh);
+  const occluders = [];
   for (const [x, z, h] of [[-7,-3,6],[-9,1,7],[9,-2,6],[11,3,7],[-4,-6,5]]) {
     const tree = new CrossPlaneObject(t.tree, { height: h }); tree.position.set(x, 0, z); scene.add(tree);
+    occluders.push(tree);
   }
   for (const [x, z, h] of [[-5,2,1],[-6,4,1.1],[-3,-3,0.85],[3,3,0.8],[6,2,1],[7,-3,0.9],[-7,-1,1.2],[2,-6,0.9],[-2,5,0.7],[5,5,1],[-1,-5,0.65],[8,4,1]]) paper('grass', x, z, h, true);
   for (const [x, z] of [[-6,-4],[8,-5],[-4,4],[7,4]]) paper('bush', x, z, 1.5, true);
   for (const [x, z] of [[-4,1],[4,4],[-2,-4]]) paper('flowers', x, z, 0.7, true);
   // Near planes: out of the walking corridor, clearly closer than the player.
-  paper('tree', -10, 9, 10); paper('tree', 11, 8, 10);
+  occluders.push(paper('tree', -10, 9, 10), paper('tree', 11, 8, 10));
   const house = new Group(); house.position.fromArray(P.house);
   const walls = new Mesh(new BoxGeometry(4, 3, 3), new MeshLambertMaterial({ color: 0xc4a678 })); walls.position.y = 1.5; house.add(walls);
   const roof = new Mesh(new CylinderGeometry(0, 3.6, 2.2, 4), new MeshLambertMaterial({ color: 0x64524a })); roof.rotation.y = Math.PI / 4; roof.scale.z = 0.86; roof.position.y = 4; house.add(roof);
@@ -45,5 +54,5 @@ export function createForest(scene, t) {
   const wire = new StageProp(new PaperObject(t.lamp, { height: 1.9 }), { pivot: [0, 1.9, 0] });
   wire.position.fromArray(P.stageWire); wire.landing.copy(wire.position); wire.visible = false; scene.add(wire);
   const pond = createPond(P.pond); scene.add(pond.group);
-  return { sign, wire, door, pond, billboards };
+  return { sign, wire, door, pond, billboards, occluders };
 }

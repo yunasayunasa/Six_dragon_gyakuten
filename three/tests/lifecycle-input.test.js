@@ -15,8 +15,8 @@ class Target {
 
 test('blur, visibility, page restore and manual pause suspend time without a catch-up frame', () => {
   const win = new Target(), doc = new Target(); doc.hidden = false;
-  let suspends = 0;
-  const lifecycle = new ApplicationLifecycle({ windowTarget: win, documentTarget: doc, onSuspend: () => suspends++ });
+  let suspends = 0, resumes = 0;
+  const lifecycle = new ApplicationLifecycle({ windowTarget: win, documentTarget: doc, onSuspend: () => suspends++, onResume: () => resumes++ });
   assert.equal(lifecycle.tick(1000), 0);
   assert.equal(lifecycle.tick(1016), 0.016);
   win.emit('blur'); assert.equal(lifecycle.active, false);
@@ -32,6 +32,7 @@ test('blur, visibility, page restore and manual pause suspend time without a cat
   win.emit('pagehide'); assert.equal(lifecycle.active, false);
   win.emit('pageshow'); assert.equal(lifecycle.tick(20000), 0);
   assert.equal(suspends, 4);
+  assert.equal(resumes, 4);
   lifecycle.dispose(); win.emit('blur'); assert.equal(suspends, 4);
 });
 

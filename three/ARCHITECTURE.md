@@ -1,4 +1,4 @@
-# Architecture — Phase 1
+# Architecture — Engine v1
 
 依存方向は **Game / Demo → Engine**。Engineからdemoへの逆依存は禁止です。
 現在のEngineパッケージは既存Repositoryの `three/` です。Godotルートとは別物です。
@@ -9,12 +9,14 @@ main.js → demo/startDemo.js
              ├─ StageEvents → StageDirector / DOFDirector
              ├─ DemoBenchmarkScenario → BenchmarkRecorder
              ├─ Core / Presentation / Runtime defaults
+             ├─ Grid Collision / Occlusion / SceneryBatch
+             ├─ Audio Hook → AudioDirector
              └─ UI → PerformanceMonitor / 計測結果
 ```
 
-- Core: Paper、Character、Rendererの基礎。ゲーム進行を持たない。
-- Presentation: Camera、DOF、Lighting、Stage、Water、Audio Hook。
-- Runtime: Quality既定値とApplicationLifecycle。Adaptive Qualityはまだ追加しない。
+- Core: Paper、Character、Renderer、静的SceneryBatch、WalkableGrid/Collision/Navigation/LOS。ゲーム進行を持たない。
+- Presentation: Camera、DOF、Lighting、Stage、Water、Occlusion、Audio Hook/Director。
+- Runtime: Quality既定値、既定OFFのQualityManager、ApplicationLifecycle。
 - Performance: カウンター読込・時間集計だけ。Player、Forest、Stage、DOMを知らない。
 - UI: 入力Adapterと表示。今回操作や配置を変えない。
 - Demo: Forest、トリガー、Stage進行、計測中の自動走行、具象設定。
@@ -22,7 +24,8 @@ main.js → demo/startDemo.js
 ApplicationLifecycleはブラウザのblur/focus、visibilitychange、pagehide/pageshow、
 手動pauseと経過時間を扱います。描画自体は継続しても、更新dtとBenchmark sampleは
 停止中に進めません。Demoが入力resetをcallbackで接続し、RuntimeからUIへはimportしません。
-再開直後の最初のframeはdt=0です。AudioDirectorは未実装なので音声資源は扱いません。
+再開直後の最初のframeはdt=0です。AudioDirectorの停止・再開もcallbackで接続します。
+デモに音源は同梱しません。
 
 Mobile Inputは既存の4方向ボタンとキー割当を維持します。押下したpointerごとに方向と
 capture元を保持し、cancel/blur/非表示/手動pauseで解除します。編集可能な要素へ
@@ -55,14 +58,28 @@ Stage/Waterは既存Profileを維持し、数値・Shader・Tweenを変更して
 
 StageDirectorはCamera/DOFやゲーム進行を知らず、渡されたPropを動かします。
 StageEventsはdemo側でFocus→Motion→Hold→復帰を進行します。
-StageのCueは既存AudioHooksを介します。Audio本実装は行いません。
+StageのCueは既存AudioHooksを介してAudioDirectorへ渡します。Clip登録はGame/Demo側です。
 DOFはCamera-space depthを使い、PaperBokehPassはPNG/Atlasの深度を保持します。
-Waterの半透明深度回避、ワイヤーの再利用、Quality/DPR独立指定も維持します。
+Occlusion中は透過Objectを深度プレパスから外します。Waterの半透明深度回避、
+ワイヤーの再利用、Quality/DPR独立指定も維持します。QualityManagerは既定OFFで
+DPRだけを変更し、Benchmark中は調整しません。
+
+## 移植した汎用機能
+
+- `core/world`: 座標付きWalkableGrid、半径付き移動、独立した視界mask。
+- `core/navigation`: 4方向BFSとGrid LOS。敵AI・マップ固有定数は持たない。
+- `core/character/SpriteAnimator`: Idle/Walkを含む任意clipと8方向行に対応。
+- `presentation/occlusion`: 個別のPaper/CrossPlaneだけを登録し、Materialは登録時に1回clone。
+- `core/scene/SceneryBatch`: 静的な遠景樹木を1 draw callへまとめる。動的/個別透過Objectは対象外。
+- `presentation/audio`: Cue Hookと、音源登録・4 Bus・Master・Mute・Pauseの再生層。
+- `runtime/quality`: 任意のDPR調整。手動Quality/DOFを上書きしない。
+
+これらはTartmanの実戦知見を参照して新EngineのAPIで実装しました。
+Tartmanのコード、4エリア、AI、固有アセットは含みません。
 
 ## 今回の対象外
 
-Collision、Navigation、8方向Sprite、Occlusion、Batch、AudioDirector、
-Adaptive Quality、ゲームシステム、見た目の改善、依存更新、Repository新設。
+ゲームシステム、AI、Tartman固有世界、見た目の改善、依存更新、Repository新設。
 
-`src/core/world`等の予約先はREADMEのみです。独立したCollision階層などは、
-実装が必要になるまで増やしません。デモ素材の `../assets/` 参照は現Repository構成を維持する意図的な依存です。
+独立したCollision階層等の細分化は、必要になるまで増やしません。
+デモ素材の `../assets/` 参照は現Repository構成を維持する意図的な依存です。

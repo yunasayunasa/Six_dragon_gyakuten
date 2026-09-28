@@ -1,4 +1,4 @@
-# Paper HD2D Engine v1 — Phase 1
+# Paper HD2D Engine v1
 
 3D World + 2D Paper Assets + HD2D Presentation を組み合わせる共通基盤です。
 完成ゲームではなく、モバイルWeb上で表現と性能を検証するための小さなEngineです。
@@ -32,20 +32,19 @@ mainでも同Workflowが存在する場合に動きますが、現作業はthree
 
 |領域|役割|
 |---|---|
-|Core|Scene生成の基礎、Paper、Character。特定のゲームやdemoを知らない|
-|Presentation|Camera、DOF、Lighting、Water、Stage、Audio Hook|
-|Runtime|Qualityの既定ProfileとLifecycle。適応品質は未実装|
+|Core|Scene、Paper、Character、World Collision、Grid Navigation。特定のゲームやdemoを知らない|
+|Presentation|Camera、DOF、Lighting、Water、Stage、Occlusion、Audio|
+|Runtime|Quality Profile、任意のDPR適応、Lifecycle|
 |Performance|Rendererの計測とBenchmark集計。Scene進行を知らない|
 |UI|Mobile ControlsとStatsの表示|
 |Optional|Paper Gameplayの予約領域。実行コードなし|
 |Genre|ADV/RPG/Actionの予約領域。実行コードなし|
 |Demo|素材、森の配置、イベント進行、自動Benchmark、起動時の組み立て|
 
-実装済み: Paper Object、Cross Plane、Player、Camera、DOF、Lighting/Fog、Water、
-Rise/Fall/DropFromWire、Thin Cylinder Wire、Mobile Controls、画面離脱時の停止、性能表示・計測。
-
-今後予定: Collision、Navigation、8方向Character、Occlusion、Batching、Audio本実装、
-適応Quality管理。Tartman由来のWorld/AI/Audio/描画コードはまだ追加していません。
+実装済み: Paper Object、Cross Plane、Player、8方向対応SpriteAnimator、Grid Collision / Navigation / LOS、
+Camera、DOF、Lighting/Fog、Water、Rise/Fall/DropFromWire、Thin Cylinder Wire、
+Occlusion、静的SceneryBatch、AudioDirector、Mobile Controls、Lifecycle、性能表示・計測。
+Tartmanのコードやゲーム固有データはコピーしていません。
 
 ## Regression Demo
 
@@ -72,7 +71,9 @@ focus・再表示・pageshow後の最初のフレームは経過時間0として
 手動pauseも同じ時計を使います。停止時にはキーとタッチ入力を解除します。
 移動ボタンの複数同時押し、pointercancel、lostpointercapture、長押し時のメニュー抑止を維持。
 入力欄を編集しているときのゲーム用キー操作は無視します。
-AudioはまだHookのみなので、再生・停止する音源はありません。
+AudioDirectorはCue URLの登録、Master/BGM/SE/Voice/Ambientの音量、Mute、Pauseを提供します。
+このデモには音源がないため、Stage/WaterのHookは発火しますが音は鳴りません。
+音源を登録するゲームでは、最初のタップ等のユーザー操作内で `unlock()` を呼んでください。
 
 ## Profile
 
@@ -85,6 +86,10 @@ Core / Presentation / Runtime / Performanceからdemoをimportしません。
 - `runtime/quality/defaultProfiles.js`: LOW / MEDIUM / HIGH。
 - `presentation/lighting/defaultProfiles.js`: 従来の照明・Fog既定値。
 - Stage Motion / Water Profileは従来の各Presentationディレクトリに維持。
+- `core/world/WalkableGrid.js`: 座標原点・cellSize・通行/視界maskを注入。`WorldCollision`は半径と分割移動、`GridPathfinder`は小規模4方向BFS。
+- `core/character/SpriteAnimator.js`: clipごとの開始コマ、fps、ループ、方向行を指定。現デモの5×5表示は維持。8方向シートは差し替え時にProfileで設定します。
+- `presentation/occlusion/OcclusionDirector.js`: 登録した個別Objectだけを画面上の重なりで透過。透過中はDOF深度から除外します。
+- `core/scene/SceneryBatch.js`: 同一Geometry/Materialの静的景観をInstancedMesh化。動くStagePropや個別透過が必要なObjectは含めません。
 
 ```js
 new PlayerController(textures, playerProfile);
@@ -101,6 +106,8 @@ DOFの旧boolean第4引数はoptionsオブジェクトへ変更し、demo側も�
 `?dpr=0.85&dofQuality=LOW`、`?dpr=1&dofQuality=LOW`、
 `?dpr=1&dofQuality=MEDIUM` で比較できます。Mobile既定はLOW/DPR上限0.85。
 Qualityの差は既存どおりblur強度で、Bokehサンプル数を減らすものではありません。
+任意の `?adaptive=1` は継続的な低FPS時にDPR上限のみ段階的に下げます。既定OFFで、
+手動Quality/DOFを変更せず、5分Benchmark中は動作しません。手動Quality/DPR変更時は適応状態をリセットします。
 
 `PerformanceMonitor` は全Render Pass後のカウンターと約0.5秒のFPSを取得します。
 `BenchmarkRecorder` はWarm-up **10秒**を除き、本計測 **300秒**を集計します。
@@ -117,16 +124,16 @@ Frame Timeはフレーム間隔でGPU時間ではなく、Geometries/Texturesも
 
 ## 検証と限界
 
-既存5テスト、Engine依存境界・Scene非依存Recorderの2テストに加え、
-LifecycleとMobile Inputの停止・解除を確認する2テストを追加しています。
+Unit Testは各共通モジュールの境界動作に限定しています。
 今回、5分実時間計測や全操作の自動巡回は行いません。公開後は起動確認のみです。
 DOF、水、Stage等の実機操作は従来のRegression Demoで確認してください。
 
 維持する技術的制約：PaperBokehPassはThree Addon内部フィールドを使用。
 水面はDOF深度から除外し、約0.029m下の不透明な池底で代替。
-Scene破棄・Material所有権・Audio停止・適応品質は将来の作業です。
+Scene全体の自動破棄は未実装です。OcclusionDirectorとAudioDirectorは個別の `dispose()` を提供します。
+音源・8方向シートはデモに含まれず、iPhone実機での長時間性能も未確認です。
 Engineコードはdemo非依存ですが、デモ素材は同Repositoryの `../assets/` へ依存します。
 
 設計は [ARCHITECTURE.md](ARCHITECTURE.md)、移植予定は
 [TARTMAN_MIGRATION.md](docs/TARTMAN_MIGRATION.md) を参照してください。
-Phase 1の変更だけ戻す場合は当該コミットに `git revert <commit>` を使用します。
+今回のMigration変更だけ戻す場合は当該コミットに `git revert <commit>` を使用します。
