@@ -6,3 +6,6 @@ validation/*.pid
 validation/edge*profile/
 validation/files.sha256
 validation/delivery-audit.json
+three/node_modules/
+three/dist/
+three/test-results/

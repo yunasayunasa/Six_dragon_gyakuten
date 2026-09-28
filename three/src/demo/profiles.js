@@ -1,0 +1,15 @@
+export const DOF_PROFILES = {
+  Exploration: { aperture: 0.00085, maxBlur: 0.006, response: 4 },
+  Event: { aperture: 0.0018, maxBlur: 0.012, response: 3 },
+};
+// Standard BokehPass keeps its sampling kernel. Quality changes resolution,
+// not sample count; all scene/color/depth buffers use the same resolution.
+export const QUALITY_PROFILES = {
+  HIGH: { desktop: 2, mobile: 1.5, blurScale: 1 },
+  MEDIUM: { desktop: 1.25, mobile: 1.25, blurScale: 0.9 },
+  LOW: { desktop: 0.85, mobile: 0.85, blurScale: 0.8 },
+};
+export const CAMERA_PROFILE = { fov: 38, near: 0.1, far: 100, offset: [0, 9.5, 17], target: [0, 1, -1], follow: 0.3, lookAhead: 0.25, response: 3, eventPush: 0.04 };
+export const STAGE_PROFILE = { focus: 0.85, rise: 1.25, hold: 1.3, restore: 1.1, triggerRadius: 2.4 };
+export const PLAYER_PROFILE = { speed: 3.2, height: 2.5, columns: 5, rows: 5, frames: 25, fps: 14, start: [-3, 0, 2], bounds: [-8, 8, -3.5, 5] };
+export const SCENE_PROFILE = { fog: [0xb6c7af, 19, 55], groundSize: 100, stage: [3.8, 0, -1], house: [5.8, 0, -7.5] };

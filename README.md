@@ -1,8 +1,65 @@
+# Paper HD2D — Three.js A/B Test
+
+**現在の公開版: [Three.jsデモ](https://yunasayunasa.github.io/Six_dragon_gyakuten/)**
+
+`threejs-ab` ブランチの `three/` が比較用の最小版です。Godot版は `main` と既存ファイルに保持しています。森＋家の1画面で、透過PNGと3D地面、距離ベースDOF、Rise演出の成立を確認します。戦闘・室内・宝箱・PWAは追加していません。
+
+## Three.js版の起動
+
+Node.js 22.12以降（CIは22）、npmを使用します。
+
+```sh
+npm ci --prefix three
+npm run dev --prefix three
+# 表示されたURLの /Six_dragon_gyakuten/ を開く
+npm run verify --prefix three
+```
+
+`verify` は焦点距離・補間・Stage順序・透過深度の復元テストとVite本番ビルドを実行します。ビルド出力は `three/dist/`。`npm run preview --prefix three` で本番出力を確認できます。
+
+## 操作と比較
+
+|操作|PC|iPhone / タッチ|
+|---|---|---|
+|移動|矢印キー（W/A/Sも補助対応）|左下の4方向ボタン|
+|DOF ON/OFF|D / 上部ボタン|上部DOFボタン|
+|HIGH → MEDIUM → LOW|Q / 上部ボタン|上部画質ボタン|
+|Rise再演|E / Space / 舞台ボタン|右下の舞台ボタン|
+|性能表示の表示・非表示|F3 / 計測ボタン|計測ボタン|
+
+指定のDキーをDOF専用とするため、完全なWASD操作ではなく矢印操作を採用しました。看板近くに歩くと最初のRiseが自動開始します。イベント中は移動を止め、焦点を舞台へ寄せ、木が起き、短く保持してプレイヤーへ戻ります。舞台ボタンで同じ演出を再比較できます。
+
+iPhoneはSafariでURLを開き、横向きで確認してください。MEDIUMから開始します。重ければLOWへ下げ、最後にDOFをOFFにしてください。固定URLは通常のHTTPSなのでローカル証明書の信頼操作は不要です。iPhone実機の起動・FPS・発熱・PCとの見た目の差は未検証で、[COMPARISON.md](COMPARISON.md) に記録欄を用意しています。
+
+## 描画と調整箇所
+
+- `three/src/demo/profiles.js`: DOF、画質、カメラ、移動、Stageの数値。
+- `three/src/core/`: 足元Pivotの紙Plane、CrossPlane、Sprite SheetのIdle/Walk、移動と接地影。
+- `three/src/presentation/`: Camera / DOF / Lighting / Stage。`EffectComposer → RenderPass → PaperBokehPass → OutputPass`。
+- `PaperBokehPass` は標準 `BokehPass` のぼかしシェーダーをそのまま使用します。深度プリパスのみ、PNGのalphaTestとアニメーションUVを反映する材質へ交換します。これにより透明な四角形を誤って深度へ書きません。接地影は深度から除外します。
+- Focusはカメラの視線方向の距離です。初期描画を除き指数補間し、Stageの対象切替もsmoothstepで補間します。CSS blurは使用していません。
+- HIGH / MEDIUM / LOWは描画解像度と最大ぼけ量を変更します。Bokehのサンプル数は同一です。DPR上限はPC 2 / 1.25 / 0.85、タッチ端末1.5 / 1.25 / 0.85です。標準Bokehを先に評価するため独自低解像度ぼかしパイプラインは未追加です。
+- リアルタイム影なし、Hemisphere＋Directional、標準Fog。地面は繰り返しTexture、道は独立Overlay Meshです。
+- 元の `assets/` を直接再利用し、Viteが参照素材をハッシュ付きファイルにします。Service Workerなし。背景等の小さなSVGはViteによりバンドルへ埋め込まれます。
+- 性能表示は全描画Passを合計した `renderer.info` と約0.5秒平均のFPS/frame intervalです。GPU処理時間ではありません。Three.js本体を含むJSの500KB警告は残しています（gzip約143KB）。
+
+## GitHub Pages自動公開
+
+`.github/workflows/three-pages.yml` が `threejs-ab`（または将来mainへ取り込んだ後のmain）の対象ファイルへのpushで、npm ci → テスト＋Vite build → Pages deployを行います。PagesはGitHub Actions方式です。`vite.config.js` のbaseは `/Six_dragon_gyakuten/`。現在のmainに変更は加えていません。
+
+公開先はリポジトリにつき1つのため、このブランチのデプロイで固定URLの内容がThree.js版になります。Godotへ戻す場合はGitHub Settings → PagesでDeploy from a branch、`main` / `docs`へ戻します。Three版を再公開する場合はSourceをGitHub Actionsへ戻し、このworkflowを実行します。
+
+検証用 `three/tests/browser-smoke.mjs` は既に起動したChromiumのCDP（既定localhost:9231）に接続します。通常利用には不要です。画質撮影・矢印移動・Rise復帰・タッチ入力・横縦リサイズを確認し、結果をGit対象外の `three/test-results/` に保存します。ソフトウェア描画結果を端末性能として扱わないでください。
+
+---
+
+## 既存Godot版の説明（mainの構成）
+
 # PaperHD2D — MVP / Vertical Slice
 
 2Dの紙素材を3D空間へ置き、カメラ・被写界深度・照明・軽量な舞台演出を検証するGodotプロジェクトです。完成ゲームではありません。1 unit = 1 m。
 
-**Webデモ:** [GitHub Pagesで開く](https://yunasayunasa.github.io/Six_dragon_gyakuten/)（HTTPS、iPhoneではSafariを使用）。公開版はCompatibility描画のため、PCのForward+版と比べてDOFなど一部の表現が省略されます。iPhone実機の描画・性能は確認中です。
+GodotのWeb出力は `main` の `docs/` に保持しています。現在の固定URLは上記Three.js版です。Godot WebはCompatibility描画のため、PCのForward+版と比べてDOFなど一部の表現が省略されます。
 
 ## 起動
 
