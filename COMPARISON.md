@@ -30,10 +30,14 @@ Frame TimeはrequestAnimationFrame間隔の平均で、GPUタイマーではあ�
 |補間・順序・深度復元|PASS|Nodeテスト4件（焦点の軸距離、フレーム独立補間、Stage順序、エラー時材質復元）|
 |PCブラウザ / 操作 / Rise|PASS|Chromiumで起動、DOF ON/OFF画像、矢印移動、Rise終了と焦点復帰を確認|
 |Mobileエミュレーション|PASS|844×390 / DPR3端末設定でMEDIUM・描画DPR1.25、タッチ移動、390×844への回転を確認。実機Safariとは別の検証|
-|GitHub Pages|確認中|Actionsと公開URLで確認|
+|GitHub Pages|PASS|[Actions build/deploy成功](https://github.com/yunasayunasa/Six_dragon_gyakuten/actions/runs/36362730420)。公開HTTPS URLからブラウザSmokeもPASS（2026-09-28、実装commit `f46dd41`）|
 |iPhone Safari実機|SKIPPED|接続された実機を操作できないため、ユーザーによる確認が必要|
 |PCハードウェアGPU性能|SKIPPED|自動テストはSwiftShader。実機性能値として転記しない|
 |PCとiPhoneの見た目の差|SKIPPED|同じ初期構図で両実機のスクリーンショットが必要|
+
+公開URLの自動検証では、JavaScriptエラー0、Rise時の焦点移動17.38→18.77m、終了時Stage blend=0 / 木の角度=0を確認しました。静止画ではDOF ONで前景と遠景がぼけ、OFFで鮮明になることを目視確認しています。初期画面はDOF ONが107 draw calls / 284 triangles、OFFが54 / 143でした。これは複数Passの合計であり、ソフトウェア描画のFPSは上の実機欄へ転記していません。
+
+共通ai-harnessはPASS（テスト4件、build、差分整形、秘密候補0、生成物・デバッグ検査）。自動ゲートの差分範囲・依存レビューSKIPPEDは手動で確認し、追加依存はThree.jsとViteのみ、既存Godotコードとmainは変更していません。Viteの500KB chunk warningはThree.jsを含む初期JS約568KB / gzip約143KBによるもので、ビルドエラーではありません。
 
 ## 判断時の注意
 
