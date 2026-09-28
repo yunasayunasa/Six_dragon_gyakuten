@@ -14,6 +14,7 @@ import { PerformanceMonitor } from '../performance/PerformanceMonitor.js';
 import { PLAYER_PROFILE, SCENE_PROFILE } from './demoProfiles.js';
 import { createInput } from '../ui/mobileControls/input.js';
 import { Stats } from '../ui/stats/Stats.js';
+import { ApplicationLifecycle } from '../runtime/lifecycle/ApplicationLifecycle.js';
 export async function startDemo() {
   const renderer = createRenderer(document.querySelector('#app'));
   const scene = new Scene(); createLighting(scene, { fog: SCENE_PROFILE.fog });
@@ -36,20 +37,19 @@ export async function startDemo() {
   const labels = () => { document.querySelector('#dof').textContent = `DOF ${dof.enabled ? 'ON' : 'OFF'}`; document.querySelector('#dof').setAttribute('aria-pressed', String(dof.enabled)); document.querySelector('#quality').textContent = dof.quality; };
   const resize = () => { const width = window.visualViewport?.width || innerWidth, height = window.visualViewport?.height || innerHeight; camera.resize(width, height); dof.resize(width, height); labels(); };
   const runBenchmark = () => { if (benchmark.active) benchmark.stop(); else benchmark.start(); };
-  const input = createInput({ toggleDOF: () => { dof.setEnabled(!dof.enabled); labels(); }, quality: () => { dof.cycleQuality(); resize(); }, stats: () => stats.toggle(), stage: () => { if (!benchmark.active) events.startNext(); }, benchmark: runBenchmark });
+  let input;
+  const lifecycle = new ApplicationLifecycle({ onSuspend: () => input?.reset() });
+  input = createInput({ toggleDOF: () => { dof.setEnabled(!dof.enabled); labels(); }, quality: () => { dof.cycleQuality(); resize(); }, stats: () => stats.toggle(), stage: () => { if (!benchmark.active) events.startNext(); }, benchmark: runBenchmark, canInput: () => lifecycle.active });
   window.addEventListener('resize', resize); window.visualViewport?.addEventListener('resize', resize);
-  document.addEventListener('visibilitychange', () => { previous = performance.now(); });
   resize();
   const status = document.querySelector('#status');
   document.querySelector('#loading').hidden = true;
-  let previous = performance.now();
-  let paused = false;
   let sceneTime = 0;
   renderer.setAnimationLoop((now) => {
-    const elapsed = (now - previous) / 1000; previous = now;
-    const dt = paused || document.hidden ? 0 : Math.min(elapsed, 0.1);
-    if (!paused && !document.hidden && benchmark.active) benchmark.update(elapsed);
-    if (!benchmark.active) events.update(dt);
+    const elapsed = lifecycle.tick(now);
+    const dt = Math.min(elapsed, 0.1);
+    if (lifecycle.active && benchmark.active) benchmark.update(elapsed);
+    if (lifecycle.active && !benchmark.active) events.update(dt);
     stage.update(dt);
     player.update(dt, benchmark.active ? benchmark.input : input, camera.camera, events.locked && !benchmark.active);
     camera.update(dt, player, events.cameraTarget, events.blend);
@@ -57,7 +57,7 @@ export async function startDemo() {
     dof.update(dt, player);
     sceneTime += dt; forest.pond.update(sceneTime);
     renderer.info.reset(); dof.render(dt);
-    if (!paused && !document.hidden) benchmark.sample(elapsed);
+    if (lifecycle.active) benchmark.sample(elapsed);
     if (!document.hidden) stats.update(elapsed);
     status.textContent = benchmark.active ? benchmark.label : events.locked ? `Focus → ${events.current.id} → Player` : '看板・ランタン・扉へ / 舞台ボタンで再演';
     const benchmarkButton = document.querySelector('#stats-toggle');
@@ -75,6 +75,6 @@ export async function startDemo() {
     focusWorldAt: (x, y, z, duration = 0.6) => { dof.focusTo({ getWorldPosition(out) { return out.set(x, y, z); } }, duration); },
     focusPlayer: (duration = 0.6) => { dof.focusTo(player, duration); },
     stage: (id) => id ? events.start(id) : events.startNext(),
-    benchmark: () => runBenchmark(), pause: (value) => { paused = value; },
+    benchmark: () => runBenchmark(), pause: (value) => { lifecycle.setPaused(value); },
   };
 }

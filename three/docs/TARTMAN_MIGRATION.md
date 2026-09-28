@@ -1,13 +1,14 @@
-# Tartman Donor Plan — 未実装
+# Tartman Donor Plan — Phase 1開始
 
 母体は現在のThree MVP、TartmanはDonor / Referenceです。
 監査対象: Tartman main `204292c`、Three MVP threejs-ab `d329b25`。
-Phase 0ではTartmanからコード・素材をコピーしません。
-以下はPhase 0の結果確認後に承認を受けて進める予定です。
+Phase 1ではTartmanの入力解除・ブラウザ停止で有効だった動作だけを
+現Engineの構造へ実装しました。Tartmanのコード・素材はコピーしていません。
+以降のPhaseは未実装です。
 
 |Phase|予定|境界・完了条件|
 |---|---|---|
-|1|Lifecycle / Mobile Input|既存入力へ必要部分だけ吸収。解除、停止、復帰の時刻管理|
+|1|Lifecycle / Mobile Input|実装済み。解除、停止、復帰の時刻管理。4方向UIは維持|
 |2|World / Collision|Grid原点・サイズ・半径を外部化。AREASや池固定値に依存しない|
 |3|Grid Navigation / LOS|小規模BFS。移動不可と視界遮断を区別。Enemy依存なし|
 |4|8-direction SpriteAnimator|方向行・clipをProfile化。少女/鬼固有データを持たない|

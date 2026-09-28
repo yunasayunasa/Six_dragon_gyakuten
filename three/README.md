@@ -1,4 +1,4 @@
-# Paper HD2D Engine v1 — Phase 0
+# Paper HD2D Engine v1 — Phase 1
 
 3D World + 2D Paper Assets + HD2D Presentation を組み合わせる共通基盤です。
 完成ゲームではなく、モバイルWeb上で表現と性能を検証するための小さなEngineです。
@@ -25,7 +25,7 @@ npm run verify --prefix three
 
 既存の `.github/workflows/three-pages.yml` を維持します。対象ファイルの
 threejs-abへのpush → npm ci → verify（buildを含む）→ Pages deploy。
-mainでも同Workflowが存在する場合に動きますが、Phase 0でmainへ統合はしません。
+mainでも同Workflowが存在する場合に動きますが、現作業はthreejs-ab上です。
 新Repository用のURLやbaseへは変更していません。
 
 ## 責務
@@ -34,7 +34,7 @@ mainでも同Workflowが存在する場合に動きますが、Phase 0でmainへ
 |---|---|
 |Core|Scene生成の基礎、Paper、Character。特定のゲームやdemoを知らない|
 |Presentation|Camera、DOF、Lighting、Water、Stage、Audio Hook|
-|Runtime|今回はQualityの既定Profileのみ。Lifecycle/適応品質は未実装|
+|Runtime|Qualityの既定ProfileとLifecycle。適応品質は未実装|
 |Performance|Rendererの計測とBenchmark集計。Scene進行を知らない|
 |UI|Mobile ControlsとStatsの表示|
 |Optional|Paper Gameplayの予約領域。実行コードなし|
@@ -42,10 +42,10 @@ mainでも同Workflowが存在する場合に動きますが、Phase 0でmainへ
 |Demo|素材、森の配置、イベント進行、自動Benchmark、起動時の組み立て|
 
 実装済み: Paper Object、Cross Plane、Player、Camera、DOF、Lighting/Fog、Water、
-Rise/Fall/DropFromWire、Thin Cylinder Wire、Mobile Controls、性能表示・計測。
+Rise/Fall/DropFromWire、Thin Cylinder Wire、Mobile Controls、画面離脱時の停止、性能表示・計測。
 
 今後予定: Collision、Navigation、8方向Character、Occlusion、Batching、Audio本実装、
-Lifecycle、Quality管理。Tartmanコードの移植は今回行っていません。
+適応Quality管理。Tartman由来のWorld/AI/Audio/描画コードはまだ追加していません。
 
 ## Regression Demo
 
@@ -66,6 +66,13 @@ Viteでハッシュ付きURLになります。素材の複製・生成はあり�
 Dは既存どおりDOFに割り当てています。WASD全方向へは変更していません。
 看板Rise、吊り物DropFromWire、扉Fallの構図・時間・Focus Tweenは従来と同じです。
 操作感・iPhone実機の最終確認はユーザーが担当します。
+
+ブラウザのblur・tab非表示・pagehideでゲーム更新とBenchmark計測を停止します。
+focus・再表示・pageshow後の最初のフレームは経過時間0として再開します。
+手動pauseも同じ時計を使います。停止時にはキーとタッチ入力を解除します。
+移動ボタンの複数同時押し、pointercancel、lostpointercapture、長押し時のメニュー抑止を維持。
+入力欄を編集しているときのゲーム用キー操作は無視します。
+AudioはまだHookのみなので、再生・停止する音源はありません。
 
 ## Profile
 
@@ -110,15 +117,16 @@ Frame Timeはフレーム間隔でGPU時間ではなく、Geometries/Texturesも
 
 ## 検証と限界
 
-既存5テストを維持し、Engine依存境界とScene非依存Recorderの2テストを追加しています。
+既存5テスト、Engine依存境界・Scene非依存Recorderの2テストに加え、
+LifecycleとMobile Inputの停止・解除を確認する2テストを追加しています。
 今回、5分実時間計測や全操作の自動巡回は行いません。公開後は起動確認のみです。
 DOF、水、Stage等の実機操作は従来のRegression Demoで確認してください。
 
 維持する技術的制約：PaperBokehPassはThree Addon内部フィールドを使用。
 水面はDOF深度から除外し、約0.029m下の不透明な池底で代替。
-Scene破棄・Material所有権・Lifecycle・適応品質は将来の作業です。
+Scene破棄・Material所有権・Audio停止・適応品質は将来の作業です。
 Engineコードはdemo非依存ですが、デモ素材は同Repositoryの `../assets/` へ依存します。
 
 設計は [ARCHITECTURE.md](ARCHITECTURE.md)、移植予定は
 [TARTMAN_MIGRATION.md](docs/TARTMAN_MIGRATION.md) を参照してください。
-復元はPhase 0のコミットに対する `git revert <commit>` を使用します。
+Phase 1の変更だけ戻す場合は当該コミットに `git revert <commit>` を使用します。

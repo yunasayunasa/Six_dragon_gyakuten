@@ -1,3 +1,4 @@
 # runtime/lifecycle
 
-将来の拡張先です。Phase 0では実行コードを追加しません。Engineからこの予約領域への依存はありません。
+ApplicationLifecycleはブラウザ停止状態とframe経過時間を管理します。
+DemoはonSuspendで入力を解除します。Runtime側はUI・Demoをimportしません。

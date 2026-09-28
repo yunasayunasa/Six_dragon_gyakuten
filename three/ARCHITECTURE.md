@@ -1,4 +1,4 @@
-# Architecture — Phase 0
+# Architecture — Phase 1
 
 依存方向は **Game / Demo → Engine**。Engineからdemoへの逆依存は禁止です。
 現在のEngineパッケージは既存Repositoryの `three/` です。Godotルートとは別物です。
@@ -14,10 +14,19 @@ main.js → demo/startDemo.js
 
 - Core: Paper、Character、Rendererの基礎。ゲーム進行を持たない。
 - Presentation: Camera、DOF、Lighting、Stage、Water、Audio Hook。
-- Runtime: Quality既定値のみ。Lifecycle/Adaptive Qualityはまだ追加しない。
+- Runtime: Quality既定値とApplicationLifecycle。Adaptive Qualityはまだ追加しない。
 - Performance: カウンター読込・時間集計だけ。Player、Forest、Stage、DOMを知らない。
 - UI: 入力Adapterと表示。今回操作や配置を変えない。
 - Demo: Forest、トリガー、Stage進行、計測中の自動走行、具象設定。
+
+ApplicationLifecycleはブラウザのblur/focus、visibilitychange、pagehide/pageshow、
+手動pauseと経過時間を扱います。描画自体は継続しても、更新dtとBenchmark sampleは
+停止中に進めません。Demoが入力resetをcallbackで接続し、RuntimeからUIへはimportしません。
+再開直後の最初のframeはdt=0です。AudioDirectorは未実装なので音声資源は扱いません。
+
+Mobile Inputは既存の4方向ボタンとキー割当を維持します。押下したpointerごとに方向と
+capture元を保持し、cancel/blur/非表示/手動pauseで解除します。編集可能な要素へ
+入力している間はゲームのショートカットを処理しません。入力側もdisposeできます。
 - Optional / Genre: READMEだけ。Coreからの依存・実行コードを追加しない。
 
 `tests/boundaries.test.js` がCore / Presentation / Runtime / Performance内の
@@ -52,7 +61,7 @@ Waterの半透明深度回避、ワイヤーの再利用、Quality/DPR独立指�
 
 ## 今回の対象外
 
-Collision、Navigation、8方向Sprite、Occlusion、Batch、AudioDirector、Lifecycle、
+Collision、Navigation、8方向Sprite、Occlusion、Batch、AudioDirector、
 Adaptive Quality、ゲームシステム、見た目の改善、依存更新、Repository新設。
 
 `src/core/world`等の予約先はREADMEのみです。独立したCollision階層などは、
