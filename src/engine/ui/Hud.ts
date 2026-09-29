@@ -1,5 +1,6 @@
 import type { Input } from '../core/Input';
 import type { Sound } from '../audio/Sound';
+import { toGame } from '../core/screen';
 import { PortraitSlot, type PortraitData, type PortraitSide } from './Portrait';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', parent?: HTMLElement, html?: string): HTMLElementTagNameMap[K] {
@@ -100,23 +101,25 @@ export class Hud {
     let id: number | null = null;
     let ox = 0;
     let oy = 0;
-    const R = () => base.getBoundingClientRect().width / 2;
+    const R = () => base.offsetWidth / 2;
     zone.addEventListener('pointerdown', (e) => {
       this.sound.unlock();
       id = e.pointerId;
       zone.setPointerCapture(id);
-      const r = zone.getBoundingClientRect();
-      ox = e.clientX;
-      oy = e.clientY;
-      base.style.left = `${e.clientX - r.left}px`;
-      base.style.top = `${e.clientY - r.top}px`;
+      // 画面を回しているときもあるので、ゲーム画面の座標で扱う
+      const p = toGame(e.clientX, e.clientY);
+      ox = p.x;
+      oy = p.y;
+      base.style.left = `${p.x - zone.offsetLeft}px`;
+      base.style.top = `${p.y - zone.offsetTop}px`;
       base.classList.remove('hidden');
     });
     const move = (e: PointerEvent) => {
       if (e.pointerId !== id) return;
       const rad = R();
-      let dx = e.clientX - ox;
-      let dy = e.clientY - oy;
+      const p = toGame(e.clientX, e.clientY);
+      let dx = p.x - ox;
+      let dy = p.y - oy;
       const len = Math.hypot(dx, dy);
       if (len > rad) {
         dx = (dx / len) * rad;
@@ -359,7 +362,7 @@ export class Hud {
     el('div', 'hint', panel, escapeHtml(hint));
     const list = el('div', 'clues', panel);
     const row = el('div', 'row', panel);
-    row.style.cssText = 'display:flex;gap:2vw;justify-content:flex-end';
+    row.style.cssText = 'display:flex;gap:calc(var(--vw) * 2);justify-content:flex-end';
     const cancel = el('div', 'btn', row, 'あとで');
     const ok = el('div', 'btn shu', row, 'つなげる');
     ok.setAttribute('disabled', '');

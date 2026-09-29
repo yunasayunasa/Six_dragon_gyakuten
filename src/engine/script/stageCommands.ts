@@ -63,6 +63,14 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     }
     if (target === '固定' || target === 'lock') return ctx.setAutoCamera?.(false);
     if (target === '自動' || target === 'auto') return ctx.setAutoCamera?.(true);
+    // @カメラ 周回 灯台柱 6 … 対象を中心に6秒かけて1周する
+    if (target === '周回' || target === 'orbit') {
+      const a = ctx.actor(second);
+      const obj = a ?? engine.stage.named.get(second);
+      if (!obj) throw new Error(`カメラの対象が見つかりません: ${second}`);
+      const p = a ? a.headPosition() : obj.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.3, 0));
+      return engine.rig.orbit(p, 3.6, 0.55, Number(args[2] ?? 6));
+    }
     if (target === '引き' || target === 'wide') {
       const x = engine.rig.look.x;
       engine.rig.shot(new THREE.Vector3(x, 1.3, 0), new THREE.Vector3(0, 2.8, 12), 32);

@@ -65,7 +65,9 @@ describe('第一話のデータ検査', () => {
           if (c.name === 'face' && c.args[1]) expect(Object.keys(a!.expressions)).toContain(c.args[1]);
         }
         if (c.name === 'cam' && c.args[0] && !['戻す', '引き', '固定', '自動'].includes(c.args[0])) {
-          expect(actorOf(c.args[0]) || namedObjects.includes(c.args[0]), `${key} カメラ対象 ${c.args[0]}`).toBeTruthy();
+          // @カメラ 周回 対象 秒 は2番目が対象
+          const target = c.args[0] === '周回' ? c.args[1] : c.args[0];
+          expect(actorOf(target) || namedObjects.includes(target), `${key} カメラ対象 ${target}`).toBeTruthy();
         }
         if (c.name === 'give') c.args.forEach((id) => expect(itemIds.has(id), `${key} 証拠 ${id}`).toBe(true));
         if (c.name === 'look') expect(['sunset', 'confront', 'dusk']).toContain(c.args[0]);

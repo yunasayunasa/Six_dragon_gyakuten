@@ -34,6 +34,8 @@ export interface ActorDef {
   height: number;
   /** 名札の色 */
   color?: string;
+  /** 元の絵が向いている方向（1=右 -1=左）。斜め向きの絵を正しく振り向かせるために使う。既定は 1 */
+  artFacing?: 1 | -1;
 }
 
 interface LoadedPose {
@@ -178,12 +180,13 @@ export class PaperActor extends THREE.Group {
     if (dir === this.facing) return;
     this.facing = dir;
     const from = this.body.scale.x;
-    await tweens.run(0.2, (k) => (this.body.scale.x = from + (dir - from) * k), Ease.inOutSine, this.body.scale);
+    const to = dir * (this.def.artFacing ?? 1);
+    await tweens.run(0.2, (k) => (this.body.scale.x = from + (to - from) * k), Ease.inOutSine, this.body.scale);
   }
 
   faceInstant(dir: 1 | -1): void {
     this.facing = dir;
-    this.body.scale.x = dir;
+    this.body.scale.x = dir * (this.def.artFacing ?? 1);
   }
 
   hop(tweens: Tweens, height = 0.22): Promise<void> {

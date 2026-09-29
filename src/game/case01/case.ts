@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Engine } from '../../engine';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { glowTexture } from '../../engine/paper/textures';
+import { Crystal } from '../../engine/stage/Crystal';
 import type { CaseData } from '../../genres/investigation/types';
 import * as S from './scripts';
 
@@ -30,9 +32,13 @@ async function buildSet(engine: Engine): Promise<void> {
   lantern.name = '灯台柱';
   lantern.position.set(0, 2.16, -1.6);
   lantern.visible = false;
-  const crystal = await st.addProp({ image: 'crystal_small_cluster', x: 0, z: 0, height: 0.62, blob: false, billboard: 'y' });
-  st.scene.remove(crystal);
+  // 灯晶は紙ではなく立体の結晶（紙の舞台の中の「本物」）。反射用の環境マップはこれ専用に1回だけ作る
+  const pmrem = new THREE.PMREMGenerator(engine.renderer);
+  const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+  const crystal = new Crystal({ height: 0.62, envMap });
   lantern.add(crystal);
+  engine.onFrame.add((dt) => crystal.update(dt));
   const light = new THREE.PointLight('#ffd49a', 0, 11, 1.6);
   light.position.y = 0.45;
   light.userData.on = 9;
@@ -89,6 +95,7 @@ export const CASE01: CaseData = {
       name: 'ルオー',
       color: '#a07a18',
       height: 1.42,
+      artFacing: -1,
       defaultExpression: '通常',
       expressions: { 通常: 'luwoh_01_normal', 構え: 'luwoh_02_light_guard_pose', 驚き: 'luwoh_03_surprised', 説明: 'luwoh_04_pointing_explaining', 考え: 'luwoh_05_thinking' },
     },

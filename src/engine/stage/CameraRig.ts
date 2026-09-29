@@ -20,6 +20,16 @@ export class CameraRig {
   private shakeAmp = 0;
   /** 焦点を合わせたい点（無ければ look） */
   focusPoint: THREE.Vector3 | null = null;
+  private orbitState: {
+    t: number;
+    seconds: number;
+    radius: number;
+    height: number;
+    start: number;
+    r0: number;
+    h0: number;
+    done: () => void;
+  } | null = null;
 
   static readonly DEFAULT_OFFSET = new THREE.Vector3(0, 2.05, 8.4);
 
@@ -45,6 +55,45 @@ export class CameraRig {
     this.goalFov = fov;
   }
 
+  /**
+   * 注視点を中心にカメラを水平に1周させる。紙の舞台が真横から薄く見えたり裏返ったりして、
+   * 立体の物と2Dの紙が同じ空間にあることが伝わる。
+   */
+  orbit(center: THREE.Vector3, radius: number, height: number, seconds: number): Promise<void> {
+    this.follow = null;
+    this.goalLook.copy(center);
+    this.orbitState?.done();
+    return new Promise((done) => {
+      this.orbitState = {
+        t: 0,
+        seconds,
+        radius,
+        height,
+        start: Math.atan2(this.offset.x, this.offset.z),
+        r0: Math.hypot(this.offset.x, this.offset.z),
+        h0: this.offset.y,
+        done,
+      };
+    });
+  }
+
+  private updateOrbit(dt: number): void {
+    const o = this.orbitState!;
+    o.t += dt;
+    const k = Math.min(1, o.t / o.seconds);
+    const e = 0.5 - Math.cos(k * Math.PI) / 2;
+    // 距離と高さは最初の2割で目標へ寄せ、角度は1周させる
+    const m = Math.min(1, k * 5);
+    const r = o.r0 + (o.radius - o.r0) * m;
+    const a = o.start + e * Math.PI * 2;
+    this.goalOffset.set(Math.sin(a) * r, o.h0 + (o.height - o.h0) * m, Math.cos(a) * r);
+    this.offset.copy(this.goalOffset);
+    if (k >= 1) {
+      this.orbitState = null;
+      o.done();
+    }
+  }
+
   snap(): void {
     this.update(0, true);
   }
@@ -68,7 +117,8 @@ export class CameraRig {
     }
     const k = instant ? 1 : 1 - Math.exp(-this.stiffness * dt);
     this.look.lerp(this.goalLook, k);
-    this.offset.lerp(this.goalOffset, k);
+    if (this.orbitState) this.updateOrbit(dt);
+    else this.offset.lerp(this.goalOffset, k);
     this.camera.fov += (this.goalFov - this.camera.fov) * k;
     this.camera.updateProjectionMatrix();
     this.apply();

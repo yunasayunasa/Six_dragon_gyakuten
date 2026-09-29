@@ -18,6 +18,8 @@ export interface PortraitData {
   width: number;
   height: number;
   base: string;
+  /** 元の絵が向いている方向（1=右 -1=左）。画面の内側を向くように左右反転する */
+  artFacing: 1 | -1;
   eyes: Partial<Record<'open' | 'half' | 'closed', PortraitPart>>;
   mouth: Partial<Record<'open' | 'half' | 'closed', PortraitPart>>;
 }
@@ -36,7 +38,7 @@ export class PortraitSlot {
   private blinkClock = 0;
   private mouthClock = 0;
 
-  constructor(parent: HTMLElement, before: HTMLElement, side: PortraitSide) {
+  constructor(parent: HTMLElement, before: HTMLElement, private side: PortraitSide) {
     this.root = document.createElement('div');
     this.root.className = `portrait ${side} hidden`;
     parent.insertBefore(this.root, before);
@@ -49,6 +51,8 @@ export class PortraitSlot {
     const fig = document.createElement('div');
     fig.className = 'fig';
     fig.style.aspectRatio = `${data.width} / ${data.height}`;
+    // 左の枠は右向き、右の枠は左向きにそろえる
+    if (data.artFacing !== (this.side === 'left' ? 1 : -1)) fig.style.transform = 'scaleX(-1)';
     const img = (url: string, p?: PortraitPart) => {
       const i = document.createElement('img');
       i.src = url;

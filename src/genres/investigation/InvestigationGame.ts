@@ -185,6 +185,7 @@ export class InvestigationGame implements Mode {
       width: info.width,
       height: info.height,
       base: url('base.webp'),
+      artFacing: actor.def.artFacing ?? 1,
       eyes: pick({ open: part('eye_open'), half: part('eye_half'), closed: part('eye_closed') }),
       mouth: pick({ open: part('mouth_open'), half: part('mouth_half'), closed: part('mouth_closed') }),
     };

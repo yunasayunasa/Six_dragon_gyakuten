@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Assets } from './Assets';
 import { Input } from './Input';
 import { Tweens } from './tween';
+import { gameSize, updateRotation } from './screen';
 import { PostFX } from '../render/PostFX';
 import { pickQuality, type QualityProfile } from '../render/quality';
 import { CameraRig } from '../stage/CameraRig';
@@ -54,7 +55,7 @@ export class Engine {
     container.appendChild(this.renderer.domElement);
     this.assets.maxAnisotropy = Math.min(4, this.renderer.capabilities.getMaxAnisotropy());
     this.post = new PostFX(this.renderer, this.quality);
-    this.rig = new CameraRig(innerWidth / innerHeight);
+    this.rig = new CameraRig(16 / 9); // 実際の縦横比は resize() で決まる
     this.stage = new Stage(this.assets, this.tweens, this.post, this.quality);
     this.hud = new Hud(this.input, this.sound);
     if (new URLSearchParams(location.search).has('stats')) {
@@ -70,8 +71,8 @@ export class Engine {
   }
 
   private resize = () => {
-    const w = innerWidth;
-    const h = innerHeight;
+    updateRotation();
+    const { w, h } = gameSize();
     const dpr = Math.min(devicePixelRatio || 1, this.quality.dprCap);
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
