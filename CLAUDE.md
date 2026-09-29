@@ -22,18 +22,25 @@
 - 素材: `コウセイ\総合アセット` と GitHub 上の素材を使ってよい。キャラ・名前・ロゴなど他社作品（逆転裁判のCapcom等）に似せない。
 - 台本はテスト用なのでAIに任せてよい。画質・動作目標は「iPhone Safari 横画面 30fps以上、PC 60fps」。
 
-## 現在の状態（2026-09-29）
+## 現在の状態（2026-09-29 夜・Cowork から Claude Code へ引き継ぎ）
 - エンジン v0.1 と第一話デモ「夕凪の空港と消えた灯晶」が完成。`npm run verify`（型・テスト41件・ビルド）通過。
 - ヘッドレスChromiumで PC(1100×520) とスマホ横(844×390) の両方で最初から解決まで通し確認済み。
+- **GitHub**: `paper-stage` ブランチへ push 済み（ユーザーのPCから）。
+- **公開は未完了**: GitHub Actions「PaperStage Pages」の build は成功するが、deploy が
+  `Branch "paper-stage" is not allowed to deploy to github-pages due to environment protection rules.` で失敗。
+  → Settings → Environments → github-pages → Deployment branches に `paper-stage` を追加し、失敗した実行を Re-run すれば公開される。
+  **リポジトリ設定の変更なので、実行前にユーザーの明示的な許可を取ること**（まだ許可は出ていない）。
+  公開URLは今も旧 threejs-ab 版のまま。公開後はスマホで確認してもらう。
 - **未確認**: iPhone実機の性能/操作感、筆文字フォント（検証環境ではGoogle Fontsが読めない）、BGMの中身（未試聴）。
-- **未完了**: GitHub への push。Cowork のクラウド環境からは GitHub への書き込みが通信制限で拒否された。
-  PCで次を実行すれば反映できる（bundle はコウセイ直下に置いてある）:
-  ```powershell
-  cd "$HOME\Desktop\コウセイ\Six_dragon_gyakuten"
-  git fetch ..\paper-stage.bundle paper-stage:paper-stage
-  git push -u origin paper-stage
-  ```
-  Pages の公開でブランチ制限に当たったら Settings → Environments → github-pages で `paper-stage` を許可。
+- PC のコウセイ直下に作業用の一時ファイルが残っている（`paper-stage.bundle`・`paper-stage2.bundle`・`push-paper-stage*.bat`・`push-result.txt`）。push 済みなので不要。消すかはユーザーに確認。
+
+## Obsidian Vault（長期知識）
+- 場所: `C:\Users\guestuser\Documents\Obsidian-Codex-Vault`（index/current/evidence/archive/review-queue 構成。Inbox, knowledge, projects, rules など）
+- 読む順: リポジトリの案内 → Vault の `AGENTS.md` → `projects/<name>/index.md` → `current.md`。**Vault 全体は一括で読まない**。必要なものだけキーワード検索して読む。
+- 新しい知見はまず Inbox へ。共通知識への自動昇格は禁止。秘密情報は書かない。
+- Cowork 側では Vault をまだ一度も読めていない（フォルダ許可前に引き継ぎになった）。
+- グローバル指示の下書きをコウセイ直下 `グローバルCLAUDE.md` に置いた。ユーザーが `C:\Users\guestuser\.claude\CLAUDE.md` へコピーする想定。
+  Vault の実際の `AGENTS.md` と食い違いがないか、最初に確認して直すこと。
 
 ## 次にやること（ユーザーの定義に対して薄いところ）
 1. 3Dパーティクル/エフェクトの充実（灯晶点灯、叫び・証拠提示の見せ場、足元の水しぶき・紙吹雪など空間が反応する演出）
