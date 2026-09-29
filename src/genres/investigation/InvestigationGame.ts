@@ -1,0 +1,442 @@
+import * as THREE from 'three';
+import { Director, Ease, PaperActor, CameraRig, type CastManifest, type Engine, type Mode } from '../../engine';
+import { registerStageCommands, actorShot, twoShot } from '../../engine/script/stageCommands';
+import { tagTexture } from '../../engine/paper/textures';
+import { CaseState, Confrontation, evaluateLogic } from './CaseState';
+import { TestimonyPanel } from './TestimonyPanel';
+import type { CaseData, HotspotDef } from './types';
+
+/** このジャンルが台本に追加する命令 */
+export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront'] as const;
+
+type Phase = 'loading' | 'script' | 'explore' | 'done';
+
+const WALK_SPEED = 2.9;
+const PLAYER_RADIUS = 0.3;
+
+/**
+ * 逆転検事風ジャンルの実行部。
+ * 捜査（歩いて調べる）→ ロジック（手がかりをつなぐ）→ 対決（証言に証拠をぶつける）を1本の流れにする。
+ * 事件の中身は CaseData（データ）として外から渡す。
+ */
+export class InvestigationGame implements Mode {
+  readonly state: CaseState;
+  readonly director: Director;
+  phase: Phase = 'loading';
+  player!: PaperActor;
+  private engine!: Engine;
+  private markers = new Map<string, THREE.Sprite>();
+  private near: HotspotDef | null = null;
+  private autoCamera = true;
+  private stepClock = 0;
+  private testimony!: TestimonyPanel;
+  private logicChip!: HTMLElement;
+  /** 対決中の状態（自動確認用に公開） */
+  confrontation: Confrontation | null = null;
+  private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), seen: tagTexture('・', '#8a7a6a') };
+  /** テストや自動確認から進行を観察するためのログ */
+  readonly log: string[] = [];
+
+  constructor(readonly data: CaseData) {
+    this.state = new CaseState(data);
+    this.director = new Director({ say: (s, e, t) => this.say(s, e, t) });
+  }
+
+  // ---------- 準備 ----------
+  async enter(engine: Engine): Promise<void> {
+    this.engine = engine;
+    this.registerCommands();
+    await this.build();
+    this.testimony = new TestimonyPanel(engine.hud.root);
+    this.logicChip = document.createElement('div');
+    this.logicChip.className = 'chip washi hidden';
+    this.logicChip.textContent = 'ロジック';
+    this.logicChip.addEventListener('click', () => {
+      if (this.phase === 'explore') void this.runLogic();
+    });
+    engine.hud.topbar.insertBefore(this.logicChip, engine.hud.bookButton);
+    engine.hud.bookButton.classList.remove('hidden');
+    engine.hud.bookButton.addEventListener('click', () => {
+      if (this.phase === 'explore') void this.openBook();
+    });
+  }
+
+  private async build(): Promise<void> {
+    const { engine, data } = this;
+    const st = engine.stage;
+    const sc = data.scene;
+    const manifest = await engine.assets.getJSON<CastManifest>('cast/manifest.json');
+    await Promise.all([
+      st.setBackdrop(sc.backdrop.image, sc.backdrop),
+      st.addFloor(sc.floor.image, sc.floor),
+      ...sc.props.map((p) => st.addProp(p)),
+    ]);
+    await sc.set?.(engine);
+    const actors = await Promise.all(data.cast.map((def) => PaperActor.load(def, manifest, engine.assets)));
+    for (const a of actors) {
+      const pl = data.placement.find((p) => p.id === a.def.id);
+      st.addActor(a, pl?.x ?? 0, pl?.z ?? 0, pl?.facing ?? 1);
+    }
+    this.player = st.actor(data.player);
+    engine.player = this.player;
+    engine.rig.bounds = sc.cameraBounds;
+    for (const h of data.hotspots) {
+      const mat = new THREE.SpriteMaterial({ map: h.actor ? this.tagTex.talk : this.tagTex.look, depthWrite: false, transparent: true, fog: false });
+      const s = new THREE.Sprite(mat);
+      s.scale.setScalar(0.42);
+      const actor = h.actor ? st.actor(h.actor) : null;
+      s.position.set(h.x, h.markHeight ?? (actor ? actor.def.height + 0.35 : 1.3), h.z);
+      s.renderOrder = 5;
+      st.scene.add(s);
+      this.markers.set(h.id, s);
+    }
+    st.addMotes(new THREE.Box3(new THREE.Vector3(-14, 0.2, -3), new THREE.Vector3(14, 4.5, 4)));
+    engine.onFrame.add((dt) => this.animateMarkers(dt));
+  }
+
+  private registerCommands(): void {
+    const d = this.director;
+    registerStageCommands(d, {
+      engine: this.engine,
+      actor: (name) => this.findActor(name),
+      resetCamera: () => this.followCamera(),
+      setAutoCamera: (on) => (this.autoCamera = on),
+    });
+    // 証拠・手がかりを渡す
+    d.register('give', async (args) => {
+      for (const id of args) {
+        if (!this.state.give(id)) continue;
+        this.log.push(`give:${id}`);
+        const ev = this.data.evidence.find((e) => e.id === id);
+        if (ev) {
+          this.engine.hud.hideDialogue();
+          this.engine.stage.burst.fire(this.player.headPosition());
+          await this.engine.hud.itemGet({ ...ev, image: this.engine.assets.url(ev.image) });
+        } else {
+          const c = this.data.clues.find((x) => x.id === id)!;
+          this.engine.sound.play('select');
+          this.engine.hud.hideDialogue();
+          await this.engine.hud.itemGet({ id, name: c.name, desc: c.desc, image: this.engine.assets.url('props/sign_hanging_small.webp') }, '手がかりを書き留めた');
+        }
+      }
+      this.refreshGoal();
+    });
+    d.register('flag', (args) => {
+      args.forEach((f) => this.state.flags.add(f));
+      this.refreshGoal();
+    });
+    // 灯り（舞台の名前付き光源）をつける/消す
+    d.register('light', async (args) => {
+      const obj = this.engine.stage.named.get(args[0]);
+      const on = args[1] !== '消す' && args[1] !== 'off';
+      const light = obj?.getObjectByProperty('isPointLight', true) as THREE.PointLight | undefined;
+      if (!obj || !light) return;
+      const glow = obj.getObjectByName('glow');
+      const target = on ? Number(light.userData.on ?? 6) : 0;
+      const from = light.intensity;
+      obj.visible = true;
+      await this.engine.tweens.run(1.2, (k) => {
+        light.intensity = from + (target - from) * k;
+        if (glow) glow.scale.setScalar((on ? k : 1 - k) * 2.2 + 0.001);
+      }, Ease.outCubic, light);
+    });
+    d.register('confront', () => this.runConfrontation());
+    for (const c of INVESTIGATION_COMMANDS) if (!d.has(c)) throw new Error(`命令の登録漏れ: ${c}`);
+  }
+
+  private findActor(name: string): PaperActor | null {
+    const st = this.engine.stage;
+    if (st.actors.has(name)) return st.actors.get(name)!;
+    for (const a of st.actors.values()) if (a.def.name === name) return a;
+    return null;
+  }
+
+  // ---------- 会話 ----------
+  private async say(speaker: string | null, expr: string | null, text: string): Promise<void> {
+    const actor = speaker ? this.findActor(speaker) : null;
+    if (actor && expr) actor.setExpression(expr, false, this.engine.tweens);
+    if (actor && this.autoCamera) {
+      // 話し手と主人公が離れていなければ2人を収める
+      if (actor !== this.player && actor.position.distanceTo(this.player.position) < 3.6) twoShot(this.engine.rig, this.player, actor);
+      else actorShot(this.engine.rig, actor);
+    }
+    this.log.push(`say:${speaker ?? ''}:${text.slice(0, 12)}`);
+    await this.engine.hud.say(actor?.def.name ?? speaker, actor?.def.color, text, (t) => {
+      if (actor) actor.talking = t;
+    });
+  }
+
+  /** 台本を流す間は操作を止める */
+  async runScript(source: string): Promise<void> {
+    const prev = this.phase;
+    this.phase = 'script';
+    this.engine.hud.showTouch(false);
+    this.engine.hud.setPrompt(null);
+    this.player.setWalking(0);
+    try {
+      await this.director.play(source);
+    } finally {
+      this.engine.hud.hideDialogue();
+      if (prev !== 'done' && this.phase === 'script') this.phase = prev === 'loading' ? 'explore' : prev;
+    }
+  }
+
+  // ---------- 流れ ----------
+  async start(): Promise<void> {
+    this.followCamera();
+    this.engine.rig.snap();
+    await this.runScript(this.data.intro);
+    this.beginExplore();
+  }
+
+  private beginExplore(): void {
+    this.phase = 'explore';
+    this.autoCamera = true;
+    this.followCamera();
+    this.engine.hud.showTouch(true);
+    this.refreshGoal();
+  }
+
+  private followCamera(): void {
+    this.engine.rig.followTarget(this.player, CameraRig.DEFAULT_OFFSET, 1.1, 32);
+  }
+
+  private refreshGoal(): void {
+    this.engine.hud.setGoal(this.state.goal());
+    const ready = this.state.check(this.data.readyForLogic.when);
+    this.logicChip?.classList.toggle('hidden', !ready || this.state.flags.has(this.data.logic.pairs[0].flag));
+  }
+
+  private async openBook(): Promise<void> {
+    const items = this.state.evidence.map((id) => {
+      const e = this.data.evidence.find((x) => x.id === id)!;
+      return { ...e, image: this.engine.assets.url(e.image) };
+    });
+    const clues = this.state.clues.map((id) => {
+      const c = this.data.clues.find((x) => x.id === id)!;
+      return { ...c, image: this.engine.assets.url('props/sign_hanging_small.webp') };
+    });
+    this.engine.hud.showTouch(false);
+    await this.engine.hud.openBook([...items, ...clues], 'view');
+    if (this.phase === 'explore') this.engine.hud.showTouch(true);
+  }
+
+  private async interact(h: HotspotDef): Promise<void> {
+    const seen = this.state.seen.has(h.id);
+    this.state.seen.add(h.id);
+    this.log.push(`examine:${h.id}`);
+    const actor = h.actor ? this.findActor(h.actor) : null;
+    if (actor) {
+      void actor.face(this.player.position.x >= actor.position.x ? 1 : -1, this.engine.tweens);
+      void this.player.face(actor.position.x >= this.player.position.x ? 1 : -1, this.engine.tweens);
+    } else {
+      void this.player.face(h.x >= this.player.position.x ? 1 : -1, this.engine.tweens);
+    }
+    const variant = h.variants?.find((v) => this.state.check(v.when));
+    const src = variant ? variant.script : seen && h.again ? h.again : h.script;
+    this.engine.sound.play('select');
+    await this.runScript(src);
+    if (this.phase === 'done') return;
+    // 証拠がそろったら頭の中を整理（ロジック）
+    const ready = this.state.check(this.data.readyForLogic.when);
+    if (ready && !this.state.flags.has('logic_prompted')) {
+      this.state.flags.add('logic_prompted');
+      await this.runScript(this.data.readyForLogic.script);
+      await this.runLogic();
+    }
+    if (this.phase === 'explore' || this.phase === 'script') this.beginExplore();
+  }
+
+  async runLogic(): Promise<void> {
+    const L = this.data.logic;
+    if (this.state.flags.has(L.pairs[0].flag)) return;
+    this.phase = 'script';
+    this.engine.hud.showTouch(false);
+    this.engine.hud.setPrompt(null);
+    await this.engine.stage.setLook('confront', 0.6);
+    const clues = L.clues
+      .filter((id) => this.state.evidence.includes(id) || this.state.clues.includes(id))
+      .map((id) => this.data.evidence.find((e) => e.id === id) ?? this.data.clues.find((c) => c.id === id)!)
+      .map((c) => ({ id: c.id, name: c.name, desc: c.desc }));
+    for (;;) {
+      const pick = await this.engine.hud.logic(clues, L.title, L.hint);
+      if (!pick) break;
+      const hit = evaluateLogic(this.data, pick[0], pick[1]);
+      if (hit) {
+        this.log.push(`logic:${hit.flag}`);
+        this.state.flags.add(hit.flag);
+        this.engine.sound.play('reveal');
+        await this.engine.stage.setLook('sunset', 0.8);
+        await this.runScript(hit.script);
+        break;
+      }
+      this.engine.sound.play('wrong');
+      await this.runScript(L.miss);
+    }
+    await this.engine.stage.setLook('sunset', 0.6);
+    this.refreshGoal();
+    this.phase = 'explore';
+  }
+
+  async runConfrontation(): Promise<void> {
+    const def = this.data.confrontation;
+    const hud = this.engine.hud;
+    const witness = this.findActor(def.witness)!;
+    const c = (this.confrontation = new Confrontation(def));
+    this.phase = 'script';
+    hud.showTouch(false);
+    hud.setGoal(null);
+    hud.bookButton.classList.add('hidden');
+    this.log.push('confront:start');
+    // 向かい合う立ち位置へ
+    const side = witness.position.x >= this.player.position.x ? 1 : -1;
+    const standX = witness.position.x - side * 2.4;
+    await this.director.play(`@移動 ${this.player.def.id} ${standX.toFixed(2)} ${witness.position.z.toFixed(2)}`);
+    await Promise.all([this.player.face(side as 1 | -1, this.engine.tweens), witness.face((-side) as 1 | -1, this.engine.tweens)]);
+    await this.engine.stage.setLook('confront', 1);
+    hud.setTalismans(def.talismans, c.talismans);
+    await this.runScript(def.intro);
+    await hud.card(def.title, '証言開始', '◀▶で証言を切り替え、矛盾に証拠を示そう');
+    for (;;) {
+      // 証言パネルが画面下半分を使うので、証人は上寄りに映す
+      this.engine.rig.shot(witness.position.clone().add(new THREE.Vector3(0, -0.15, 0)), new THREE.Vector3(0.3 * witness.facing, 1.15, 5.6), 30);
+      witness.talking = true;
+      setTimeout(() => (witness.talking = false), 900);
+      this.testimony.show(`${witness.def.name}の証言`, c.statement.text, c.index, def.statements.length);
+      const a = await this.testimony.wait();
+      if (a === 'next' || a === 'prev') {
+        this.engine.sound.play('select');
+        if (a === 'next') c.next();
+        else c.prev();
+        continue;
+      }
+      this.testimony.hide();
+      if (a === 'press') {
+        c.pressed.add(c.index);
+        this.log.push(`press:${c.index}`);
+        await this.runScript(`@叫び 待った！\n${c.statement.press}`);
+        continue;
+      }
+      const items = this.state.evidence.map((id) => {
+        const e = this.data.evidence.find((x) => x.id === id)!;
+        return { ...e, image: this.engine.assets.url(e.image) };
+      });
+      const chosen = await hud.openBook(items, 'present');
+      if (!chosen) continue;
+      const result = c.present(chosen);
+      this.log.push(`present:${c.index}:${chosen}:${result}`);
+      await hud.shout('これを見ろ！');
+      if (result === 'correct') {
+        await this.runScript(def.success);
+        break;
+      }
+      this.engine.sound.play('wrong');
+      hud.setTalismans(def.talismans, c.talismans);
+      await this.runScript(def.wrong);
+      if (c.lost) {
+        await this.runScript(def.fail);
+        c.reset();
+        hud.setTalismans(def.talismans, c.talismans);
+        await hud.card(def.title, 'もう一度', '証言をよく聞き直そう');
+      }
+    }
+    hud.setTalismans(0, 0);
+    this.testimony.hide();
+    this.state.flags.add('solved');
+    this.log.push('confront:solved');
+    await this.runScript(this.data.ending);
+    this.phase = 'done';
+    this.markers.forEach((m) => (m.visible = false));
+    await hud.card('事件解決', this.data.chapter, 'タップでもう一度はじめから');
+    location.reload();
+  }
+
+  // ---------- 毎フレーム ----------
+  update(dt: number, engine: Engine): void {
+    if (this.phase !== 'explore') {
+      this.player?.setWalking(0);
+      return;
+    }
+    const inp = engine.input;
+    const p = this.player;
+    const mv = inp.move;
+    const moving = Math.hypot(mv.x, mv.y) > 0.05;
+    if (moving) {
+      const nx = p.position.x + mv.x * WALK_SPEED * dt;
+      const nz = p.position.z + mv.y * WALK_SPEED * 0.8 * dt;
+      const pos = this.resolveCollision(nx, nz);
+      p.position.x = pos.x;
+      p.position.z = pos.y;
+      if (Math.abs(mv.x) > 0.2) void p.face(mv.x > 0 ? 1 : -1, engine.tweens);
+      this.stepClock -= dt;
+      if (this.stepClock <= 0) {
+        this.stepClock = 0.34;
+        engine.sound.play('step');
+      }
+    }
+    p.setWalking(moving ? Math.min(1, Math.hypot(mv.x, mv.y) * 1.2) : 0);
+    engine.stage.centerShadow(p.position.x);
+
+    // 近くの調べられる所
+    let best: HotspotDef | null = null;
+    let bestD = Infinity;
+    for (const h of this.data.hotspots) {
+      const d = Math.hypot(h.x - p.position.x, h.z - p.position.z);
+      if (d < h.radius && d < bestD) {
+        best = h;
+        bestD = d;
+      }
+    }
+    if (best !== this.near) {
+      this.near = best;
+      engine.hud.setPrompt(best ? best.label : null);
+    }
+    if (inp.consume('menu')) {
+      void this.openBook();
+      return;
+    }
+    if (this.near && inp.consume('confirm')) {
+      const h = this.near;
+      this.near = null;
+      void this.interact(h);
+    }
+  }
+
+  private resolveCollision(x: number, z: number): THREE.Vector2 {
+    const w = this.data.scene.walk;
+    const v = new THREE.Vector2(THREE.MathUtils.clamp(x, w.minX, w.maxX), THREE.MathUtils.clamp(z, w.minZ, w.maxZ));
+    const push = (cx: number, cz: number, r: number) => {
+      const dx = v.x - cx;
+      const dz = v.y - cz;
+      const d = Math.hypot(dx, dz);
+      const min = r + PLAYER_RADIUS;
+      if (d < min && d > 1e-4) {
+        v.x = cx + (dx / d) * min;
+        v.y = cz + (dz / d) * min;
+      }
+    };
+    for (const o of this.data.scene.obstacles) push(o.x, o.z, o.r);
+    for (const a of this.engine.stage.actors.values()) if (a !== this.player && a.visible) push(a.position.x, a.position.z, 0.32);
+    return v;
+  }
+
+  private markerTime = 0;
+  private animateMarkers(dt: number): void {
+    this.markerTime += dt;
+    for (const h of this.data.hotspots) {
+      const m = this.markers.get(h.id)!;
+      const seen = this.state.seen.has(h.id);
+      const mat = m.material as THREE.SpriteMaterial;
+      const want = seen ? this.tagTex.seen : h.actor ? this.tagTex.talk : this.tagTex.look;
+      if (mat.map !== want) {
+        mat.map = want;
+        mat.needsUpdate = true;
+      }
+      const base = h.markHeight ?? (h.actor ? (this.findActor(h.actor)?.def.height ?? 1) + 0.35 : 1.3);
+      m.position.y = base + Math.sin(this.markerTime * 2.4 + h.x) * 0.06;
+      const isNear = this.near === h && this.phase === 'explore';
+      m.scale.setScalar(isNear ? 0.52 : seen ? 0.26 : 0.4);
+      m.visible = this.phase === 'explore';
+    }
+  }
+}

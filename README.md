@@ -1,0 +1,55 @@
+# PaperStage（ペーパーステージ）
+
+紙の切り抜き（ペーパーマリオ風）× HD-2Dのリッチな光とボケで、いろいろなジャンルを作るためのブラウザ用ゲームエンジンです。
+最初のジャンルとして **逆転検事風（捜査 → ロジック → 対決）** を実装し、1話ぶんのデモ事件で一周遊べます。
+
+- 公開URL: https://yunasayunasa.github.io/Six_dragon_gyakuten/
+- ブランチ: `paper-stage`（既存の履歴を持たない新しいブランチ。既存の Six_dragon / threejs-ab のコードは参照していません）
+- 技術: Three.js 0.186.1 / TypeScript / Vite 8（すべてバージョン固定）
+
+## 遊び方（デモ「夕凪の空港と消えた灯晶」）
+
+| 操作 | PC | スマホ（横向き） |
+|---|---|---|
+| 移動 | 矢印 / WASD | 画面左半分をドラッグ（どこでもスティック） |
+| 調べる・話す・会話送り | Enter / Space / Z / E | 「調べる」ボタン・会話ウィンドウをタップ |
+| 証拠品ファイル | C / Tab | 「証拠」ボタン・右上「証拠品」 |
+| 証言の切り替え（対決） | 画面の ◀ ▶ | 同左 |
+
+1. 桟橋を歩いて「！」（調べる）と「話」（話しかける）を回り、証拠を集める
+2. 証拠がそろうと「ロジック」。関係のある手がかりを2つつなげる
+3. ワムデュスと対決。証言を ◀▶ で切り替え、「問いただす」で揺さぶり、矛盾に「証拠を示す」
+4. 間違えると右上の「信」札が減る。0 になると証言を最初から聞き直し
+
+URLの後ろに `?q=low` / `?q=medium` / `?q=high` を付けると画質を固定、`?stats` でFPS等を表示します（スマホの既定は medium）。
+
+## 開発
+
+```sh
+npm ci
+npm run dev       # 開発サーバー（同じWi-Fiのスマホからも開ける）
+npm run verify    # 型チェック + テスト + 本番ビルド
+```
+
+`paper-stage` ブランチへ push すると GitHub Actions が verify → GitHub Pages 公開まで自動で行います（`.github/workflows/pages.yml`）。
+
+## フォルダ構成
+
+```
+src/engine/          ジャンルに依存しないエンジン本体
+  core/              Engine（ループ・一時停止）、入力、Tween、読み込み
+  render/            画質プロファイル、後処理（被写界深度・色調・周辺減光・紙の粒子感）
+  paper/             紙の切り抜き（PaperSprite）、紙の役者（PaperActor：まばたき・口パク・紙の歩き・振り向き）
+  stage/             舞台（光・空・霧・床・小物）、見た目プリセット（Look）、カメラ、粒子
+  script/            台本の読み取りと実行（Director）、共通の演出命令
+  audio/             効果音（合成）とBGM
+  ui/                和紙と墨のUI（会話・叫び・字幕・選択肢・アイテム一覧・タッチ操作）
+src/genres/          ジャンルごとの遊び方（エンジンの上に載る）
+  investigation/     逆転検事風：捜査・ロジック・対決
+src/game/case01/     デモ事件のデータと台本
+public/assets/       ゲームで使う素材（tools/prepare_assets.py で生成）
+tests/               単体テストと事件データの検査
+docs/                設計（ARCHITECTURE.md）、台本の書き方（SCRIPT.md）、素材（ASSETS.md）
+```
+
+詳しくは [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) と [docs/SCRIPT.md](docs/SCRIPT.md) を参照してください。
