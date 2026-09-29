@@ -22,25 +22,30 @@
 - 素材: `コウセイ\総合アセット` と GitHub 上の素材を使ってよい。キャラ・名前・ロゴなど他社作品（逆転裁判のCapcom等）に似せない。
 - 台本はテスト用なのでAIに任せてよい。画質・動作目標は「iPhone Safari 横画面 30fps以上、PC 60fps」。
 
-## 現在の状態（2026-09-29 夜・Cowork から Claude Code へ引き継ぎ）
+## 現在の状態（2026-09-29 夜・Claude Code で更新）
 - エンジン v0.1 と第一話デモ「夕凪の空港と消えた灯晶」が完成。`npm run verify`（型・テスト41件・ビルド）通過。
-- ヘッドレスChromiumで PC(1100×520) とスマホ横(844×390) の両方で最初から解決まで通し確認済み。
-- **GitHub**: `paper-stage` ブランチへ push 済み（ユーザーのPCから）。
-- **公開は未完了**: GitHub Actions「PaperStage Pages」の build は成功するが、deploy が
-  `Branch "paper-stage" is not allowed to deploy to github-pages due to environment protection rules.` で失敗。
-  → Settings → Environments → github-pages → Deployment branches に `paper-stage` を追加し、失敗した実行を Re-run すれば公開される。
-  **リポジトリ設定の変更なので、実行前にユーザーの明示的な許可を取ること**（まだ許可は出ていない）。
-  公開URLは今も旧 threejs-ab 版のまま。公開後はスマホで確認してもらう。
-- **未確認**: iPhone実機の性能/操作感、筆文字フォント（検証環境ではGoogle Fontsが読めない）、BGMの中身（未試聴）。
-- PC のコウセイ直下に作業用の一時ファイルが残っている（`paper-stage.bundle`・`paper-stage2.bundle`・`push-paper-stage*.bat`・`push-result.txt`）。push 済みなので不要。消すかはユーザーに確認。
+- **公開済み**: https://yunasayunasa.github.io/Six_dragon_gyakuten/ は `paper-stage` 版。push すると GitHub Actions「PaperStage Pages」で自動公開される
+  （github-pages 環境の Deployment branches に `paper-stage` をユーザーが追加済み）。
+- ユーザーが iPhone 実機（Safari・横画面）で確認し、出来に満足している。キャラクターの整合性や感想をユーザーがまとめ中（次の指示待ち）。
+- 実機確認で直した不具合:
+  - 透明な暗転幕 `.fader`（と `.shout`）が全タップを奪い、タイトル後の会話が進まなかった。
+    原因は `#hud > *` の詳細度が `pointer-events: none` を上書きしていたこと → `:where(#hud) > *` に変更。
+    **HUD 直下に全面の要素を足すときは pointer-events に注意**。
+  - 会話中は会話枠の外（舞台 `#app`）をタップしても送れるようにした（`Hud.ts`）。
+- iPhone Safari は Fullscreen API 非対応のため、`public/manifest.webmanifest`（display: fullscreen / landscape）と iOS 用 meta を追加。
+  「共有 → ホーム画面に追加」から起動するとアドレスバーなしの全画面になる。ホーム画面用アイコン画像は未作成。
+- タッチ操作の確認は playwright-core（Edge を executablePath に指定、`devices['iPhone 13 landscape']`）で `touchscreen.tap` するのが有効。
+  `game.log` と `document.elementFromPoint` で詰まりの原因を調べられる。
+- **未確認**: 筆文字フォントの実機表示、BGMの中身、ホーム画面起動時のセーフエリア（ノッチ側の欠け）、第一話の後半を実機で通したときの挙動。
+- `validation/` フォルダは旧ブランチの残り（未追跡）。paper-stage とは無関係なのでコミットしない。
 
 ## Obsidian Vault（長期知識）
 - 場所: `C:\Users\guestuser\Documents\Obsidian-Codex-Vault`（index/current/evidence/archive/review-queue 構成。Inbox, knowledge, projects, rules など）
 - 読む順: リポジトリの案内 → Vault の `AGENTS.md` → `projects/<name>/index.md` → `current.md`。**Vault 全体は一括で読まない**。必要なものだけキーワード検索して読む。
 - 新しい知見はまず Inbox へ。共通知識への自動昇格は禁止。秘密情報は書かない。
-- Cowork 側では Vault をまだ一度も読めていない（フォルダ許可前に引き継ぎになった）。
-- グローバル指示の下書きをコウセイ直下 `グローバルCLAUDE.md` に置いた。ユーザーが `C:\Users\guestuser\.claude\CLAUDE.md` へコピーする想定。
-  Vault の実際の `AGENTS.md` と食い違いがないか、最初に確認して直すこと。
+- Vault はまだ一度も読んでいない（Cowork・Claude Code とも未読）。
+- グローバル指示の下書きをコウセイ直下 `グローバルCLAUDE.md` に置いた。ユーザーが `C:\Users\guestuser\.claude\CLAUDE.md` へコピーする想定
+  （2026-09-29 時点でコピー済みの様子）。Vault の実際の `AGENTS.md` と食い違いがないかは未確認。
 
 ## 次にやること（ユーザーの定義に対して薄いところ）
 1. 3Dパーティクル/エフェクトの充実（灯晶点灯、叫び・証拠提示の見せ場、足元の水しぶき・紙吹雪など空間が反応する演出）
