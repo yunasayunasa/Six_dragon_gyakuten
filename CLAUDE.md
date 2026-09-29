@@ -26,7 +26,13 @@
 - エンジン v0.1 と第一話デモ「夕凪の空港と消えた灯晶」が完成。`npm run verify`（型・テスト41件・ビルド）通過。
 - **公開済み**: https://yunasayunasa.github.io/Six_dragon_gyakuten/ は `paper-stage` 版。push すると GitHub Actions「PaperStage Pages」で自動公開される
   （github-pages 環境の Deployment branches に `paper-stage` をユーザーが追加済み）。
-- ユーザーが iPhone 実機（Safari・横画面）で確認し、出来に満足している。キャラクターの整合性や感想をユーザーがまとめ中（次の指示待ち）。
+- ユーザーが iPhone 実機（Safari・横画面）で確認し、出来に満足している。
+- ユーザー所見（2026-09-29）を反映済み:
+  - キャラの口調を設定に合わせて台本を全面改稿（口調メモは `src/game/case01/scripts.ts` 冒頭）。会話量も増やした。
+  - 会話中は会話枠の後ろに立ち絵（`src/engine/ui/Portrait.ts`。主人公は左・相手は右、聞き手は暗く）。
+  - 開幕に舞台がパタパタ起き上がる演出（`@たたむ` → `@組み立て`、`Stage.assemble`）。
+  - ポスト処理に光のにじみ・光漏れ・端の色ずれを追加（DOFのぼかしを流用、Look の bloom / leak で調整）。
+  - 未対応: 話はまだ短い（新しい場面・事件の追加はユーザーと相談）。BGMはユーザーが別途用意。公開先は Discord（仲間内のみ）の予定。
 - 実機確認で直した不具合:
   - 透明な暗転幕 `.fader`（と `.shout`）が全タップを奪い、タイトル後の会話が進まなかった。
     原因は `#hud > *` の詳細度が `pointer-events: none` を上書きしていたこと → `:where(#hud) > *` に変更。

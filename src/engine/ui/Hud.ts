@@ -1,5 +1,6 @@
 import type { Input } from '../core/Input';
 import type { Sound } from '../audio/Sound';
+import { PortraitSlot, type PortraitData, type PortraitSide } from './Portrait';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', parent?: HTMLElement, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -48,6 +49,8 @@ export class Hud {
   onSpeakTick: (() => void) | null = null;
   bookButton: HTMLElement;
   soundButton: HTMLElement;
+  private portraits: Record<PortraitSide, PortraitSlot>;
+  private speaking: PortraitSide | null = null;
 
   constructor(private input: Input, private sound: Sound) {
     this.root = document.getElementById('hud')!;
@@ -74,6 +77,8 @@ export class Hud {
     this.dlgName = el('div', 'name', this.dlg);
     this.dlgText = el('div', 'text', this.dlg);
     el('div', 'next', this.dlg);
+    // 立ち絵は会話枠の後ろに置く
+    this.portraits = { left: new PortraitSlot(this.root, this.dlg, 'left'), right: new PortraitSlot(this.root, this.dlg, 'right') };
     this.dlg.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       this.sound.unlock();
@@ -189,11 +194,14 @@ export class Hud {
     this.dlgName.style.background = color ?? '';
     this.dlgText.textContent = '';
     this.input.clearPressed();
+    const slot = this.speaking ? this.portraits[this.speaking] : null;
     onTalk?.(true);
+    if (slot) slot.talking = true;
     await new Promise<void>((done) => {
       this.typing = { full: text, shown: 0, acc: 0, done };
     });
     onTalk?.(false);
+    if (slot) slot.talking = false;
     this.dlg.classList.add('done');
     await this.waitConfirm();
     this.sound.play('select');
@@ -201,6 +209,19 @@ export class Hud {
 
   hideDialogue(): void {
     this.dlg.classList.add('hidden');
+    this.portraits.left.hide();
+    this.portraits.right.hide();
+    this.speaking = null;
+  }
+
+  /**
+   * 次のセリフの話し手の立ち絵を出す。話し手は明るく、聞き手は暗くする。
+   * data が null（ナレーション）のときは、出ている立ち絵を両方とも暗くする。
+   */
+  setSpeaker(side: PortraitSide | null, data: PortraitData | null): void {
+    if (side && data) this.portraits[side].show(data);
+    this.speaking = side && data ? side : null;
+    for (const s of ['left', 'right'] as const) this.portraits[s].setActive(s === this.speaking);
   }
 
   async shout(word: string, color?: string): Promise<void> {
@@ -376,6 +397,8 @@ export class Hud {
 
   /** 毎フレーム呼ぶ。文字送りと決定入力を処理する。 */
   update(dt: number): void {
+    this.portraits.left.update(dt);
+    this.portraits.right.update(dt);
     if (this.bookKeys) {
       for (const a of ['left', 'right', 'cancel', 'menu', 'confirm'] as const) if (this.input.consume(a)) this.bookKeys?.(a);
       return;

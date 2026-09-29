@@ -30,6 +30,10 @@ export interface Look {
   drama: number;
   farBlur: number;
   nearBlur: number;
+  /** 光のにじみ 0..1 */
+  bloom: number;
+  /** 太陽側からの光漏れ 0..1（色は sunGlow） */
+  leak: number;
 }
 
 export const LOOKS: Record<string, Look> = {
@@ -57,6 +61,8 @@ export const LOOKS: Record<string, Look> = {
     drama: 0,
     farBlur: 0.6,
     nearBlur: 0.75,
+    bloom: 0.55,
+    leak: 0.32,
   },
   /** 対決。周りが暗く落ち、証人にスポットが当たる */
   confront: {
@@ -82,6 +88,8 @@ export const LOOKS: Record<string, Look> = {
     drama: 0.55,
     farBlur: 1,
     nearBlur: 0.8,
+    bloom: 0.35,
+    leak: 0.08,
   },
   /** 解決後。灯りがともった宵の口 */
   dusk: {
@@ -107,6 +115,8 @@ export const LOOKS: Record<string, Look> = {
     drama: 0,
     farBlur: 0.85,
     nearBlur: 0.7,
+    bloom: 0.75,
+    leak: 0.2,
   },
 };
 
@@ -118,7 +128,7 @@ export interface LookState {
 }
 
 const COLOR_KEYS = ['skyTop', 'skyHorizon', 'backdropTint', 'sunGlow', 'sunColor', 'hemiSky', 'hemiGround', 'fogColor', 'tint', 'shadowTint'] as const;
-const NUM_KEYS = ['sunIntensity', 'hemiIntensity', 'fogNear', 'fogFar', 'saturation', 'contrast', 'exposure', 'vignette', 'drama', 'farBlur', 'nearBlur'] as const;
+const NUM_KEYS = ['sunIntensity', 'hemiIntensity', 'fogNear', 'fogFar', 'saturation', 'contrast', 'exposure', 'vignette', 'drama', 'farBlur', 'nearBlur', 'bloom', 'leak'] as const;
 
 export function lookState(look: Look): LookState {
   const colors: Record<string, THREE.Color> = {};

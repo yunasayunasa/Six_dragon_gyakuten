@@ -3,7 +3,8 @@ import type { QualityProfile } from './quality';
 
 /**
  * 紙の舞台らしい画作りのための後処理。
- * 1) シーンを深度付きで描く  2) 縮小バッファで2回ぼかす  3) 深度から被写界深度を合成し、色調・周辺減光・紙の粒子感をかける
+ * 1) シーンを深度付きで描く  2) 縮小バッファで2回ぼかす
+ * 3) 深度から被写界深度を合成し、光のにじみ・光漏れ・色ずれ・色調・周辺減光・紙の粒子感をかける
  * 重いポスト処理（SSAO/SSR/ブルーム多段）は使わない。スマホでの負荷を抑える設計。
  */
 export interface GradeParams {
@@ -25,6 +26,14 @@ export interface GradeParams {
   /** 対決演出などで画面中央以外を暗く落とす量 */
   drama: number;
   grain: number;
+  /** 明るい所から光がにじむ量（被写界深度のぼかしを流用するので追加の描画は無い） */
+  bloom: number;
+  bloomThreshold: number;
+  /** 太陽側から差し込む光漏れ */
+  leak: number;
+  leakColor: THREE.Color;
+  /** 画面端の色ずれ（レンズ感） */
+  aberration: number;
 }
 
 export function defaultGrade(): GradeParams {
@@ -42,6 +51,11 @@ export function defaultGrade(): GradeParams {
     vignetteColor: new THREE.Color(0.1, 0.05, 0.08),
     drama: 0,
     grain: 0.035,
+    bloom: 0.5,
+    bloomThreshold: 0.68,
+    leak: 0.3,
+    leakColor: new THREE.Color(1, 0.8, 0.55),
+    aberration: 1,
   };
 }
 
@@ -87,6 +101,12 @@ uniform float uDrama;
 uniform float uGrain;
 uniform float uTime;
 uniform vec2 uResolution;
+uniform float uBloom;
+uniform float uBloomThr;
+uniform float uLeak;
+uniform vec3 uLeakColor;
+uniform vec2 uLeakPos;
+uniform float uAberration;
 varying vec2 vUv;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
@@ -94,6 +114,10 @@ float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.545
 void main() {
   vec4 sharp = texture2D(tColor, vUv);
   vec3 col = sharp.rgb;
+  // 画面端ほど赤と青をわずかにずらす（中央はそのまま）
+  vec2 ca = (vUv - 0.5) * dot(vUv - 0.5, vUv - 0.5) * 0.012 * uAberration;
+  col.r = texture2D(tColor, vUv - ca).r;
+  col.b = texture2D(tColor, vUv + ca).b;
   if (uDof > 0.5) {
     float d = texture2D(tDepth, vUv).x;
     float viewZ = -perspectiveDepthToViewZ(d, uNear, uFar);
@@ -103,7 +127,13 @@ void main() {
       : smoothstep(uRange * 0.6, uRange * 1.6 + 0.6, -diff) * uNearBlur;
     vec3 blurred = texture2D(tBlur, vUv).rgb;
     col = mix(col, blurred, clamp(coc, 0.0, 1.0));
+    // 光のにじみ：ぼかした画像の明るい部分だけを足す
+    vec3 glow = max(blurred - uBloomThr, 0.0);
+    col += glow * glow * 2.5 * uBloom + glow * 0.6 * uBloom;
   }
+  // 光漏れ：太陽のある側の上から、やわらかい光が差し込む
+  vec2 lp = (vUv - uLeakPos) * vec2(uResolution.x / uResolution.y, 1.0);
+  col += uLeakColor * uLeak * pow(max(0.0, 1.0 - length(lp) * 0.75), 2.2);
   col *= uExposure;
   // 色調: 明部に色味、暗部に別の色味を足す（夕景の暖色＋影の紫など）
   float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
@@ -181,6 +211,12 @@ export class PostFX {
         uGrain: { value: g.grain },
         uTime: { value: 0 },
         uResolution: { value: new THREE.Vector2(1, 1) },
+        uBloom: { value: g.bloom },
+        uBloomThr: { value: g.bloomThreshold },
+        uLeak: { value: g.leak },
+        uLeakColor: { value: g.leakColor },
+        uLeakPos: { value: new THREE.Vector2(0.05, 1.05) },
+        uAberration: { value: g.aberration },
       },
       vertexShader: quadVert,
       fragmentShader: compositeFrag,
@@ -233,6 +269,10 @@ export class PostFX {
     u.uVignette.value = g.vignette;
     u.uDrama.value = g.drama;
     u.uGrain.value = g.grain;
+    u.uBloom.value = g.bloom;
+    u.uBloomThr.value = g.bloomThreshold;
+    u.uLeak.value = g.leak;
+    u.uAberration.value = g.aberration;
     u.uTime.value = this.time;
     this.quad.material = this.compMat;
     r.setRenderTarget(null);

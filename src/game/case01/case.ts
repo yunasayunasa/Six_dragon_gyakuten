@@ -105,7 +105,7 @@ export const CASE01: CaseData = {
     { id: 'ribbon', name: '青いリボンの切れ端', desc: '係留ロープのささくれに引っかかっていた、青い布の切れ端。\n金の縁取りがある。', image: 'props/banner_small_blue.webp' },
   ],
   clues: [
-    { id: 'nap', name: 'ガレヲンの昼寝', desc: 'ガレヲンは昼から積荷のそばで寝ていた（本人談）。' },
+    { id: 'nap', name: 'ガレヲンの休息', desc: 'ガレヲンは昼から積荷のそばで目を閉じ、風の声を聴いていた（本人談）。\n灯台の前ではない。' },
     { id: 'bell', name: '消えた時刻', desc: '灯晶が消えたのは、夕方の鐘が鳴ってすぐ。ルオーは鐘楼にいた。' },
     { id: 'lastship', name: '最終便', desc: '最終便は日没に着く。それまでに灯晶を戻さなければならない。' },
   ],
@@ -197,9 +197,9 @@ export const CASE01: CaseData = {
     intro: S.CONFRONT_INTRO,
     talismans: 5,
     statements: [
-      { text: 'ボクは夕方からずーっと、\n桟橋のはしっこで釣りをしてたよ！', press: S.PRESS_1 },
-      { text: '灯りが消えたとき、ガレヲンが\n灯台の前で寝てるのを見たもん！', press: S.PRESS_2 },
-      { text: 'それにボクは、灯台柱には\n一歩も近づいてないからね！', press: S.PRESS_3, contradiction: ['ribbon', 'footprints'] },
+      { text: 'ワムは夕方からずーっと、\n桟橋のはしっこで釣りをしてたので。', press: S.PRESS_1 },
+      { text: '灯りが消えたとき、ガレヲンが\n灯台の前で寝てるのを見たので。', press: S.PRESS_2 },
+      { text: 'それにワムは、灯台柱には\n一歩も近づいてないので。', press: S.PRESS_3, contradiction: ['ribbon', 'footprints'] },
     ],
     success: S.CONFRONT_SUCCESS,
     wrong: S.CONFRONT_WRONG,

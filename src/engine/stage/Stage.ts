@@ -74,6 +74,8 @@ export class Stage {
   private look: LookState;
   wind = 0.3;
   private time = 0;
+  /** 開幕に床から起き上がる物（k: 0=倒れている 1=立っている） */
+  private raisers: Array<{ x: number; set: (k: number) => void }> = [];
 
   constructor(
     private assets: Assets,
@@ -161,6 +163,7 @@ export class Stage {
     mesh.receiveShadow = true;
     if (opts.name) this.named.set(opts.name, mesh);
     this.scene.add(mesh);
+    this.addGrower(mesh, pos[0], pos[1] - size[1] / 2, size[1]);
     return mesh;
   }
 
@@ -170,7 +173,20 @@ export class Stage {
     mesh.castShadow = cast;
     mesh.receiveShadow = true;
     this.scene.add(mesh);
+    this.addGrower(mesh, pos[0], pos[1], height);
     return mesh;
+  }
+
+  /** 立体は床から伸びるように起き上がる */
+  private addGrower(mesh: THREE.Mesh, x: number, bottom: number, height: number): void {
+    this.raisers.push({
+      x,
+      set: (k) => {
+        const s = Math.max(0.001, k);
+        mesh.scale.y = s;
+        mesh.position.y = bottom + (height / 2) * s;
+      },
+    });
   }
 
   async addProp(def: PropDef): Promise<PaperSprite> {
@@ -182,6 +198,7 @@ export class Stage {
     this.sprites.push(s);
     if (def.occluder) this.occluders.push(s);
     if (def.id) this.named.set(def.id, s);
+    if (!def.flat) this.raisers.push({ x: def.x, set: (k) => (s.body.rotation.x = (-Math.PI / 2) * (1 - k)) });
     // 影は主要な物だけ受ける（床・台座）。紙同士は受けない＝軽い
     return s;
   }
@@ -191,6 +208,7 @@ export class Stage {
     actor.faceInstant(facing);
     this.scene.add(actor);
     this.actors.set(actor.def.id, actor);
+    this.raisers.push({ x, set: (k) => (actor.paper.rotation.x = (-Math.PI / 2) * (1 - k)) });
     return actor;
   }
 
@@ -198,6 +216,23 @@ export class Stage {
     const a = this.actors.get(id);
     if (!a) throw new Error(`役者がいません: ${id}`);
     return a;
+  }
+
+  /** 舞台の紙・装置をすべて床に倒す（開幕の組み立て演出の準備） */
+  flattenAll(): void {
+    for (const r of this.raisers) r.set(0);
+  }
+
+  /** 倒した物を左から順にパタパタと起こす（ペーパークラフトの舞台が組み上がる演出） */
+  async assemble(onRaise?: (index: number) => void): Promise<void> {
+    const list = [...this.raisers].sort((a, b) => a.x - b.x);
+    await Promise.all(
+      list.map(async (r, i) => {
+        await this.tweens.wait(i * 0.035);
+        onRaise?.(i);
+        await this.tweens.run(0.5, (k) => r.set(k), Ease.outBack, r);
+      }),
+    );
   }
 
   addMotes(box: THREE.Box3, color?: string): void {
@@ -251,6 +286,9 @@ export class Stage {
     g.drama = n.drama;
     g.farBlur = n.farBlur;
     g.nearBlur = n.nearBlur;
+    g.bloom = n.bloom;
+    g.leak = n.leak;
+    g.leakColor.copy(c.sunGlow);
   }
 
   /** 影を落とす範囲をカメラ付近に合わせる */

@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { Director, Ease, PaperActor, CameraRig, type CastManifest, type Engine, type Mode } from '../../engine';
 import { registerStageCommands, actorShot, twoShot } from '../../engine/script/stageCommands';
 import { tagTexture } from '../../engine/paper/textures';
+import type { PoseInfo } from '../../engine/paper/PaperActor';
+import type { PortraitData } from '../../engine/ui/Portrait';
 import { CaseState, Confrontation, evaluateLogic } from './CaseState';
 import { TestimonyPanel } from './TestimonyPanel';
 import type { CaseData, HotspotDef } from './types';
@@ -160,10 +162,32 @@ export class InvestigationGame implements Mode {
       if (actor !== this.player && actor.position.distanceTo(this.player.position) < 3.6) twoShot(this.engine.rig, this.player, actor);
       else actorShot(this.engine.rig, actor);
     }
+    // 会話の立ち絵：主人公は左、相手は右
+    if (actor) this.engine.hud.setSpeaker(actor === this.player ? 'left' : 'right', this.portraitOf(actor));
+    else this.engine.hud.setSpeaker(null, null);
     this.log.push(`say:${speaker ?? ''}:${text.slice(0, 12)}`);
     await this.engine.hud.say(actor?.def.name ?? speaker, actor?.def.color, text, (t) => {
       if (actor) actor.talking = t;
     });
+  }
+
+  private portraitOf(actor: PaperActor): PortraitData {
+    const { id, info } = actor.pose;
+    const url = (file: string) => this.engine.assets.url(`cast/${id}/${file}`);
+    const part = (k: keyof PoseInfo['parts']) => {
+      const p = info.parts[k];
+      return p ? { url: url(p.file), x: p.x, y: p.y, w: p.w, h: p.h } : undefined;
+    };
+    const pick = <T,>(o: Record<string, T | undefined>) =>
+      Object.fromEntries(Object.entries(o).filter(([, v]) => v)) as Partial<Record<'open' | 'half' | 'closed', T>>;
+    return {
+      key: id,
+      width: info.width,
+      height: info.height,
+      base: url('base.webp'),
+      eyes: pick({ open: part('eye_open'), half: part('eye_half'), closed: part('eye_closed') }),
+      mouth: pick({ open: part('mouth_open'), half: part('mouth_half'), closed: part('mouth_closed') }),
+    };
   }
 
   /** 台本を流す間は操作を止める */

@@ -114,6 +114,11 @@ export class PaperActor extends THREE.Group {
     return actor;
   }
 
+  /** 今の表情のポーズ（フォルダ名と画像情報）。会話の立ち絵に使う */
+  get pose(): { id: string; info: PoseInfo } {
+    return { id: this.def.expressions[this.expression], info: this.current.info };
+  }
+
   get expressions(): string[] {
     return Object.keys(this.def.expressions);
   }

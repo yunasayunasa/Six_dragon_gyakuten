@@ -34,6 +34,8 @@ export const COMMAND_ALIASES: Record<string, string> = {
   字幕: 'card',
   灯り: 'light',
   対決: 'confront',
+  たたむ: 'flatten',
+  組み立て: 'assemble',
 };
 
 const SAY = /^([^「」（）()@#]+?)?\s*(?:[（(]([^）)]+)[）)])?\s*「([\s\S]*)」\s*$/;

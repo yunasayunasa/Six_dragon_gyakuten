@@ -45,7 +45,7 @@ export function twoShot(rig: CameraRig, a: PaperActor, b: PaperActor): void {
 
 /**
  * どのジャンルでも使える演出命令を登録する。
- * カメラ・表情・跳ねる・向き・移動・登場/退場・効果音・揺れ・叫び・待つ・見た目・きらめき・暗転・字幕
+ * カメラ・表情・跳ねる・向き・移動・登場/退場・効果音・揺れ・叫び・待つ・見た目・きらめき・暗転・字幕・たたむ/組み立て
  */
 export function registerStageCommands(d: Director, ctx: StageCommandContext): void {
   const { engine } = ctx;
@@ -135,4 +135,7 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     const [title = '', sub = '', hint = ''] = args.join(' ').split(/[|｜]/);
     return engine.hud.card(title, sub, hint);
   });
+  // 開幕の組み立て演出（@たたむ で倒し、@組み立て で左から順に起こす）
+  d.register('flatten', () => engine.stage.flattenAll());
+  d.register('assemble', () => engine.stage.assemble((i) => i % 5 === 0 && engine.sound.play('paper')));
 }
