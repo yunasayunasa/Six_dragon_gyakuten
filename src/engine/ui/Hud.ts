@@ -79,6 +79,12 @@ export class Hud {
       this.sound.unlock();
       this.input.press('confirm');
     });
+    // 会話中は舞台（会話枠の外）をタップしても送れるようにする
+    document.getElementById('app')?.addEventListener('pointerdown', () => {
+      if (this.dlg.classList.contains('hidden')) return;
+      this.sound.unlock();
+      this.input.press('confirm');
+    });
     this.fader = el('div', 'fader', this.root);
   }
 

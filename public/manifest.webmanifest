@@ -1,0 +1,10 @@
+{
+  "name": "PaperStage — 夕凪の空港と消えた灯晶",
+  "short_name": "PaperStage",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a1220",
+  "theme_color": "#1a1220"
+}
