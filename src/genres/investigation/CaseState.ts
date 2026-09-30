@@ -1,4 +1,4 @@
-import type { CaseData, Condition } from './types';
+import type { CaseData, Condition, ConfrontationDef } from './types';
 
 /** 事件の進み具合（持っている証拠・記録・手がかり）。表示や演出は持たない。 */
 export class CaseState {
@@ -6,8 +6,12 @@ export class CaseState {
   readonly clues: string[] = [];
   readonly flags = new Set<string>();
   readonly seen = new Set<string>();
+  /** 尋問で間違えられる残り回数（事件全体で共通） */
+  talismans: number;
 
-  constructor(readonly data: CaseData) {}
+  constructor(readonly data: CaseData) {
+    this.talismans = data.talismans;
+  }
 
   give(id: string): boolean {
     if (this.data.evidence.some((e) => e.id === id)) {
@@ -36,37 +40,67 @@ export class CaseState {
   }
 }
 
-/** ロジック：2つの手がかりを選んだ結果 */
+/** まとめる：2つの手がかりを選んだ結果（順番は問わない）。つながらなければ null */
 export function evaluateLogic(data: CaseData, a: string, b: string) {
   return data.logic.pairs.find((p) => (p.a === a && p.b === b) || (p.a === b && p.b === a)) ?? null;
 }
 
 export type PresentResult = 'correct' | 'wrong';
 
-/** 対決の状態。証言の切り替え・証拠をぶつけた結果・信頼（ライフ）を管理する */
+/**
+ * 尋問の状態。証言の切り替え・揺さぶりで増える証言・証拠をぶつけた結果・信頼（ライフ）を管理する。
+ * 信頼は事件全体で共通なので、開始時の残りと最大値を受け取る。
+ */
 export class Confrontation {
   index = 0;
   talismans: number;
+  /** 見えている証言（statements の番号） */
+  visible: number[] = [];
   readonly pressed = new Set<number>();
 
-  constructor(readonly def: CaseData['confrontation']) {
-    this.talismans = def.talismans;
+  constructor(
+    readonly def: ConfrontationDef,
+    start: number,
+    readonly max: number,
+  ) {
+    this.talismans = start;
+    this.resetStatements();
+  }
+
+  private resetStatements(): void {
+    this.visible = this.def.statements.map((s, i) => (s.hidden ? -1 : i)).filter((i) => i >= 0);
+    this.index = 0;
+    this.pressed.clear();
+  }
+
+  /** 今の証言の statements 上の番号 */
+  get number(): number {
+    return this.visible[this.index];
   }
 
   get statement() {
-    return this.def.statements[this.index];
+    return this.def.statements[this.number];
   }
 
   next(): void {
-    this.index = (this.index + 1) % this.def.statements.length;
+    this.index = (this.index + 1) % this.visible.length;
   }
 
   prev(): void {
-    this.index = (this.index - 1 + this.def.statements.length) % this.def.statements.length;
+    this.index = (this.index - 1 + this.visible.length) % this.visible.length;
   }
 
-  present(evidenceId: string): PresentResult {
-    if (this.statement.contradiction?.includes(evidenceId)) return 'correct';
+  /** 揺さぶる。隠れた証言が出てきたらその番号を返す */
+  press(): number | null {
+    this.pressed.add(this.number);
+    const r = this.statement.reveals;
+    if (r === undefined || this.visible.includes(r)) return null;
+    this.visible = [...this.visible, r].sort((x, y) => x - y);
+    return r;
+  }
+
+  present(id: string): PresentResult {
+    if (this.statement.contradiction?.includes(id)) return 'correct';
     this.talismans = Math.max(0, this.talismans - 1);
     return 'wrong';
   }
@@ -75,9 +109,9 @@ export class Confrontation {
     return this.talismans <= 0;
   }
 
+  /** 信頼が尽きたら、信頼を戻して証言を最初から */
   reset(): void {
-    this.index = 0;
-    this.talismans = this.def.talismans;
-    this.pressed.clear();
+    this.talismans = this.max;
+    this.resetStatements();
   }
 }

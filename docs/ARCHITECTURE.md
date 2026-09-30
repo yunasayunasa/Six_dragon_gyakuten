@@ -16,7 +16,7 @@ flowchart TB
     Audio[audio: 効果音 / BGM]
   end
   subgraph Genres[ジャンル]
-    Inv[investigation: 捜査・ロジック・対決]
+    Inv[investigation: 捜査・まとめる・尋問]
     Next[今後: 墨絵アクション / シューティング / RPG戦闘 …]
   end
   Game[game/case01: 事件データ＋台本] --> Inv
@@ -43,9 +43,9 @@ flowchart TB
 
 ## 逆転検事風ジャンル（`src/genres/investigation`）
 
-- `types.ts` … 事件データの形（登場人物・配置・証拠・手がかり・調べる場所・目的・ロジック・対決・台本）
-- `CaseState.ts` … 進行状態（証拠・記録）とロジック判定、対決の状態（表示を持たないのでテストしやすい）
-- `InvestigationGame.ts` … 捜査の歩き回り、調べる、ロジック、対決の流れ
+- `types.ts` … 事件データの形（登場人物・配置・証拠・手がかり・調べる場所・目的・まとめる・尋問・台本）
+- `CaseState.ts` … 進行状態（証拠・記録）とまとめる判定、尋問の状態（揺さぶりで増える証言・事件共通の信）（表示を持たないのでテストしやすい）
+- `InvestigationGame.ts` … 捜査の歩き回り、調べる、まとめる、尋問（何度でも）、攻撃・被弾の演出、事件解決
 - `TestimonyPanel.ts` … 証言パネル
 
 新しい事件は `CaseData` を1つ書くだけで作れます（`src/game/case01/case.ts` が見本）。

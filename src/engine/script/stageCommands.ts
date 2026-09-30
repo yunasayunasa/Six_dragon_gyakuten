@@ -45,7 +45,7 @@ export function twoShot(rig: CameraRig, a: PaperActor, b: PaperActor): void {
 
 /**
  * どのジャンルでも使える演出命令を登録する。
- * カメラ・表情・跳ねる・向き・移動・登場/退場・効果音・揺れ・叫び・待つ・見た目・きらめき・暗転・字幕・たたむ/組み立て
+ * カメラ・表情・跳ねる・攻撃/被弾・向き・移動・登場/退場・効果音・揺れ・叫び・待つ・見た目・きらめき・暗転・字幕・たたむ/組み立て
  */
 export function registerStageCommands(d: Director, ctx: StageCommandContext): void {
   const { engine } = ctx;
@@ -93,6 +93,12 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     a.setExpression(args[1] ?? a.def.defaultExpression, false, engine.tweens);
   });
   d.register('hop', (args) => need(args[0]).hop(engine.tweens));
+  // 強く出る（攻撃3コマ）／論破される（被弾）
+  d.register('attack', (args) => need(args[0]).attack(engine.tweens));
+  d.register('damage', (args) => {
+    engine.rig.shake(0.3, 0.35);
+    return need(args[0]).damage(engine.tweens);
+  });
   d.register('turn', async (args) => {
     const a = need(args[0]);
     const dir = args[1];

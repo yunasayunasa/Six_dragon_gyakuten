@@ -1,6 +1,6 @@
 import type { ActorDef, Engine, PropDef } from '../../engine';
 
-/** 逆転検事風「捜査→ロジック→対決」の事件データ。ゲームごとにこれを書けば遊べる。 */
+/** 逆転検事風「捜査→まとめる→尋問」の事件データ。ゲームごとにこれを書けば遊べる。 */
 export interface EvidenceDef {
   id: string;
   name: string;
@@ -44,27 +44,44 @@ export interface Condition {
 export interface StatementDef {
   text: string;
   press: string;
-  /** この証言にぶつけると正解になる証拠 */
+  /** この証言にぶつけると正解になる証拠・手がかり */
   contradiction?: string[];
+  /** 最初は隠れている証言（他の証言を揺さぶると出てくる） */
+  hidden?: boolean;
+  /** 揺さぶると現れる証言（statements の番号） */
+  reveals?: number;
 }
 
+/** 尋問1回分。台本から `@対決 <id>` で始める */
 export interface ConfrontationDef {
   witness: string;
   title: string;
   intro: string;
   statements: StatementDef[];
+  /** 正しい証拠をぶつけた後の台本（ここで尋問は終わる） */
   success: string;
   wrong: string;
+  /** 信頼が尽きたときの台本（その後、信頼を戻して証言を最初から） */
   fail: string;
-  talismans: number;
+}
+
+/** まとめる：2つの手がかりをつなぐと新しい推理になる */
+export interface LogicPairDef {
+  a: string;
+  b: string;
+  script: string;
+  /** 成立したら立つ記録（同じ組は1回だけ） */
+  flag: string;
 }
 
 export interface LogicDef {
   title: string;
   hint: string;
-  clues: string[];
-  pairs: Array<{ a: string; b: string; script: string; flag: string }>;
+  pairs: LogicPairDef[];
+  /** つながらなかったとき */
   miss: string;
+  /** もうまとめ終わった組を選んだとき */
+  done: string;
 }
 
 export interface SceneDef {
@@ -92,9 +109,10 @@ export interface CaseData {
   hotspots: HotspotDef[];
   /** 目的表示（条件を満たす最初のものを表示） */
   goals: Array<{ when: Condition; text: string }>;
-  /** 証拠がそろったら流れる台本（その後ロジックへ） */
-  readyForLogic: { when: Condition; script: string };
+  /** 尋問で間違えられる回数（事件全体で共通） */
+  talismans: number;
   logic: LogicDef;
-  confrontation: ConfrontationDef;
+  /** 尋問（id → 内容） */
+  confrontations: Record<string, ConfrontationDef>;
   ending: string;
 }

@@ -154,7 +154,7 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-user-select: no
   background: var(--washi); border: calc(var(--u) * .5) solid var(--paper-edge); outline: 2px solid var(--ink); outline-offset: calc(var(--u) * -1.1);
   box-shadow: 0 4px 12px rgba(0,0,0,.45);
 }
-.btn-round.small { width: calc(var(--u) * 9); height: calc(var(--u) * 9); font-size: calc(var(--u) * 2.5); }
+.btn-round.small { width: calc(var(--u) * 10); height: calc(var(--u) * 10); font-size: calc(var(--u) * 2.1); white-space: nowrap; letter-spacing: -0.02em; }
 .btn-round.shu { background: var(--shu); color: #fff6e8; outline-color: #fff6e8; }
 .btn-round:active, .btn:active { transform: scale(.94); }
 

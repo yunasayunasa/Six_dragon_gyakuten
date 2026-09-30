@@ -34,6 +34,9 @@ export const COMMAND_ALIASES: Record<string, string> = {
   字幕: 'card',
   灯り: 'light',
   対決: 'confront',
+  攻撃: 'attack',
+  被弾: 'damage',
+  事件解決: 'solve',
   たたむ: 'flatten',
   組み立て: 'assemble',
 };

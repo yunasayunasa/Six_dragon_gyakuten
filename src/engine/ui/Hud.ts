@@ -146,10 +146,11 @@ export class Hud {
     zone.addEventListener('contextmenu', (e) => e.preventDefault());
 
     const btns = el('div', 'btns', this.touch);
-    const ev = el('div', 'btn-round small', btns, '証拠');
-    ev.addEventListener('pointerdown', (e) => {
+    // 証拠品一覧は上の「証拠品」から開けるので、こちらは「まとめる」
+    const logic = el('div', 'btn-round small', btns, 'まとめる');
+    logic.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
-      this.input.press('menu');
+      this.input.press('logic');
     });
     const act = el('div', 'btn-round shu', btns, '調べる');
     act.addEventListener('pointerdown', (e) => {
@@ -221,6 +222,11 @@ export class Hud {
    * 次のセリフの話し手の立ち絵を出す。話し手は明るく、聞き手は暗くする。
    * data が null（ナレーション）のときは、出ている立ち絵を両方とも暗くする。
    */
+  /** 出ている立ち絵の絵だけを差し替える（話し手は変えない） */
+  refreshPortrait(side: PortraitSide, data: PortraitData): void {
+    if (this.portraits[side].visible) this.portraits[side].show(data, false);
+  }
+
   setSpeaker(side: PortraitSide | null, data: PortraitData | null): void {
     if (side && data) this.portraits[side].show(data);
     this.speaking = side && data ? side : null;

@@ -14,5 +14,16 @@
 python tools/prepare_assets.py <素材を展開したフォルダ> public/assets <wood.pngのあるフォルダ>
 ```
 
+追加の立ち絵（攻撃3コマ・被弾・ガレヲンの微笑み／投げキッスなど、`ADV_attack_damage_galleon_additions.zip`）は、
+Python が無い環境でも動く Node 版で変換しています（処理内容は上と同じ。`manifest.json` に追記）。
+
+```sh
+npm i --no-save sharp
+node tools/prepare_poses.mjs <追加素材を展開したフォルダ> public/assets
+```
+
+- 攻撃・被弾の絵はすべて画面右向き。足元は `motion_layout.json` の `ground_y` にそろえる
+- ガレヲンはいつも目を閉じたキャラなので、目のパーツ（まばたき）は無い
+
 効果音は素材ファイルを使わず、WebAudioで合成しています（`src/engine/audio/Sound.ts`）。
 立ち絵はAI生成の差分のため、手指や装飾の細部はポーズ間で完全には一致しません。

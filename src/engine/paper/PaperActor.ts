@@ -36,6 +36,8 @@ export interface ActorDef {
   color?: string;
   /** 元の絵が向いている方向（1=右 -1=左）。斜め向きの絵を正しく振り向かせるために使う。既定は 1 */
   artFacing?: 1 | -1;
+  /** 動きのコマ（ポーズフォルダ名）。攻撃は溜め→ヒット→フォロースルーの3枚、被弾は1枚。どちらも右向きの絵 */
+  motions?: { attack?: string[]; damage?: string };
 }
 
 interface LoadedPose {
@@ -62,6 +64,9 @@ export class PaperActor extends THREE.Group {
   private blob: THREE.Mesh;
   private poses = new Map<string, LoadedPose>();
   private current!: LoadedPose;
+  private currentId = '';
+  /** ポーズの絵が変わったとき（会話の立ち絵を同期するため） */
+  onPose: ((actor: PaperActor) => void) | null = null;
   private ppm = 400; // pixel per meter
   expression = '';
   facing: 1 | -1 = 1;
@@ -97,7 +102,8 @@ export class PaperActor extends THREE.Group {
 
   static async load(def: ActorDef, manifest: CastManifest, assets: Assets): Promise<PaperActor> {
     const actor = new PaperActor(def);
-    const poseIds = [...new Set(Object.values(def.expressions))];
+    const m = def.motions;
+    const poseIds = [...new Set([...Object.values(def.expressions), ...(m?.attack ?? []), ...(m?.damage ? [m.damage] : [])])];
     await Promise.all(
       poseIds.map(async (pid) => {
         const info = manifest[pid];
@@ -116,23 +122,60 @@ export class PaperActor extends THREE.Group {
     return actor;
   }
 
-  /** 今の表情のポーズ（フォルダ名と画像情報）。会話の立ち絵に使う */
-  get pose(): { id: string; info: PoseInfo } {
-    return { id: this.def.expressions[this.expression], info: this.current.info };
+  /** 今表示しているポーズ（フォルダ名・画像情報・元絵の向き）。会話の立ち絵に使う */
+  get pose(): { id: string; info: PoseInfo; artFacing: 1 | -1 } {
+    return { id: this.currentId, info: this.current.info, artFacing: this.poseFacing(this.currentId) };
   }
 
   get expressions(): string[] {
     return Object.keys(this.def.expressions);
   }
 
+  /** ポーズの元絵の向き。攻撃・被弾の絵はすべて右向きで描かれている */
+  private poseFacing(pid: string): 1 | -1 {
+    const m = this.def.motions;
+    if (m?.attack?.includes(pid) || m?.damage === pid) return 1;
+    return this.def.artFacing ?? 1;
+  }
+
   /** 表情（ポーズ）を切り替える。紙がぺこっとたわむ小さな演出つき。 */
   setExpression(expr: string, instant = false, tweens?: Tweens): void {
     const pid = this.def.expressions[expr] ?? this.def.expressions[this.def.defaultExpression];
-    const pose = this.poses.get(pid);
-    if (!pose) return;
     this.expression = this.def.expressions[expr] ? expr : this.def.defaultExpression;
-    if (this.current === pose) return;
+    if (this.showPose(pid) && !instant && tweens) {
+      tweens.run(0.22, (k) => (this.paper.scale.y = 0.93 + 0.07 * k), Ease.outBack, this.paper.scale);
+    }
+  }
+
+  /** 攻撃（強く出る）：溜め→ヒット→フォロースルーの3コマのあと、元の表情に戻る */
+  async attack(tweens: Tweens): Promise<void> {
+    const frames = this.def.motions?.attack;
+    if (!frames?.length) return;
+    const times = [0.18, 0.1, 0.2];
+    for (let i = 0; i < frames.length; i++) {
+      this.showPose(frames[i]);
+      if (i === 1) void tweens.run(0.16, (k) => (this.body.position.x = Math.sin(k * Math.PI) * 0.12 * this.facing), Ease.linear, this.body.position);
+      await tweens.wait(times[i] ?? 0.15);
+    }
+    this.showPose(this.def.expressions[this.expression]);
+  }
+
+  /** 被弾（論破された）：のけぞって、少し後ろへ押し戻される */
+  async damage(tweens: Tweens): Promise<void> {
+    const pid = this.def.motions?.damage;
+    if (!pid) return;
+    this.showPose(pid);
+    await tweens.run(0.4, (k) => (this.body.position.x = -Math.sin(k * Math.PI) * 0.16 * this.facing), Ease.outCubic, this.body.position);
+    this.showPose(this.def.expressions[this.expression]);
+  }
+
+  /** ポーズの絵を差し替える。変わったら true */
+  private showPose(pid: string): boolean {
+    const pose = this.poses.get(pid);
+    if (!pose || this.current === pose) return false;
     this.current = pose;
+    this.currentId = pid;
+    this.body.scale.x = this.facing * this.poseFacing(pid);
     const { info } = pose;
     const s = 1 / this.ppm;
     const place = (m: THREE.Mesh, w: number, h: number, x: number, y: number, z: number) => {
@@ -158,9 +201,8 @@ export class PaperActor extends THREE.Group {
     }
     const w = info.width * s;
     this.blob.scale.set(Math.min(w * 0.75, 1.1), 0.34, 1);
-    if (!instant && tweens) {
-      tweens.run(0.22, (k) => (this.paper.scale.y = 0.93 + 0.07 * k), Ease.outBack, this.paper.scale);
-    }
+    this.onPose?.(this);
+    return true;
   }
 
   private setPart(mesh: THREE.Mesh, key: string): void {
@@ -180,13 +222,13 @@ export class PaperActor extends THREE.Group {
     if (dir === this.facing) return;
     this.facing = dir;
     const from = this.body.scale.x;
-    const to = dir * (this.def.artFacing ?? 1);
+    const to = dir * this.poseFacing(this.currentId);
     await tweens.run(0.2, (k) => (this.body.scale.x = from + (to - from) * k), Ease.inOutSine, this.body.scale);
   }
 
   faceInstant(dir: 1 | -1): void {
     this.facing = dir;
-    this.body.scale.x = dir * (this.def.artFacing ?? 1);
+    this.body.scale.x = dir * this.poseFacing(this.currentId);
   }
 
   hop(tweens: Tweens, height = 0.22): Promise<void> {

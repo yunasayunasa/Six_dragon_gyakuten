@@ -2,7 +2,7 @@
  * キーボードとタッチを「行動」にまとめる入力層。
  * 移動は -1..1 のベクトル、決定/キャンセル等はその瞬間だけ true になる「押した」判定。
  */
-export type Action = 'confirm' | 'cancel' | 'menu' | 'left' | 'right';
+export type Action = 'confirm' | 'cancel' | 'menu' | 'logic' | 'left' | 'right';
 
 export class Input {
   readonly move = { x: 0, y: 0 };
@@ -47,6 +47,9 @@ export class Input {
       case 'Tab':
       case 'KeyC':
         return 'menu';
+      case 'KeyQ':
+      case 'KeyL':
+        return 'logic';
       case 'ArrowLeft':
       case 'KeyA':
         return 'left';

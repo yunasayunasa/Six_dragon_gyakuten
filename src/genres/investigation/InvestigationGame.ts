@@ -9,7 +9,7 @@ import { TestimonyPanel } from './TestimonyPanel';
 import type { CaseData, HotspotDef } from './types';
 
 /** このジャンルが台本に追加する命令 */
-export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront'] as const;
+export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'solve'] as const;
 
 type Phase = 'loading' | 'script' | 'explore' | 'done';
 
@@ -18,7 +18,7 @@ const PLAYER_RADIUS = 0.3;
 
 /**
  * 逆転検事風ジャンルの実行部。
- * 捜査（歩いて調べる）→ ロジック（手がかりをつなぐ）→ 対決（証言に証拠をぶつける）を1本の流れにする。
+ * 捜査（歩いて調べる）・まとめる（手がかりをつなぐ／いつでも開ける）・尋問（証言に証拠をぶつける／何度でも）を行き来する。
  * 事件の中身は CaseData（データ）として外から渡す。
  */
 export class InvestigationGame implements Mode {
@@ -32,7 +32,8 @@ export class InvestigationGame implements Mode {
   private autoCamera = true;
   private stepClock = 0;
   private testimony!: TestimonyPanel;
-  private logicChip!: HTMLElement;
+  /** 会話の立ち絵に出ている役者（ポーズが変わったら立ち絵も差し替える） */
+  private portraitActors: { left: PaperActor | null; right: PaperActor | null } = { left: null, right: null };
   /** 対決中の状態（自動確認用に公開） */
   confrontation: Confrontation | null = null;
   private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), seen: tagTexture('・', '#8a7a6a') };
@@ -50,13 +51,6 @@ export class InvestigationGame implements Mode {
     this.registerCommands();
     await this.build();
     this.testimony = new TestimonyPanel(engine.hud.root);
-    this.logicChip = document.createElement('div');
-    this.logicChip.className = 'chip washi hidden';
-    this.logicChip.textContent = 'ロジック';
-    this.logicChip.addEventListener('click', () => {
-      if (this.phase === 'explore') void this.runLogic();
-    });
-    engine.hud.topbar.insertBefore(this.logicChip, engine.hud.bookButton);
     engine.hud.bookButton.classList.remove('hidden');
     engine.hud.bookButton.addEventListener('click', () => {
       if (this.phase === 'explore') void this.openBook();
@@ -80,6 +74,7 @@ export class InvestigationGame implements Mode {
       st.addActor(a, pl?.x ?? 0, pl?.z ?? 0, pl?.facing ?? 1);
     }
     this.player = st.actor(data.player);
+    for (const a of actors) a.onPose = (who) => this.syncPortrait(who);
     engine.player = this.player;
     engine.rig.bounds = sc.cameraBounds;
     for (const h of data.hotspots) {
@@ -142,7 +137,8 @@ export class InvestigationGame implements Mode {
         if (glow) glow.scale.setScalar((on ? k : 1 - k) * 2.2 + 0.001);
       }, Ease.outCubic, light);
     });
-    d.register('confront', () => this.runConfrontation());
+    d.register('confront', (args) => this.runConfrontation(args[0]));
+    d.register('solve', () => this.solve());
     for (const c of INVESTIGATION_COMMANDS) if (!d.has(c)) throw new Error(`命令の登録漏れ: ${c}`);
   }
 
@@ -163,16 +159,26 @@ export class InvestigationGame implements Mode {
       else actorShot(this.engine.rig, actor);
     }
     // 会話の立ち絵：主人公は左、相手は右
-    if (actor) this.engine.hud.setSpeaker(actor === this.player ? 'left' : 'right', this.portraitOf(actor));
-    else this.engine.hud.setSpeaker(null, null);
+    if (actor) {
+      const side = actor === this.player ? 'left' : 'right';
+      this.portraitActors[side] = actor;
+      this.engine.hud.setSpeaker(side, this.portraitOf(actor));
+    } else this.engine.hud.setSpeaker(null, null);
     this.log.push(`say:${speaker ?? ''}:${text.slice(0, 12)}`);
     await this.engine.hud.say(actor?.def.name ?? speaker, actor?.def.color, text, (t) => {
       if (actor) actor.talking = t;
     });
   }
 
+  /** 攻撃・被弾・表情の変化を、出ている会話の立ち絵にも反映する */
+  private syncPortrait(actor: PaperActor): void {
+    for (const side of ['left', 'right'] as const) {
+      if (this.portraitActors[side] === actor) this.engine.hud.refreshPortrait(side, this.portraitOf(actor));
+    }
+  }
+
   private portraitOf(actor: PaperActor): PortraitData {
-    const { id, info } = actor.pose;
+    const { id, info, artFacing } = actor.pose;
     const url = (file: string) => this.engine.assets.url(`cast/${id}/${file}`);
     const part = (k: keyof PoseInfo['parts']) => {
       const p = info.parts[k];
@@ -185,7 +191,7 @@ export class InvestigationGame implements Mode {
       width: info.width,
       height: info.height,
       base: url('base.webp'),
-      artFacing: actor.def.artFacing ?? 1,
+      artFacing,
       eyes: pick({ open: part('eye_open'), half: part('eye_half'), closed: part('eye_closed') }),
       mouth: pick({ open: part('mouth_open'), half: part('mouth_half'), closed: part('mouth_closed') }),
     };
@@ -228,11 +234,10 @@ export class InvestigationGame implements Mode {
 
   private refreshGoal(): void {
     this.engine.hud.setGoal(this.state.goal());
-    const ready = this.state.check(this.data.readyForLogic.when);
-    this.logicChip?.classList.toggle('hidden', !ready || this.state.flags.has(this.data.logic.pairs[0].flag));
   }
 
-  private async openBook(): Promise<void> {
+  /** 持っている証拠品と手がかり（まとめる・尋問で使える物） */
+  private ownedItems(): Array<{ id: string; name: string; desc: string; image: string }> {
     const items = this.state.evidence.map((id) => {
       const e = this.data.evidence.find((x) => x.id === id)!;
       return { ...e, image: this.engine.assets.url(e.image) };
@@ -241,8 +246,12 @@ export class InvestigationGame implements Mode {
       const c = this.data.clues.find((x) => x.id === id)!;
       return { ...c, image: this.engine.assets.url('props/sign_hanging_small.webp') };
     });
+    return [...items, ...clues];
+  }
+
+  private async openBook(): Promise<void> {
     this.engine.hud.showTouch(false);
-    await this.engine.hud.openBook([...items, ...clues], 'view');
+    await this.engine.hud.openBook(this.ownedItems(), 'view');
     if (this.phase === 'explore') this.engine.hud.showTouch(true);
   }
 
@@ -262,31 +271,28 @@ export class InvestigationGame implements Mode {
     this.engine.sound.play('select');
     await this.runScript(src);
     if (this.phase === 'done') return;
-    // 証拠がそろったら頭の中を整理（ロジック）
-    const ready = this.state.check(this.data.readyForLogic.when);
-    if (ready && !this.state.flags.has('logic_prompted')) {
-      this.state.flags.add('logic_prompted');
-      await this.runScript(this.data.readyForLogic.script);
-      await this.runLogic();
-    }
     if (this.phase === 'explore' || this.phase === 'script') this.beginExplore();
   }
 
+  /** まとめる：持っている手がかりから2つ選んでつなぐ。探索中ならいつでも開ける */
   async runLogic(): Promise<void> {
     const L = this.data.logic;
-    if (this.state.flags.has(L.pairs[0].flag)) return;
+    const hud = this.engine.hud;
     this.phase = 'script';
-    this.engine.hud.showTouch(false);
-    this.engine.hud.setPrompt(null);
+    hud.showTouch(false);
+    hud.setPrompt(null);
+    this.player.setWalking(0);
     await this.engine.stage.setLook('confront', 0.6);
-    const clues = L.clues
-      .filter((id) => this.state.evidence.includes(id) || this.state.clues.includes(id))
-      .map((id) => this.data.evidence.find((e) => e.id === id) ?? this.data.clues.find((c) => c.id === id)!)
-      .map((c) => ({ id: c.id, name: c.name, desc: c.desc }));
+    const clues = this.ownedItems().map(({ id, name, desc }) => ({ id, name, desc }));
     for (;;) {
-      const pick = await this.engine.hud.logic(clues, L.title, L.hint);
+      const pick = await hud.logic(clues, L.title, L.hint);
       if (!pick) break;
       const hit = evaluateLogic(this.data, pick[0], pick[1]);
+      if (hit && this.state.flags.has(hit.flag)) {
+        await this.runScript(L.done);
+        this.phase = 'script';
+        continue;
+      }
       if (hit) {
         this.log.push(`logic:${hit.flag}`);
         this.state.flags.add(hit.flag);
@@ -297,37 +303,42 @@ export class InvestigationGame implements Mode {
       }
       this.engine.sound.play('wrong');
       await this.runScript(L.miss);
+      this.phase = 'script';
     }
     await this.engine.stage.setLook('sunset', 0.6);
     this.refreshGoal();
-    this.phase = 'explore';
+    // まとめた台本の中で尋問が始まり、事件が解決していることもある
+    if (this.phase === 'script') this.beginExplore();
   }
 
-  async runConfrontation(): Promise<void> {
-    const def = this.data.confrontation;
+  /** 尋問。台本の `@対決 <id>` から呼ばれ、正しい証拠をぶつけるまで続く */
+  async runConfrontation(id: string): Promise<void> {
+    const def = this.data.confrontations[id];
+    if (!def) throw new Error(`尋問がありません: ${id}`);
     const hud = this.engine.hud;
     const witness = this.findActor(def.witness)!;
-    const c = (this.confrontation = new Confrontation(def));
+    const c = (this.confrontation = new Confrontation(def, this.state.talismans, this.data.talismans));
+    const max = this.data.talismans;
     this.phase = 'script';
     hud.showTouch(false);
     hud.setGoal(null);
     hud.bookButton.classList.add('hidden');
-    this.log.push('confront:start');
+    this.log.push(`confront:${id}:start`);
     // 向かい合う立ち位置へ
     const side = witness.position.x >= this.player.position.x ? 1 : -1;
     const standX = witness.position.x - side * 2.4;
     await this.director.play(`@移動 ${this.player.def.id} ${standX.toFixed(2)} ${witness.position.z.toFixed(2)}`);
     await Promise.all([this.player.face(side as 1 | -1, this.engine.tweens), witness.face((-side) as 1 | -1, this.engine.tweens)]);
     await this.engine.stage.setLook('confront', 1);
-    hud.setTalismans(def.talismans, c.talismans);
+    hud.setTalismans(max, c.talismans);
     await this.runScript(def.intro);
-    await hud.card(def.title, '証言開始', '◀▶で証言を切り替え、矛盾に証拠を示そう');
+    await hud.card(def.title, '尋問開始', '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠をつきつけよう');
     for (;;) {
       // 証言パネルが画面下半分を使うので、証人は上寄りに映す
       this.engine.rig.shot(witness.position.clone().add(new THREE.Vector3(0, -0.15, 0)), new THREE.Vector3(0.3 * witness.facing, 1.15, 5.6), 30);
       witness.talking = true;
       setTimeout(() => (witness.talking = false), 900);
-      this.testimony.show(`${witness.def.name}の証言`, c.statement.text, c.index, def.statements.length);
+      this.testimony.show(`${witness.def.name}の証言`, c.statement.text, c.index, c.visible.length);
       const a = await this.testimony.wait();
       if (a === 'next' || a === 'prev') {
         this.engine.sound.play('select');
@@ -337,38 +348,62 @@ export class InvestigationGame implements Mode {
       }
       this.testimony.hide();
       if (a === 'press') {
-        c.pressed.add(c.index);
-        this.log.push(`press:${c.index}`);
-        await this.runScript(`@叫び 待った！\n${c.statement.press}`);
+        const statement = c.statement;
+        const revealed = c.press();
+        this.log.push(`press:${id}:${c.number}`);
+        await this.runScript(`@叫び 待った！\n${statement.press}`);
+        if (revealed !== null) {
+          // 揺さぶりで新しい証言が出た：その証言へ移る
+          this.engine.sound.play('reveal');
+          c.index = c.visible.indexOf(revealed);
+          await hud.card('証言が増えた', '', 'この証言をよく聞こう');
+        }
         continue;
       }
-      const items = this.state.evidence.map((id) => {
-        const e = this.data.evidence.find((x) => x.id === id)!;
-        return { ...e, image: this.engine.assets.url(e.image) };
-      });
-      const chosen = await hud.openBook(items, 'present');
+      const chosen = await hud.openBook(this.ownedItems(), 'present');
       if (!chosen) continue;
       const result = c.present(chosen);
-      this.log.push(`present:${c.index}:${chosen}:${result}`);
-      await hud.shout('これを見ろ！');
+      this.state.talismans = c.talismans;
+      this.log.push(`present:${id}:${c.number}:${chosen}:${result}`);
+      await Promise.all([hud.shout('これを見ろ！'), this.player.attack(this.engine.tweens)]);
       if (result === 'correct') {
+        this.engine.rig.shake(0.4, 0.5);
+        await witness.damage(this.engine.tweens);
         await this.runScript(def.success);
         break;
       }
       this.engine.sound.play('wrong');
-      hud.setTalismans(def.talismans, c.talismans);
+      // 相手に言い返される
+      await witness.attack(this.engine.tweens);
+      await this.player.damage(this.engine.tweens);
+      hud.setTalismans(max, c.talismans);
       await this.runScript(def.wrong);
       if (c.lost) {
         await this.runScript(def.fail);
         c.reset();
-        hud.setTalismans(def.talismans, c.talismans);
+        this.state.talismans = c.talismans;
+        hud.setTalismans(max, c.talismans);
         await hud.card(def.title, 'もう一度', '証言をよく聞き直そう');
       }
     }
-    hud.setTalismans(0, 0);
+    this.confrontation = null;
     this.testimony.hide();
+    hud.setTalismans(0, 0);
+    this.log.push(`confront:${id}:solved`);
+    // 成功の台本の中で事件が解決していれば、ここで終わり（台本の実行中に phase が変わる）
+    if ((this.phase as Phase) === 'done') return;
+    await this.engine.stage.setLook('sunset', 0.8);
+    hud.bookButton.classList.remove('hidden');
+    this.refreshGoal();
+  }
+
+  /** 事件解決：結末を流して最初から */
+  async solve(): Promise<void> {
+    const hud = this.engine.hud;
     this.state.flags.add('solved');
-    this.log.push('confront:solved');
+    this.log.push('solved');
+    hud.bookButton.classList.add('hidden');
+    hud.setGoal(null);
     await this.runScript(this.data.ending);
     this.phase = 'done';
     this.markers.forEach((m) => (m.visible = false));
@@ -418,6 +453,10 @@ export class InvestigationGame implements Mode {
     }
     if (inp.consume('menu')) {
       void this.openBook();
+      return;
+    }
+    if (inp.consume('logic')) {
+      void this.runLogic();
       return;
     }
     if (this.near && inp.consume('confirm')) {

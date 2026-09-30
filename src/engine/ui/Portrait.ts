@@ -44,7 +44,12 @@ export class PortraitSlot {
     parent.insertBefore(this.root, before);
   }
 
-  show(data: PortraitData): void {
+  get visible(): boolean {
+    return !this.root.classList.contains('hidden');
+  }
+
+  /** animate=false は同じ人物のポーズ差し替え（攻撃・被弾のコマ送りなど）。滑り込みをしない */
+  show(data: PortraitData, animate = true): void {
     this.root.classList.remove('hidden');
     if (data.key === this.key) return;
     this.key = data.key;
@@ -78,6 +83,7 @@ export class PortraitSlot {
     this.fig = fig;
     this.root.appendChild(fig);
     this.root.classList.remove('enter');
+    if (!animate) return;
     void this.root.offsetWidth; // アニメーションをやり直す
     this.root.classList.add('enter');
   }

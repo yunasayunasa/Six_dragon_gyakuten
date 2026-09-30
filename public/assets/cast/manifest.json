@@ -935,5 +935,195 @@
     "h": 60
    }
   }
+ },
+ "fediel_attack_01_windup": {
+  "width": 658,
+  "height": 823,
+  "cx": 361,
+  "foot": 811,
+  "parts": {}
+ },
+ "fediel_attack_02_hit": {
+  "width": 749,
+  "height": 830,
+  "cx": 405,
+  "foot": 819,
+  "parts": {}
+ },
+ "fediel_attack_03_follow_through": {
+  "width": 765,
+  "height": 829,
+  "cx": 408,
+  "foot": 817,
+  "parts": {}
+ },
+ "fediel_damage_01_hit": {
+  "width": 617,
+  "height": 823,
+  "cx": 378,
+  "foot": 811,
+  "parts": {}
+ },
+ "galleon_attack_01_windup": {
+  "width": 654,
+  "height": 835,
+  "cx": 322,
+  "foot": 824,
+  "parts": {}
+ },
+ "galleon_attack_02_hit": {
+  "width": 752,
+  "height": 839,
+  "cx": 348,
+  "foot": 827,
+  "parts": {}
+ },
+ "galleon_attack_03_follow_through": {
+  "width": 757,
+  "height": 841,
+  "cx": 403,
+  "foot": 829,
+  "parts": {}
+ },
+ "galleon_damage_01_hit": {
+  "width": 574,
+  "height": 816,
+  "cx": 278,
+  "foot": 805,
+  "parts": {}
+ },
+ "galleon_07_hand_on_cheek_smile": {
+  "width": 425,
+  "height": 835,
+  "cx": 207,
+  "foot": 824,
+  "parts": {
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 243,
+    "y": 279,
+    "w": 43,
+    "h": 35
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 243,
+    "y": 279,
+    "w": 43,
+    "h": 35
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 243,
+    "y": 279,
+    "w": 43,
+    "h": 35
+   }
+  }
+ },
+ "galleon_04_blow_kiss": {
+  "width": 495,
+  "height": 837,
+  "cx": 225,
+  "foot": 827,
+  "parts": {}
+ },
+ "galleon_05_kiss_hand_to_mouth": {
+  "width": 495,
+  "height": 837,
+  "cx": 220,
+  "foot": 827,
+  "parts": {}
+ },
+ "galleon_06_kiss_mid_throw": {
+  "width": 488,
+  "height": 839,
+  "cx": 223,
+  "foot": 828,
+  "parts": {}
+ },
+ "luwoh_attack_01_windup": {
+  "width": 531,
+  "height": 816,
+  "cx": 304,
+  "foot": 805,
+  "parts": {}
+ },
+ "luwoh_attack_02_hit": {
+  "width": 683,
+  "height": 816,
+  "cx": 357,
+  "foot": 804,
+  "parts": {}
+ },
+ "luwoh_attack_03_follow_through": {
+  "width": 639,
+  "height": 812,
+  "cx": 348,
+  "foot": 801,
+  "parts": {}
+ },
+ "luwoh_damage_01_hit": {
+  "width": 553,
+  "height": 832,
+  "cx": 276,
+  "foot": 820,
+  "parts": {}
+ },
+ "wamdus_attack_01_windup": {
+  "width": 543,
+  "height": 822,
+  "cx": 249,
+  "foot": 811,
+  "parts": {}
+ },
+ "wamdus_attack_02_hit": {
+  "width": 662,
+  "height": 824,
+  "cx": 258,
+  "foot": 813,
+  "parts": {}
+ },
+ "wamdus_attack_03_follow_through": {
+  "width": 622,
+  "height": 824,
+  "cx": 260,
+  "foot": 812,
+  "parts": {}
+ },
+ "wamdus_damage_01_hit": {
+  "width": 538,
+  "height": 802,
+  "cx": 343,
+  "foot": 791,
+  "parts": {}
+ },
+ "wilnas_attack_01_windup": {
+  "width": 574,
+  "height": 814,
+  "cx": 312,
+  "foot": 801,
+  "parts": {}
+ },
+ "wilnas_attack_02_hit": {
+  "width": 697,
+  "height": 822,
+  "cx": 292,
+  "foot": 811,
+  "parts": {}
+ },
+ "wilnas_attack_03_follow_through": {
+  "width": 611,
+  "height": 822,
+  "cx": 300,
+  "foot": 811,
+  "parts": {}
+ },
+ "wilnas_damage_01_hit": {
+  "width": 504,
+  "height": 814,
+  "cx": 276,
+  "foot": 802,
+  "parts": {}
  }
 }
