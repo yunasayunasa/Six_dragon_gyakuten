@@ -268,7 +268,9 @@ export const CASE01: CaseData = {
       radius: 1.1,
       script: S.WAMDUS,
       variants: [
-        { when: { flags: ['l4'] }, script: S.WAMDUS_CONFRONT },
+        // 最後の尋問（③→③の続き→④）は、答えの証拠品（リボン）を持つまで始めない（持たずに始めると勝てずに詰む）
+        { when: { flags: ['l4'], evidence: ['ribbon'] }, script: S.WAMDUS_CONFRONT },
+        { when: { flags: ['l4'] }, script: S.WAMDUS_NOT_READY },
         { when: { flags: ['c1_done'] }, script: S.WAMDUS_AGAIN },
         { when: { evidence: ['map'], flags: ['met_galleon'] }, script: S.WAMDUS_GALLEON },
       ],
@@ -276,7 +278,8 @@ export const CASE01: CaseData = {
   ],
   goals: [
     { when: { flags: ['solved'] }, text: '' },
-    { when: { flags: ['l4'] }, text: '桟橋の先のワムデュスを問いただす' },
+    { when: { flags: ['l4'], evidence: ['ribbon'] }, text: '桟橋の先のワムデュスを問いただす' },
+    { when: { flags: ['l4'] }, text: '問いただす前に、桟橋の調べ残しを探す' },
     { when: { evidence: ['skyfish'] }, text: '「まとめる」で犯人の狙いを考える' },
     { when: { flags: ['l3'] }, text: 'ルオーに話を聞く' },
     { when: { evidence: ['honey_note'] }, text: '「まとめる」で2つの事件をつなげる' },

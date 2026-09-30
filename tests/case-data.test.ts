@@ -114,7 +114,11 @@ describe('第一話のデータ検査', () => {
     for (const id of itemIds) expect(given.has(id), `${id} が手に入らない`).toBe(true);
   });
 
-  it('最初から最後まで遊べる（調べる・話す・まとめる・尋問をくり返して事件解決まで届く）', () => {
+  /**
+   * 通しで遊ぶ。avoid の場所は「ほかに何もできなくなるまで」調べない（調べ忘れた人の遊び方）。
+   * どの場所を後回しにしても、答えの証拠品を持たずに尋問が始まらず、最後まで届くこと。
+   */
+  function play(avoid: string | null) {
     const s = new CaseState(data);
     let solved = false;
     const done = new Set<string>();
@@ -127,7 +131,7 @@ describe('第一話のデータ検査', () => {
         if (c.name === 'flag') c.args.forEach((f) => s.flags.add(f));
         if (c.name === 'confront') {
           const def = data.confrontations[c.args[0]];
-          // 尋問を始める時点で、答えになる証拠品を持っていること
+          // 尋問を始める時点で、答えになる証拠品を持っていること（持っていないと勝てずに詰む）
           const answers = def.statements.flatMap((x) => x.contradiction ?? []);
           if (!answers.some((a) => s.evidence.includes(a))) unready.push(def.title);
           run(def.success);
@@ -135,17 +139,17 @@ describe('第一話のデータ検査', () => {
         if (c.name === 'solve') solved = true;
       }
     };
+    const state = () => `${s.evidence.length}/${s.clues.length}/${s.flags.size}/${solved}`;
+    const visit = (h: (typeof data.hotspots)[number]) => {
+      const b = state();
+      const r = s.resolveHotspot(h);
+      run(r.script);
+      s.markPlayed(r.key);
+      return state() !== b;
+    };
     run(data.intro);
-    for (let step = 0; step < 100 && !solved; step++) {
+    for (let step = 0; step < 200 && !solved; step++) {
       let progressed = false;
-      const before = () => `${s.evidence.length}/${s.clues.length}/${s.flags.size}/${solved}`;
-      for (const h of data.hotspots) {
-        const b = before();
-        const r = s.resolveHotspot(h);
-        run(r.script);
-        s.markPlayed(r.key);
-        if (before() !== b) progressed = true;
-      }
       for (const p of data.logic.pairs) {
         if (done.has(p.flag) || !s.clues.includes(p.a) || !s.clues.includes(p.b)) continue;
         done.add(p.flag);
@@ -153,9 +157,25 @@ describe('第一話のデータ検査', () => {
         run(p.script);
         progressed = true;
       }
+      for (const h of data.hotspots) if (h.id !== avoid && visit(h)) progressed = true;
+      // ほかに何もできないときだけ、後回しにした場所を調べる
+      if (!progressed && avoid) progressed = visit(data.hotspots.find((h) => h.id === avoid)!);
       if (!progressed) break;
     }
+    return { solved, unready, s };
+  }
+
+  it('最初から最後まで遊べる（調べる・話す・まとめる・尋問をくり返して事件解決まで届く）', () => {
+    const { solved, unready, s } = play(null);
     expect(solved, `進めなくなった：持ち物 ${[...s.evidence, ...s.clues].join(',')} 記録 ${[...s.flags].join(',')}`).toBe(true);
     expect(unready, '答えの証拠品を持たずに始まる尋問').toEqual([]);
   });
+
+  for (const h of data.hotspots) {
+    it(`「${h.label}」を後回しにしても、証拠品が無いまま尋問が始まらず最後まで遊べる`, () => {
+      const { solved, unready } = play(h.id);
+      expect(unready, '答えの証拠品を持たずに始まる尋問').toEqual([]);
+      expect(solved).toBe(true);
+    });
+  }
 });
