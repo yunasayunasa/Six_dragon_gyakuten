@@ -25,7 +25,6 @@ async function boot(): Promise<void> {
       engine.sound.setMuted(false);
       engine.hud.syncSoundLabel();
     }
-    engine.sound.playBgm(engine.assets.url('audio/bgm_harbor.mp3'));
     removeEventListener('pointerdown', unlock);
     removeEventListener('keydown', unlock);
   };

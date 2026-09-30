@@ -3,6 +3,7 @@ import type { Engine } from '../../engine';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { glowTexture } from '../../engine/paper/textures';
 import { Crystal } from '../../engine/stage/Crystal';
+import { technoBgm } from '../../engine/audio/technoBgm';
 import type { CaseData } from '../../genres/investigation/types';
 import * as S from './scripts';
 
@@ -36,18 +37,23 @@ async function buildSet(engine: Engine): Promise<void> {
   const pmrem = new THREE.PMREMGenerator(engine.renderer);
   const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   pmrem.dispose();
-  const crystal = new Crystal({ height: 0.62, envMap });
+  const crystal = new Crystal({ height: 0.85, envMap });
   lantern.add(crystal);
   engine.onFrame.add((dt) => crystal.update(dt));
   // 開幕に紙が立ち上がる音（ユーザー提供の素材）
   engine.sound.useFile('rise', engine.assets.url('audio/se_paper_rise.mp3'));
-  const light = new THREE.PointLight('#ffd49a', 0, 11, 1.6);
-  light.position.y = 0.45;
-  light.userData.on = 9;
+  engine.sound.defineBgm('カフェ', engine.assets.url('audio/cafe.mp3'));
+  engine.sound.defineBgm('尋問', technoBgm(0.8));
+  engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'));
+  const light = new THREE.PointLight('#ffd49a', 0, 12, 1.6);
+  light.position.y = 1.9; // 結晶の近くに置くと結晶そのものが白く飛ぶので、結晶の上から離して照らす
+  light.userData.on = 12;
   lantern.add(light);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#ffdca8', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
   glow.name = 'glow';
-  glow.position.y = 0.35;
+  glow.position.y = 0.4;
+  glow.material.opacity = 0.55;
+  glow.userData.size = 1.2; // 大きすぎると結晶がぼやけて見える
   glow.scale.setScalar(0.001);
   lantern.add(glow);
   st.scene.add(lantern);
@@ -127,25 +133,24 @@ export const CASE01: CaseData = {
     { id: 'fediel', x: 3.7, z: -1.9, facing: -1 },
     { id: 'wamdus', x: 9.3, z: -1.7, facing: -1 },
   ],
+  // 証拠品＝尋問でつきつける物。推理メモ（clues）＝まとめるで使う物。どれも必ずどこかで使う（tests/case-data.test.ts で確認）
   // 画像は仮（話が固まったら専用の証拠品画像に差し替える）
   evidence: [
+    { id: 'map', name: '桟橋の見取り図', desc: '掲示板に貼られた凪ノ桟橋の見取り図。\n桟橋のはしから見ると、灯台柱の前はフェディエルの物干しの陰になる。', image: 'props/sign_hanging_small.webp' },
+    { id: 'wrapper', name: '包み紙の切れ端', desc: 'ガレヲンの積荷のそばに落ちていた、だんごの包み紙の切れ端。\nべたべたした蜜が付いている。', image: 'props/sack_small.webp' },
     { id: 'footprints', name: '濡れた足跡', desc: '灯台柱の根元の水たまりから、桟橋の先へ点々と続く小さな足跡。\nまだ乾いていない。', image: 'props/puddle.webp' },
     { id: 'ribbon', name: '青いリボンの切れ端', desc: '係留ロープのささくれに引っかかっていた、青い布の切れ端。\n金の縁取りがある。', image: 'props/banner_small_blue.webp' },
-    { id: 'plate', name: '空っぽの皿', desc: 'フェディエルの台の上に残っていた皿。\n雲蜜だんごが載っていた。蜜の跡だけが残り、食べこぼしは無い。', image: 'props/food_bundle_shop.webp' },
-    { id: 'wrapper', name: '包み紙の切れ端', desc: 'ガレヲンの積荷のそばに落ちていた、だんごの包み紙の切れ端。\nべたべたした蜜が付いている。', image: 'props/sack_small.webp' },
     { id: 'honey_puddle', name: '甘い水たまり', desc: '灯台柱の根元の水たまり。ほんのり甘い匂いがして、触るとべたつく。\n蜜が溶けている。', image: 'props/puddle.webp' },
   ],
   clues: [
-    { id: 'nap', name: 'ガレヲンの居場所', desc: 'ガレヲンは昼から積荷のそばで目を閉じ、風の声を聴いていた（本人談）。\n灯台の前ではない。' },
+    { id: 'no_crumbs', name: '食べこぼしの無い皿', desc: 'フェディエルの台の皿には、蜜の跡だけが残っていた。\nだんごのかけらも、食べこぼしも無い。' },
+    { id: 'wrapper_spot', name: '包み紙が落ちていた場所', desc: 'だんごの包み紙の切れ端は、フェディエルの台から遠く離れた\nガレヲンの積荷のそばに落ちていた。' },
     { id: 'bell', name: '灯晶が消えた時刻', desc: '灯晶が消えたのは、夕方の鐘が鳴ってすぐ。ルオーは鐘楼にいた。' },
-    { id: 'lastship', name: '最終便', desc: '最終便は日没に着く。それまでに灯晶を戻さなければならない。' },
-    { id: 'fediel_saw', name: 'フェディエルの目撃', desc: '鐘が鳴ったころ、水の子が桟橋の先から駆けてくるのを、\n物干しのそばからじっくり眺めていた（本人談）。' },
-    { id: 'scent', name: '甘い香り', desc: '鐘が鳴ったころ、ガレヲンの前を甘い香りが通り過ぎ、\n桟橋の先へ遠ざかっていった（ガレヲン談）。' },
+    { id: 'snack_time', name: 'だんごが消えた時刻', desc: 'フェディエルが目を離したのは、鐘が鳴ったころ。\nだんごが消えたのは、そのとき。' },
+    { id: 'carried', name: '持ち去られただんご', desc: 'だんごはその場で食べられたのではない。\n包みごと持ち去られ、途中で包みが破れた。' },
+    { id: 'honey_note', name: '水たまりの蜜', desc: '灯台柱の根元の水たまりには、蜜が溶けていた。\nほんのり甘い匂いがする。' },
+    { id: 'same_culprit', name: '同じ犯人', desc: '灯台柱の水たまりに、だんごの蜜が溶けていた。\n灯晶を持ち去った者は、だんごも持っていた。' },
     { id: 'skyfish', name: '空魚の言い伝え', desc: '夕焼けの空魚は、光と甘い匂いに寄ってくる。\n昔の釣り人は、灯りと蜜で誘ったという（ルオー談）。' },
-    { id: 'snack_time', name: 'だんごが消えた時刻', desc: 'フェディエルが目を離したのは鐘が鳴ったころ。\nだんごが消えたのも、灯晶と同じ鐘の時刻。' },
-    { id: 'carried', name: '持ち去られただんご', desc: '皿は台の上、包み紙は積荷のそば。\nだんごは包みごと持ち去られた。その場で食べたのではない。' },
-    { id: 'same_culprit', name: '同じ犯人', desc: '灯台柱の水たまりの蜜と、包み紙の蜜は同じもの。\n灯晶を持ち去った者は、だんごも持っていた。' },
-    { id: 'fishing', name: '空魚釣り', desc: '光（灯晶）と甘い匂い（だんご）。\n犯人の狙いは、空魚を釣ること。' },
   ],
   scene: {
     floor: { image: 'stage/wood.webp', width: 44, depth: 10, z: 0.45, repeat: [11, 2.5], color: '#e6d6c8' },
@@ -210,10 +215,8 @@ export const CASE01: CaseData = {
       script: S.PUDDLE,
       again: S.PUDDLE_AGAIN,
       markHeight: 0.8,
-      variants: [
-        { when: { evidence: ['honey_puddle'] }, script: S.PUDDLE_HONEY_AGAIN },
-        { when: { flags: ['c2_done'], evidence: ['footprints'] }, script: S.PUDDLE_HONEY },
-      ],
+      // まとめる②（同じ時刻）のあと、調べ直すと甘い匂いに気づく
+      variants: [{ when: { flags: ['l2'] }, script: S.PUDDLE_HONEY, again: S.PUDDLE_HONEY_AGAIN }],
     },
     { id: 'board', label: '掲示板', x: -3.6, z: -1.75, radius: 0.95, script: S.BOARD, again: S.BOARD_AGAIN, markHeight: 1.55 },
     { id: 'rope', label: '係留ロープ', x: 6.85, z: -1.45, radius: 1.0, script: S.ROPE, again: S.ROPE_AGAIN, markHeight: 1.1 },
@@ -228,10 +231,7 @@ export const CASE01: CaseData = {
       radius: 1.05,
       script: S.GALLEON,
       again: S.GALLEON_AGAIN,
-      variants: [
-        { when: { evidence: ['scent'] }, script: S.GALLEON_2_AGAIN },
-        { when: { flags: ['c1_done'] }, script: S.GALLEON_2 },
-      ],
+      variants: [{ when: { flags: ['c1_done'] }, script: S.GALLEON_2, again: S.GALLEON_2_AGAIN }],
     },
     {
       id: 'luwoh',
@@ -242,10 +242,7 @@ export const CASE01: CaseData = {
       radius: 0.95,
       script: S.LUWOH,
       again: S.LUWOH_AGAIN,
-      variants: [
-        { when: { evidence: ['skyfish'] }, script: S.LUWOH_2_AGAIN },
-        { when: { flags: ['l2'] }, script: S.LUWOH_2 },
-      ],
+      variants: [{ when: { flags: ['l3'] }, script: S.LUWOH_2, again: S.LUWOH_2_AGAIN }],
     },
     {
       id: 'fediel',
@@ -258,7 +255,7 @@ export const CASE01: CaseData = {
       again: S.FEDIEL_AGAIN,
       variants: [
         { when: { flags: ['c2_done'] }, script: S.FEDIEL_2_AGAIN },
-        { when: { flags: ['l1'], evidence: ['fediel_saw'] }, script: S.FEDIEL_CONFRONT },
+        { when: { flags: ['l1', 'met_fediel'] }, script: S.FEDIEL_CONFRONT },
       ],
     },
     {
@@ -270,33 +267,37 @@ export const CASE01: CaseData = {
       radius: 1.1,
       script: S.WAMDUS,
       variants: [
-        { when: { flags: ['l3'] }, script: S.WAMDUS_CONFRONT },
+        { when: { flags: ['l4'] }, script: S.WAMDUS_CONFRONT },
         { when: { flags: ['c1_done'] }, script: S.WAMDUS_AGAIN },
-        { when: { evidence: ['nap'] }, script: S.WAMDUS_GALLEON },
+        { when: { evidence: ['map'], flags: ['met_galleon'] }, script: S.WAMDUS_GALLEON },
       ],
     },
   ],
   goals: [
     { when: { flags: ['solved'] }, text: '' },
-    { when: { flags: ['l3'] }, text: '桟橋の先のワムデュスを問いただす' },
+    { when: { flags: ['l4'] }, text: '桟橋の先のワムデュスを問いただす' },
     { when: { evidence: ['skyfish'] }, text: '「まとめる」で犯人の狙いを考える' },
-    { when: { flags: ['l2'] }, text: 'ルオーに話を聞く' },
-    { when: { evidence: ['honey_puddle'] }, text: '「まとめる」で2つの事件をつなげる' },
-    { when: { flags: ['c2_done'] }, text: '灯台柱のあたりを調べ直す' },
-    { when: { flags: ['l1'] }, text: 'フェディエルを問いただす' },
-    { when: { flags: ['c1_done'], evidence: ['plate', 'wrapper'] }, text: '「まとめる」でだんごの行方を考える' },
+    { when: { flags: ['l3'] }, text: 'ルオーに話を聞く' },
+    { when: { evidence: ['honey_note'] }, text: '「まとめる」で2つの事件をつなげる' },
+    { when: { flags: ['l2'] }, text: '灯台柱の水たまりを調べ直す' },
+    { when: { evidence: ['snack_time'] }, text: '「まとめる」で2つの時刻を比べる' },
+    { when: { flags: ['l1', 'met_fediel'] }, text: 'フェディエルを問いただす' },
+    { when: { flags: ['l1'] }, text: 'フェディエルに話を聞く' },
+    { when: { flags: ['c1_done'], evidence: ['no_crumbs', 'wrapper_spot'] }, text: '「まとめる」でだんごの行方を考える' },
     { when: { flags: ['c1_done'] }, text: 'だんごの手がかりを探す（フェディエルの台・ガレヲンの積荷）' },
-    { when: { evidence: ['nap'] }, text: 'ワムデュスにガレヲンのことを聞き直す' },
+    { when: { evidence: ['map'], flags: ['met_galleon'] }, text: 'ワムデュスにガレヲンのことを聞き直す' },
     { when: {}, text: '桟橋を調べて、皆の話を聞く' },
   ],
+  bgm: { field: 'カフェ', confront: '尋問' },
   talismans: 5,
   logic: {
     title: 'まとめる',
-    hint: '関係のありそうな証拠品・手がかりを2つ選んで、つなげよう。',
+    hint: '関係のありそうな推理メモを2つ選んで、つなげよう。',
     pairs: [
-      { a: 'plate', b: 'wrapper', script: S.LOGIC_1, flag: 'l1' },
-      { a: 'honey_puddle', b: 'wrapper', script: S.LOGIC_2, flag: 'l2' },
-      { a: 'same_culprit', b: 'skyfish', script: S.LOGIC_3, flag: 'l3' },
+      { a: 'no_crumbs', b: 'wrapper_spot', script: S.LOGIC_1, flag: 'l1' },
+      { a: 'bell', b: 'snack_time', script: S.LOGIC_2, flag: 'l2' },
+      { a: 'honey_note', b: 'carried', script: S.LOGIC_3, flag: 'l3' },
+      { a: 'same_culprit', b: 'skyfish', script: S.LOGIC_4, flag: 'l4' },
     ],
     miss: S.LOGIC_MISS,
     done: S.LOGIC_DONE,
@@ -308,7 +309,7 @@ export const CASE01: CaseData = {
       intro: S.C1_INTRO,
       statements: [
         { text: '灯りが消えたとき、ワムは\n桟橋のはしっこで釣りをしてた。', press: S.C1_PRESS_1 },
-        { text: 'そこから、ガレヲンが\n灯台の前で寝てるのが見えたので。', press: S.C1_PRESS_2, contradiction: ['nap'] },
+        { text: 'そこから、ガレヲンが\n灯台の前で寝てるのが見えたので。', press: S.C1_PRESS_2, contradiction: ['map'] },
         { text: '寝てる人のそばで灯りが消えたら、\nその人があやしい。', press: S.C1_PRESS_3 },
       ],
       success: S.C1_SUCCESS,
@@ -322,7 +323,7 @@ export const CASE01: CaseData = {
       intro: S.C2_INTRO,
       statements: [
         { text: '雲蜜だんごは、\nこの台の上の皿に置いておいたぞえ。', press: S.C2_PRESS_1 },
-        { text: '此方は片時も、\nだんごから目を離しはせなんだ。', press: S.C2_PRESS_2, contradiction: ['fediel_saw'] },
+        { text: '此方は片時も、\nだんごから目を離しはせなんだ。', press: S.C2_PRESS_2, contradiction: ['wrapper'] },
         { text: 'なのに気づけば皿は空。\nこれは妖術に違いないわいな。', press: S.C2_PRESS_3 },
       ],
       success: S.C2_SUCCESS,
@@ -351,8 +352,8 @@ export const CASE01: CaseData = {
       statements: [
         { text: 'ワム、甘いものは\nそんなに好きじゃない。', press: S.C4_PRESS_1, reveals: 3 },
         { text: 'フェディエルのだんごなんて、\n見たこともないので。', press: S.C4_PRESS_2 },
-        { text: '空魚は光だけで寄ってくる。\n餌なんていらないので。', press: S.C4_PRESS_3, contradiction: ['skyfish', 'fishing'] },
-        { text: 'だから、ワムから甘い匂いなんて、\nするわけないので。', press: S.C4_PRESS_4, contradiction: ['scent', 'honey_puddle', 'same_culprit'], hidden: true },
+        { text: '空魚は光だけで寄ってくる。\n餌なんていらないので。', press: S.C4_PRESS_3, contradiction: ['honey_puddle'] },
+        { text: 'だから、ワムから甘い匂いなんて、\nするわけないので。', press: S.C4_PRESS_4, contradiction: ['honey_puddle'], hidden: true },
       ],
       success: S.C4_SUCCESS,
       wrong: S.C4_WRONG,

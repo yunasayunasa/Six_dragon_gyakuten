@@ -20,6 +20,8 @@ export interface CardItem {
   name: string;
   desc: string;
   image: string;
+  /** 一覧で見出しを付けて分けるときの分類名 */
+  group?: string;
 }
 
 export interface ClueItem {
@@ -300,10 +302,10 @@ export class Hud {
   /**
    * アイテム一覧を開く。mode='present' なら選んだIDを返す（やめたら null）。
    */
-  openBook(items: CardItem[], mode: 'view' | 'present', title = '証拠品ファイル'): Promise<string | null> {
+  openBook(items: CardItem[], mode: 'view' | 'present', title = '証拠品ファイル', note = ''): Promise<string | null> {
     const wrap = el('div', 'book', this.root);
     const panel = el('div', 'panel washi', wrap);
-    const h = el('h2', '', panel, `${escapeHtml(title)}<small>${mode === 'present' ? '示す証拠を選んでください' : ''}</small>`);
+    const h = el('h2', '', panel, `${escapeHtml(title)}<small>${mode === 'present' ? '示す証拠を選んでください' : escapeHtml(note)}</small>`);
     void h;
     const grid = el('div', 'grid', panel);
     const desc = el('div', 'desc', panel);
@@ -320,6 +322,7 @@ export class Hud {
       cards[sel].scrollIntoView({ block: 'nearest', inline: 'nearest' });
     };
     items.forEach((it, i) => {
+      if (it.group && it.group !== items[i - 1]?.group) el('div', 'group', grid, escapeHtml(it.group));
       const c = el('div', 'ev', grid);
       const img = el('img', '', c);
       img.src = it.image;

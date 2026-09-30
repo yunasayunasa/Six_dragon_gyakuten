@@ -53,28 +53,33 @@ export class Crystal extends THREE.Group {
   private cluster = new THREE.Group();
   private mat: THREE.MeshPhysicalMaterial;
   private core: THREE.Sprite;
+  /** 点灯の瞬間に大きく広がる光の十字 */
+  private flare: THREE.Sprite;
   private stars: { sprite: THREE.Sprite; phase: number; speed: number; size: number }[] = [];
   private time = Math.random() * 10;
+  private h: number;
+  /** 点灯の強い光（1 → 0 に減っていく） */
+  private flash = 0;
 
   constructor(opts: CrystalOptions = {}) {
     super();
-    const h = opts.height ?? 0.6;
+    const h = (this.h = opts.height ?? 0.6);
     const glow = new THREE.Color(opts.glow ?? '#ffb347');
+    // 形がはっきり見えるように：不透明・地の色は濃いめ・自己発光は控えめ・反射を強めにして、面ごとの明暗を出す。
+    // 不透明なので、まわりの光（加算のスプライト）は結晶の後ろに回り、結晶の上には重ならない
     this.mat = new THREE.MeshPhysicalMaterial({
-      color: opts.color ?? '#ffd27a',
+      color: opts.color ?? '#b8661a',
       emissive: glow,
-      emissiveIntensity: 0.22,
-      roughness: 0.08,
-      metalness: 0.05,
+      emissiveIntensity: 0.12,
+      roughness: 0.04,
+      metalness: 0.3,
       clearcoat: 1,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.02,
       iridescence: 1,
-      iridescenceIOR: 1.35,
+      iridescenceIOR: 1.4,
       iridescenceThicknessRange: [180, 620],
       envMap: opts.envMap ?? null,
-      envMapIntensity: 1.6,
-      transparent: true,
-      opacity: 0.82,
+      envMapIntensity: 2.4,
       flatShading: true,
       fog: false,
     });
@@ -96,35 +101,55 @@ export class Crystal extends THREE.Group {
     });
     this.add(this.cluster);
 
-    const glowMat = new THREE.SpriteMaterial({ map: starTexture(), color: glow, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
-    this.core = new THREE.Sprite(glowMat);
+    const additive = (color: THREE.ColorRepresentation) =>
+      new THREE.SpriteMaterial({ map: starTexture(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
+    this.core = new THREE.Sprite(additive(glow));
     this.core.position.y = h * 0.45;
-    this.core.scale.setScalar(h * 0.9);
+    this.core.scale.setScalar(h * 0.6);
     this.add(this.core);
 
-    const n = opts.sparkles ?? 14;
+    this.flare = new THREE.Sprite(additive('#fff4d6'));
+    this.flare.position.y = h * 0.5;
+    this.flare.material.opacity = 0;
+    this.add(this.flare);
+
+    const n = opts.sparkles ?? 16;
     for (let i = 0; i < n; i++) {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTexture(), color: '#fffbe8', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+      const sp = new THREE.Sprite(additive('#fffbe8'));
       const a = Math.random() * Math.PI * 2;
       const rr = h * (0.25 + Math.random() * 0.55);
       sp.position.set(Math.cos(a) * rr, h * (0.1 + Math.random() * 0.95), Math.sin(a) * rr);
       this.add(sp);
-      this.stars.push({ sprite: sp, phase: Math.random() * Math.PI * 2, speed: 2 + Math.random() * 3, size: h * (0.22 + Math.random() * 0.2) });
+      this.stars.push({ sprite: sp, phase: Math.random() * Math.PI * 2, speed: 1.5 + Math.random() * 2.5, size: h * (0.22 + Math.random() * 0.22) });
     }
   }
 
+  /** 灯りがともる瞬間：強く光って、光の十字が広がり、結晶がぐっと大きくなってから落ち着く */
+  ignite(): void {
+    this.flash = 1;
+  }
+
   update(dt: number): void {
-    if (!this.visible) return;
     this.time += dt;
     const t = this.time;
-    this.cluster.rotation.y += dt * 0.5;
+    this.flash = Math.max(0, this.flash - dt / 1.6);
+    const f = this.flash;
+    const pop = f > 0.85 ? (1 - f) / 0.15 : f; // 最初の一瞬で膨らみ、ゆっくり戻る
+    this.cluster.scale.setScalar(1 + pop * 0.18);
+    this.cluster.rotation.y += dt * (0.5 + f * 4);
     this.cluster.position.y = Math.sin(t * 1.6) * 0.03;
-    this.mat.emissiveIntensity = 0.2 + Math.sin(t * 2.3) * 0.08;
-    this.core.material.opacity = 0.3 + Math.sin(t * 3.1) * 0.12;
+    // ふだんは控えめ、ときどき強く脈打つ（メリハリ）
+    const beat = Math.pow(Math.max(0, Math.sin(t * 1.3)), 12);
+    this.mat.emissiveIntensity = 0.1 + beat * 0.45 + f * 1.6;
+    this.core.material.opacity = 0.18 + beat * 0.5 + f * 0.8;
+    this.core.scale.setScalar(this.h * (0.55 + beat * 0.35 + f * 1.2));
+    this.flare.material.opacity = Math.min(1, f * 1.4);
+    this.flare.material.rotation = t * 0.6;
+    this.flare.scale.setScalar(this.h * (1 + (1 - f) * 5) * (f > 0 ? 1 : 0.001));
     for (const s of this.stars) {
-      // 鋭く光って消える瞬き
-      const k = Math.pow(Math.max(0, Math.sin(t * s.speed + s.phase)), 6);
-      s.sprite.scale.setScalar(s.size * (0.2 + k * 1.3));
+      // 鋭く光って消える瞬き。点灯の瞬間は全部いっせいに光る
+      const k = Math.max(Math.pow(Math.max(0, Math.sin(t * s.speed + s.phase)), 10), f);
+      s.sprite.scale.setScalar(s.size * (0.15 + k * 1.6));
       s.sprite.material.opacity = k;
       s.sprite.material.rotation = t * 0.8 + s.phase;
     }

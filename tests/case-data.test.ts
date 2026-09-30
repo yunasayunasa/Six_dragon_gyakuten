@@ -28,7 +28,10 @@ function allScripts(): Array<[string, string]> {
   for (const h of data.hotspots) {
     list.push([`hs.${h.id}`, h.script]);
     if (h.again) list.push([`hs.${h.id}.again`, h.again]);
-    h.variants?.forEach((v, i) => list.push([`hs.${h.id}.v${i}`, v.script]));
+    h.variants?.forEach((v, i) => {
+      list.push([`hs.${h.id}.v${i}`, v.script]);
+      if (v.again) list.push([`hs.${h.id}.v${i}.again`, v.again]);
+    });
   }
   return list;
 }
@@ -96,17 +99,39 @@ describe('第一話のデータ検査', () => {
     for (const p of data.logic.pairs) expect(itemIds.has(p.a) && itemIds.has(p.b), `${p.a}+${p.b}`).toBe(true);
   });
 
+  it('出てくる物はどれも必ず使う（証拠品は尋問で、推理メモはまとめるで）', () => {
+    const evidenceIds = data.evidence.map((e) => e.id);
+    const clueIds = data.clues.map((c) => c.id);
+    const answers = Object.values(data.confrontations).flatMap((c) => c.statements.flatMap((x) => x.contradiction ?? []));
+    const logicIds = data.logic.pairs.flatMap((p) => [p.a, p.b]);
+    for (const id of evidenceIds) expect(answers, `証拠品 ${id} を使う尋問が無い`).toContain(id);
+    for (const id of clueIds) expect(logicIds, `推理メモ ${id} を使うまとめるが無い`).toContain(id);
+    // 尋問でつきつけられるのは証拠品だけ、まとめるで選べるのは推理メモだけ
+    for (const id of answers) expect(evidenceIds, `尋問の答え ${id} が証拠品ではない`).toContain(id);
+    for (const id of logicIds) expect(clueIds, `まとめるの ${id} が推理メモではない`).toContain(id);
+    // どれも、どこかの台本で手に入る
+    const given = new Set(allScripts().flatMap(([, src]) => parseScript(src).flatMap((c) => (c.op === 'cmd' && c.name === 'give' ? c.args : []))));
+    for (const id of itemIds) expect(given.has(id), `${id} が手に入らない`).toBe(true);
+  });
+
   it('最初から最後まで遊べる（調べる・話す・まとめる・尋問をくり返して事件解決まで届く）', () => {
     const s = new CaseState(data);
     let solved = false;
     const done = new Set<string>();
+    const unready: string[] = [];
     /** 台本の効果（証拠・記録・尋問・解決）だけを実行する */
     const run = (src: string): void => {
       for (const c of parseScript(src)) {
         if (c.op !== 'cmd') continue;
         if (c.name === 'give') c.args.forEach((id) => s.give(id));
         if (c.name === 'flag') c.args.forEach((f) => s.flags.add(f));
-        if (c.name === 'confront') run(data.confrontations[c.args[0]].success);
+        if (c.name === 'confront') {
+          const def = data.confrontations[c.args[0]];
+          // 尋問を始める時点で、答えになる証拠品を持っていること
+          const answers = def.statements.flatMap((x) => x.contradiction ?? []);
+          if (!answers.some((a) => s.evidence.includes(a))) unready.push(def.title);
+          run(def.success);
+        }
         if (c.name === 'solve') solved = true;
       }
     };
@@ -116,13 +141,13 @@ describe('第一話のデータ検査', () => {
       const before = () => `${s.evidence.length}/${s.clues.length}/${s.flags.size}/${solved}`;
       for (const h of data.hotspots) {
         const b = before();
-        const variant = h.variants?.find((v) => s.check(v.when));
-        run(variant ? variant.script : s.seen.has(h.id) && h.again ? h.again : h.script);
-        s.seen.add(h.id);
+        const r = s.resolveHotspot(h);
+        run(r.script);
+        s.markPlayed(r.key);
         if (before() !== b) progressed = true;
       }
       for (const p of data.logic.pairs) {
-        if (done.has(p.flag) || !s.check({ evidence: [p.a, p.b] })) continue;
+        if (done.has(p.flag) || !s.clues.includes(p.a) || !s.clues.includes(p.b)) continue;
         done.add(p.flag);
         s.flags.add(p.flag);
         run(p.script);
@@ -131,10 +156,6 @@ describe('第一話のデータ検査', () => {
       if (!progressed) break;
     }
     expect(solved, `進めなくなった：持ち物 ${[...s.evidence, ...s.clues].join(',')} 記録 ${[...s.flags].join(',')}`).toBe(true);
-    // 尋問で必要な証拠が、その尋問を始める前に手に入っているか（おおまかに：最後には全部持っている）
-    for (const c of Object.values(data.confrontations)) {
-      const answers = c.statements.flatMap((x) => x.contradiction ?? []);
-      expect(answers.some((a) => s.check({ evidence: [a] })), c.title).toBe(true);
-    }
+    expect(unready, '答えの証拠品を持たずに始まる尋問').toEqual([]);
   });
 });

@@ -16,6 +16,7 @@ const SE_NAMES: Record<string, SE> = {
   失敗: 'wrong',
   紙: 'paper',
   紙起こし: 'rise',
+  きらり: 'shine',
   発見: 'reveal',
   足音: 'step',
 };
@@ -150,6 +151,10 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     const [title = '', sub = '', hint = ''] = args.join(' ').split(/[|｜]/);
     return engine.hud.card(title, sub, hint);
   });
+  // @音楽 名前（Sound.defineBgm で登録した名前）／ @音楽 止める
+  d.register('bgm', (args) => engine.sound.setBgm(!args[0] || args[0] === '止める' || args[0] === 'stop' ? null : args[0]));
+  // 会話枠と立ち絵をいったん下げる（演出を見せたいとき）
+  d.register('hidetext', () => engine.hud.hideDialogue());
   // 開幕の組み立て演出（@たたむ で倒し、@組み立て で左から順に起こす）
   d.register('flatten', () => engine.stage.flattenAll());
   d.register('assemble', () => {

@@ -4,6 +4,7 @@ import { registerStageCommands, actorShot, twoShot } from '../../engine/script/s
 import { tagTexture } from '../../engine/paper/textures';
 import type { PoseInfo } from '../../engine/paper/PaperActor';
 import type { PortraitData } from '../../engine/ui/Portrait';
+import type { CardItem } from '../../engine/ui/Hud';
 import { CaseState, Confrontation, evaluateLogic } from './CaseState';
 import { TestimonyPanel } from './TestimonyPanel';
 import type { CaseData, HotspotDef } from './types';
@@ -36,7 +37,8 @@ export class InvestigationGame implements Mode {
   private portraitActors: { left: PaperActor | null; right: PaperActor | null } = { left: null, right: null };
   /** 対決中の状態（自動確認用に公開） */
   confrontation: Confrontation | null = null;
-  private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), seen: tagTexture('・', '#8a7a6a') };
+  /** 頭上の印：まだ見ていない内容がある（！・話）／今の段階では調べ済み（赤い✓） */
+  private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), done: tagTexture('✓', '#b8322a') };
   /** テストや自動確認から進行を観察するためのログ */
   readonly log: string[] = [];
 
@@ -132,9 +134,11 @@ export class InvestigationGame implements Mode {
       const target = on ? Number(light.userData.on ?? 6) : 0;
       const from = light.intensity;
       obj.visible = true;
+      // 立体の結晶などは、点灯の瞬間に強く光る
+      if (on) obj.traverse((o) => (o as { ignite?: () => void }).ignite?.());
       await this.engine.tweens.run(1.2, (k) => {
         light.intensity = from + (target - from) * k;
-        if (glow) glow.scale.setScalar((on ? k : 1 - k) * 2.2 + 0.001);
+        if (glow) glow.scale.setScalar((on ? k : 1 - k) * Number(glow.userData.size ?? 2.2) + 0.001);
       }, Ease.outCubic, light);
     });
     d.register('confront', (args) => this.runConfrontation(args[0]));
@@ -216,6 +220,7 @@ export class InvestigationGame implements Mode {
   async start(): Promise<void> {
     this.followCamera();
     this.engine.rig.snap();
+    if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
     await this.runScript(this.data.intro);
     this.beginExplore();
   }
@@ -236,28 +241,31 @@ export class InvestigationGame implements Mode {
     this.engine.hud.setGoal(this.state.goal());
   }
 
-  /** 持っている証拠品と手がかり（まとめる・尋問で使える物） */
-  private ownedItems(): Array<{ id: string; name: string; desc: string; image: string }> {
-    const items = this.state.evidence.map((id) => {
+  /** 証拠品（尋問でつきつける物） */
+  private ownedEvidence(): CardItem[] {
+    return this.state.evidence.map((id) => {
       const e = this.data.evidence.find((x) => x.id === id)!;
-      return { ...e, image: this.engine.assets.url(e.image) };
+      return { ...e, image: this.engine.assets.url(e.image), group: '証拠品' };
     });
-    const clues = this.state.clues.map((id) => {
+  }
+
+  /** 推理メモ（まとめるで使う物） */
+  private ownedClues(): CardItem[] {
+    return this.state.clues.map((id) => {
       const c = this.data.clues.find((x) => x.id === id)!;
-      return { ...c, image: this.engine.assets.url('props/sign_hanging_small.webp') };
+      return { ...c, image: this.engine.assets.url('props/sign_hanging_small.webp'), group: '推理メモ' };
     });
-    return [...items, ...clues];
   }
 
   private async openBook(): Promise<void> {
     this.engine.hud.showTouch(false);
-    await this.engine.hud.openBook(this.ownedItems(), 'view');
+    await this.engine.hud.openBook([...this.ownedEvidence(), ...this.ownedClues()], 'view', '証拠品・推理メモ', '証拠品は尋問で、推理メモはまとめるで使う');
     if (this.phase === 'explore') this.engine.hud.showTouch(true);
   }
 
   private async interact(h: HotspotDef): Promise<void> {
-    const seen = this.state.seen.has(h.id);
-    this.state.seen.add(h.id);
+    const { script: src, key } = this.state.resolveHotspot(h);
+    this.state.markPlayed(key);
     this.log.push(`examine:${h.id}`);
     const actor = h.actor ? this.findActor(h.actor) : null;
     if (actor) {
@@ -266,8 +274,6 @@ export class InvestigationGame implements Mode {
     } else {
       void this.player.face(h.x >= this.player.position.x ? 1 : -1, this.engine.tweens);
     }
-    const variant = h.variants?.find((v) => this.state.check(v.when));
-    const src = variant ? variant.script : seen && h.again ? h.again : h.script;
     this.engine.sound.play('select');
     await this.runScript(src);
     if (this.phase === 'done') return;
@@ -283,7 +289,7 @@ export class InvestigationGame implements Mode {
     hud.setPrompt(null);
     this.player.setWalking(0);
     await this.engine.stage.setLook('confront', 0.6);
-    const clues = this.ownedItems().map(({ id, name, desc }) => ({ id, name, desc }));
+    const clues = this.ownedClues().map(({ id, name, desc }) => ({ id, name, desc }));
     for (;;) {
       const pick = await hud.logic(clues, L.title, L.hint);
       if (!pick) break;
@@ -332,9 +338,10 @@ export class InvestigationGame implements Mode {
     await this.director.play(`@移動 ${this.player.def.id} ${standX.toFixed(2)} ${witness.position.z.toFixed(2)}`);
     await Promise.all([this.player.face(side as 1 | -1, this.engine.tweens), witness.face((-side) as 1 | -1, this.engine.tweens)]);
     await this.engine.stage.setLook('confront', 1);
+    if (this.data.bgm?.confront) this.engine.sound.setBgm(this.data.bgm.confront);
     hud.setTalismans(max, c.talismans);
     await this.runScript(def.intro);
-    await hud.card(def.title, '尋問開始', '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠をつきつけよう');
+    await hud.card(def.title, '尋問開始', '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう');
     for (;;) {
       // 証言パネルが画面下半分を使うので、証人は上寄りに映す
       this.engine.rig.shot(witness.position.clone().add(new THREE.Vector3(0, -0.15, 0)), new THREE.Vector3(0.3 * witness.facing, 1.15, 5.6), 30);
@@ -362,7 +369,8 @@ export class InvestigationGame implements Mode {
         }
         continue;
       }
-      const chosen = await hud.openBook(this.ownedItems(), 'present');
+      // 尋問でつきつけられるのは証拠品だけ（推理メモは「まとめる」用）
+      const chosen = await hud.openBook(this.ownedEvidence(), 'present', '証拠品');
       if (!chosen) continue;
       const result = c.present(chosen);
       this.state.talismans = c.talismans;
@@ -382,11 +390,18 @@ export class InvestigationGame implements Mode {
       await this.runScript(def.wrong);
       misses++;
       if (c.lost) {
+        // 信が尽きたらゲームオーバー。この尋問を始めたときの信に戻して、尋問の最初からやり直す（満タンには戻らない）
         await this.runScript(def.fail);
+        this.log.push(`gameover:${id}`);
+        this.engine.sound.play('wrong');
+        await hud.card('ゲームオーバー', '信を失った', `この尋問の最初からやり直す（信 ${c.start}）`);
         c.reset();
+        misses = 0;
         this.state.talismans = c.talismans;
         hud.setTalismans(max, c.talismans);
-        await hud.card(def.title, 'もう一度', '証言をよく聞き直そう');
+        await this.runScript(def.intro);
+        await hud.card(def.title, '尋問開始', '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう');
+        continue;
       }
       // 間違えるたびに、少しずつはっきりしたヒントを出す
       const hints = def.hints ?? [];
@@ -398,6 +413,7 @@ export class InvestigationGame implements Mode {
     this.log.push(`confront:${id}:solved`);
     // 成功の台本の中で事件が解決していれば、ここで終わり（台本の実行中に phase が変わる）
     if ((this.phase as Phase) === 'done') return;
+    if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
     await this.engine.stage.setLook('sunset', 0.8);
     hud.bookButton.classList.remove('hidden');
     this.refreshGoal();
@@ -495,17 +511,19 @@ export class InvestigationGame implements Mode {
     this.markerTime += dt;
     for (const h of this.data.hotspots) {
       const m = this.markers.get(h.id)!;
-      const seen = this.state.seen.has(h.id);
+      // 今の段階で新しく見られる内容があれば「！・話」、見終わっていれば赤い✓
+      const done = !this.state.resolveHotspot(h).fresh;
       const mat = m.material as THREE.SpriteMaterial;
-      const want = seen ? this.tagTex.seen : h.actor ? this.tagTex.talk : this.tagTex.look;
+      const want = done ? this.tagTex.done : h.actor ? this.tagTex.talk : this.tagTex.look;
       if (mat.map !== want) {
         mat.map = want;
         mat.needsUpdate = true;
       }
       const base = h.markHeight ?? (h.actor ? (this.findActor(h.actor)?.def.height ?? 1) + 0.35 : 1.3);
-      m.position.y = base + Math.sin(this.markerTime * 2.4 + h.x) * 0.06;
+      // 新しい内容がある印は大きく弾ませ、調べ済みは小さく静かに
+      m.position.y = base + (done ? 0 : Math.abs(Math.sin(this.markerTime * 3 + h.x)) * 0.1);
       const isNear = this.near === h && this.phase === 'explore';
-      m.scale.setScalar(isNear ? 0.52 : seen ? 0.26 : 0.4);
+      m.scale.setScalar(isNear ? 0.52 : done ? 0.3 : 0.44);
       m.visible = this.phase === 'explore';
     }
   }

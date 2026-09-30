@@ -2,14 +2,25 @@
  * 効果音と音楽。効果音は素材が無くても鳴るように WebAudio で合成する。
  * スマホでは最初のタップまで音が出せないため unlock() を入力時に呼ぶ。
  */
-export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'reveal' | 'step';
+export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'shine' | 'reveal' | 'step';
+
+/** コードで鳴らす BGM（テクノなど）。ゲームの AudioContext の、BGM 用の音量ノードへ出す */
+export interface BgmTrack {
+  start(ctx: AudioContext, out: AudioNode): void;
+  stop(): void;
+}
 
 export class Sound {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private bgmGain: GainNode | null = null;
   private bgmEl: HTMLAudioElement | null = null;
-  private bgmSource: MediaElementAudioSourceNode | null = null;
+  /** 一度作った BGM の audio 要素（MediaElementSource は要素ごとに1回しか作れないので使い回す） */
+  private bgmEls = new Map<string, HTMLAudioElement>();
+  /** 名前で呼ぶ BGM（音声ファイルのURLか、コードで鳴らす曲） */
+  private bgmDefs = new Map<string, string | BgmTrack>();
+  private bgmName: string | null = null;
+  private bgmTrack: BgmTrack | null = null;
   /** 素材ファイルで鳴らす効果音（無ければ合成音） */
   private files = new Map<SE, { data: Promise<ArrayBuffer>; buffer: AudioBuffer | null }>();
   muted = false;
@@ -26,9 +37,34 @@ export class Sound {
       this.bgmGain = this.ctx.createGain();
       this.bgmGain.gain.value = this.bgmVolume;
       this.bgmGain.connect(this.master);
+      // 音が出せるようになる前に指定されていた BGM をここで鳴らす
+      const wanted = this.bgmName;
+      this.bgmName = null;
+      if (wanted) this.setBgm(wanted);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
     if (this.bgmEl && this.bgmEl.paused && !this.muted) void this.bgmEl.play().catch(() => {});
+  }
+
+  /** BGM に名前を付けて登録する（音声ファイルのURL、またはコードで鳴らす曲） */
+  defineBgm(name: string, source: string | BgmTrack): void {
+    this.bgmDefs.set(name, source);
+  }
+
+  /** 名前で BGM を切り替える。null で止める。音が出せるようになる前なら、出せるようになった時に鳴らす */
+  setBgm(name: string | null): void {
+    if (name === this.bgmName) return;
+    this.bgmName = name;
+    if (!this.ctx || !this.bgmGain) return;
+    this.bgmEl?.pause();
+    this.bgmEl = null;
+    this.bgmTrack?.stop();
+    this.bgmTrack = null;
+    if (!name) return;
+    const def = this.bgmDefs.get(name) ?? name;
+    if (typeof def === 'string') return this.playBgm(def);
+    this.bgmTrack = def;
+    def.start(this.ctx, this.bgmGain);
   }
 
   suspend(): void {
@@ -51,19 +87,21 @@ export class Sound {
     }
   }
 
+  /** 音声ファイルの BGM を最初から鳴らす（名前で切り替えるときは setBgm を使う） */
   playBgm(url: string): void {
-    if (this.bgmEl?.dataset.src === url) return;
     this.bgmEl?.pause();
-    const el = new Audio(url);
-    el.loop = true;
-    el.preload = 'auto';
-    el.crossOrigin = 'anonymous';
-    el.dataset.src = url;
+    let el = this.bgmEls.get(url);
+    if (!el) {
+      el = new Audio(url);
+      el.loop = true;
+      el.preload = 'auto';
+      el.crossOrigin = 'anonymous';
+      if (this.ctx && this.bgmGain) this.ctx.createMediaElementSource(el).connect(this.bgmGain);
+      else el.volume = this.bgmVolume;
+      this.bgmEls.set(url, el);
+    }
+    el.currentTime = 0;
     this.bgmEl = el;
-    if (this.ctx && this.bgmGain) {
-      this.bgmSource = this.ctx.createMediaElementSource(el);
-      this.bgmSource.connect(this.bgmGain);
-    } else el.volume = this.bgmVolume;
     if (!this.muted) void el.play().catch(() => {});
   }
 
@@ -164,6 +202,26 @@ export class Sound {
         // 紙が次々に立ち上がる音（素材ファイルが無いときの代わり）
         for (let i = 0; i < 6; i++) noise(i * 0.2, 0.18, 0.4, 2200 + i * 300, 0.6);
         break;
+      case 'shine': {
+        // キラキラキラキラ……（高い音が駆け上がる）
+        const steps = [1568, 1760, 2093, 2349, 2637, 3136, 3520, 4186, 4699, 5274, 6272, 7040];
+        steps.forEach((f, i) => {
+          const at = i * 0.055;
+          tone('triangle', f * (1 + (Math.random() - 0.5) * 0.01), f, at, 0.22, 0.1);
+          tone('sine', f * 2, f * 2, at + 0.02, 0.12, 0.03);
+        });
+        noise(0, 0.75, 0.12, 9000, 0.5);
+        // ……ジャキーン！（金属的な一撃と、長く響く和音）
+        const hit = 0.72;
+        noise(hit, 0.35, 1.0, 3200, 0.4);
+        noise(hit, 0.08, 0.9, 900, 0.7);
+        tone('sine', 150, 50, hit, 0.35, 0.45);
+        for (const f of [880, 1318.5, 1760, 2637]) {
+          tone('sawtooth', f, f, hit, 1.3, 0.07);
+          tone('square', f * 1.006, f * 1.006, hit, 0.9, 0.035);
+        }
+        break;
+      }
       case 'item':
         [0, 0.09, 0.18, 0.3].forEach((s, i) => tone('triangle', [784, 988, 1175, 1568][i], [784, 988, 1175, 1568][i], s, 0.28, 0.25));
         break;

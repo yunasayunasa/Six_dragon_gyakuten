@@ -28,8 +28,8 @@ export interface HotspotDef {
   again?: string;
   /** 話しかける相手（いればその役者がこちらを向く） */
   actor?: string;
-  /** 条件付きで差し替える台本（上から順に判定） */
-  variants?: Array<{ when: Condition; script: string }>;
+  /** 条件付きで差し替える台本（上から順に判定）。again は、その台本を一度見たあとに流すもの */
+  variants?: Array<{ when: Condition; script: string; again?: string }>;
   /** マークを出す高さ */
   markHeight?: number;
 }
@@ -111,6 +111,8 @@ export interface CaseData {
   hotspots: HotspotDef[];
   /** 目的表示（条件を満たす最初のものを表示） */
   goals: Array<{ when: Condition; text: string }>;
+  /** BGM（Sound.defineBgm で登録した名前）。field＝探索中、confront＝尋問中 */
+  bgm?: { field?: string; confront?: string };
   /** 尋問で間違えられる回数（事件全体で共通） */
   talismans: number;
   logic: LogicDef;

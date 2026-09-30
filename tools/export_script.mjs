@@ -32,6 +32,9 @@ const FLAGS = {
   l1: 'まとめる①のあと',
   l2: 'まとめる②のあと',
   l3: 'まとめる③のあと',
+  l4: 'まとめる④のあと',
+  met_galleon: 'ガレヲンと話したあと',
+  met_fediel: 'フェディエルと話したあと',
 };
 const when = (w) => {
   const parts = [...(w.flags ?? []).map((f) => FLAGS[f] ?? f), ...(w.evidence ?? []).map((e) => `「${itemName(e)}」を持っている`)];
@@ -62,7 +65,10 @@ for (const h of data.hotspots) {
   addScript(scene, '1回目', h.script);
   if (h.again) addScript(scene, '2回目から', h.again);
   // variants は上から順に判定されるので、表では条件がゆるい（後ろの）ものから並べる
-  for (const v of [...(h.variants ?? [])].reverse()) addScript(scene, when(v.when), v.script);
+  for (const v of [...(h.variants ?? [])].reverse()) {
+    addScript(scene, when(v.when), v.script);
+    if (v.again) addScript(scene, `${when(v.when)}（2回目から）`, v.again);
+  }
 }
 data.logic.pairs.forEach((p, i) => addScript(`まとめる${'①②③④⑤'[i]}`, `「${itemName(p.a)}」＋「${itemName(p.b)}」`, p.script));
 addScript('まとめる（失敗）', 'つながらない組み合わせ', data.logic.miss);

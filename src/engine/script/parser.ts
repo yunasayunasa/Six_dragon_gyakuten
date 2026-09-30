@@ -37,6 +37,7 @@ export const COMMAND_ALIASES: Record<string, string> = {
   攻撃: 'attack',
   被弾: 'damage',
   事件解決: 'solve',
+  会話を閉じる: 'hidetext',
   たたむ: 'flatten',
   組み立て: 'assemble',
 };

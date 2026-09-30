@@ -185,6 +185,7 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-user-select: no
 .ev img { width: 100%; height: calc(var(--u) * 9); object-fit: contain; }
 .ev .nm { font-size: calc(var(--u) * 2.2); margin-top: calc(var(--u) * .6); }
 .ev.sel { outline: 3px solid var(--shu); transform: translateY(-4px) rotate(-1deg); }
+.book .grid .group { flex-shrink: 0; writing-mode: vertical-rl; font-family: var(--font-brush); font-size: calc(var(--u) * 2.4); color: var(--shu); padding: 0 calc(var(--u) * .4); border-left: 2px solid var(--shu); }
 .book .desc { min-height: 2.6em; font-size: calc(var(--u) * 2.5); line-height: 1.6; color: var(--ink-soft); white-space: pre-wrap; }
 .book .row { display: flex; gap: calc(var(--u) * 2); justify-content: flex-end; }
 .book .row, .logic .row { position: sticky; bottom: calc(var(--u) * -2.6); padding: calc(var(--u) * 1.2) 0 calc(var(--u) * .4); background: linear-gradient(transparent, var(--washi) 30%); }

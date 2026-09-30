@@ -1,10 +1,11 @@
-import type { CaseData, Condition, ConfrontationDef } from './types';
+import type { CaseData, Condition, ConfrontationDef, HotspotDef } from './types';
 
 /** 事件の進み具合（持っている証拠・記録・手がかり）。表示や演出は持たない。 */
 export class CaseState {
   readonly evidence: string[] = [];
   readonly clues: string[] = [];
   readonly flags = new Set<string>();
+  /** 見た台本（調べる場所の id、または id#変化の番号） */
   readonly seen = new Set<string>();
   /** 尋問で間違えられる残り回数（事件全体で共通） */
   talismans: number;
@@ -38,6 +39,26 @@ export class CaseState {
   goal(): string | null {
     return this.data.goals.find((g) => this.check(g.when))?.text ?? null;
   }
+
+  /**
+   * 調べる場所で今流れる台本。fresh は「今の段階でまだ見ていない内容がある」か（印の表示に使う）。
+   * 見終わったら markPlayed(key) を呼ぶ。
+   */
+  resolveHotspot(h: HotspotDef): { script: string; key: string; fresh: boolean } {
+    const i = h.variants?.findIndex((v) => this.check(v.when)) ?? -1;
+    if (i >= 0) {
+      const v = h.variants![i];
+      const key = `${h.id}#${i}`;
+      const fresh = !this.seen.has(key);
+      return { script: !fresh && v.again ? v.again : v.script, key, fresh };
+    }
+    const fresh = !this.seen.has(h.id);
+    return { script: !fresh && h.again ? h.again : h.script, key: h.id, fresh };
+  }
+
+  markPlayed(key: string): void {
+    this.seen.add(key);
+  }
 }
 
 /** まとめる：2つの手がかりを選んだ結果（順番は問わない）。つながらなければ null */
@@ -60,7 +81,8 @@ export class Confrontation {
 
   constructor(
     readonly def: ConfrontationDef,
-    start: number,
+    /** この尋問を始めたときの残り（尽きたらここからやり直す） */
+    readonly start: number,
     readonly max: number,
   ) {
     this.talismans = start;
@@ -109,9 +131,9 @@ export class Confrontation {
     return this.talismans <= 0;
   }
 
-  /** 信頼が尽きたら、信頼を戻して証言を最初から */
+  /** 信頼が尽きたら、この尋問を始めたときの残りに戻して証言を最初から（満タンには戻らない） */
   reset(): void {
-    this.talismans = this.max;
+    this.talismans = this.start;
     this.resetStatements();
   }
 }
