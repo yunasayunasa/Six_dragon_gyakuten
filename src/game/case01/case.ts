@@ -307,9 +307,9 @@ export const CASE01: CaseData = {
       title: 'ガレヲンを見た',
       intro: S.C1_INTRO,
       statements: [
-        { text: '灯りが消えたとき、ワムは\n桟橋のはしっこで釣りをしてたので。', press: S.C1_PRESS_1 },
+        { text: '灯りが消えたとき、ワムは\n桟橋のはしっこで釣りをしてた。', press: S.C1_PRESS_1 },
         { text: 'そこから、ガレヲンが\n灯台の前で寝てるのが見えたので。', press: S.C1_PRESS_2, contradiction: ['nap'] },
-        { text: '寝てる人のそばで灯りが消えたら、\nその人があやしいので。', press: S.C1_PRESS_3 },
+        { text: '寝てる人のそばで灯りが消えたら、\nその人があやしい。', press: S.C1_PRESS_3 },
       ],
       success: S.C1_SUCCESS,
       wrong: S.C1_WRONG,
@@ -335,7 +335,7 @@ export const CASE01: CaseData = {
       title: 'あのとき見たこと',
       intro: S.C3_INTRO,
       statements: [
-        { text: 'ワムは夕方からずーっと、\n桟橋のはしっこで釣りをしてたので。', press: S.C3_PRESS_1 },
+        { text: 'ワムは夕方からずーっと、\n桟橋のはしっこで釣りをしてた。', press: S.C3_PRESS_1 },
         { text: '灯りが消えて暗くなったから、\nワムは桟橋の先でじっとしてたので。', press: S.C3_PRESS_2 },
         { text: 'それにワムは、灯台柱には\n一歩も近づいてないので。', press: S.C3_PRESS_3, contradiction: ['ribbon', 'footprints'] },
       ],
@@ -349,9 +349,9 @@ export const CASE01: CaseData = {
       title: 'だんごは知らない',
       intro: S.C4_INTRO,
       statements: [
-        { text: 'ワム、甘いものは\nそんなに好きじゃないので。', press: S.C4_PRESS_1, reveals: 3 },
+        { text: 'ワム、甘いものは\nそんなに好きじゃない。', press: S.C4_PRESS_1, reveals: 3 },
         { text: 'フェディエルのだんごなんて、\n見たこともないので。', press: S.C4_PRESS_2 },
-        { text: '空魚は光だけで寄ってくるので。\n餌なんていらないので。', press: S.C4_PRESS_3, contradiction: ['skyfish', 'fishing'] },
+        { text: '空魚は光だけで寄ってくる。\n餌なんていらないので。', press: S.C4_PRESS_3, contradiction: ['skyfish', 'fishing'] },
         { text: 'だから、ワムから甘い匂いなんて、\nするわけないので。', press: S.C4_PRESS_4, contradiction: ['scent', 'honey_puddle', 'same_culprit'], hidden: true },
       ],
       success: S.C4_SUCCESS,
