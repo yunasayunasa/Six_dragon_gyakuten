@@ -92,6 +92,9 @@ export class PaperActor extends THREE.Group {
     this.eyeMesh = new THREE.Mesh(plane, mk(0, true));
     this.mouthMesh = new THREE.Mesh(plane, mk(0, true));
     this.eyeMesh.renderOrder = this.mouthMesh.renderOrder = 2;
+    // 目・口も奥行きを書き込む（書き込まないと、被写界深度の合成などで目の部分だけ奥の景色になることがある）
+    (this.eyeMesh.material as THREE.Material).depthWrite = true;
+    (this.mouthMesh.material as THREE.Material).depthWrite = true;
     this.paper.add(this.baseMesh, this.eyeMesh, this.mouthMesh);
     this.blob = new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, depthWrite: false }));
     this.blob.rotation.x = -Math.PI / 2;

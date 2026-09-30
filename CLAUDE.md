@@ -48,6 +48,13 @@
   - エンジン: まとめるは探索中いつでも（右下ボタン／Q・L）。`CaseData.confrontations`（`@対決 id`）、`@事件解決`、`@攻撃`/`@被弾`、信は事件全体で共通。
   - 追加立ち絵（攻撃・被弾・ガレヲン微笑み/投げキッス）は `tools/prepare_poses.mjs` で変換（Python が無いため Node + sharp。sharp は --no-save で入れる）。
 - 次: 証拠品の専用画像・効果音・背景は、ユーザーが話の流れを見てからリストを作って渡す予定。証拠品の画像は今は小物の流用（仮）。
+- 実機所見（2026-09-30 夜）を反映:
+  - フェディエルの一人称は「此方」、二人称は「其方」。「〜じゃ」は使わない（「〜かえ？」「〜ぞえ」「〜わいな」）。
+  - 尋問で間違えるとヒント（`ConfrontationDef.hints`、1回目はそれとなく・2回目からはっきり）。
+  - ダブルタップ拡大対策: CSS `touch-action: manipulation`、viewport に maximum-scale=1、`screen.ts` の `preventZoom()`（ピンチ阻止・拡大されたら等倍へ戻す）。実機未確認。
+  - 「ウィルナスの目が抜けて透ける」は再現できず原因未特定。対策として、会話の立ち絵の影フィルターを元絵だけに移し、3Dの目・口パーツも奥行きを書き込むようにした。再発したら写真をもらう。
+  - 開幕の紙が立ち上がる効果音はユーザー提供（`public/assets/audio/se_paper_rise.mp3`、`sound.useFile('rise', …)`）。
+  - 監修用の台本一覧: `node tools/export_script.mjs <出力.xlsx>`（`npm i --no-save exceljs`）。コウセイ直下の `第一話_台本一覧.xlsx` に出力して渡した。
 - 実機確認で直した不具合:
   - 透明な暗転幕 `.fader`（と `.shout`）が全タップを奪い、タイトル後の会話が進まなかった。
     原因は `#hud > *` の詳細度が `pointer-events: none` を上書きしていたこと → `:where(#hud) > *` に変更。

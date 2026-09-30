@@ -319,6 +319,8 @@ export class InvestigationGame implements Mode {
     const witness = this.findActor(def.witness)!;
     const c = (this.confrontation = new Confrontation(def, this.state.talismans, this.data.talismans));
     const max = this.data.talismans;
+    /** この尋問で間違えた回数（ヒントの強さに使う） */
+    let misses = 0;
     this.phase = 'script';
     hud.showTouch(false);
     hud.setGoal(null);
@@ -378,6 +380,7 @@ export class InvestigationGame implements Mode {
       await this.player.damage(this.engine.tweens);
       hud.setTalismans(max, c.talismans);
       await this.runScript(def.wrong);
+      misses++;
       if (c.lost) {
         await this.runScript(def.fail);
         c.reset();
@@ -385,6 +388,9 @@ export class InvestigationGame implements Mode {
         hud.setTalismans(max, c.talismans);
         await hud.card(def.title, 'もう一度', '証言をよく聞き直そう');
       }
+      // 間違えるたびに、少しずつはっきりしたヒントを出す
+      const hints = def.hints ?? [];
+      if (hints.length) await this.runScript(hints[Math.min(misses, hints.length) - 1]);
     }
     this.confrontation = null;
     this.testimony.hide();

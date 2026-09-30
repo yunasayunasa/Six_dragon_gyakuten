@@ -23,6 +23,7 @@ function allScripts(): Array<[string, string]> {
   for (const [id, c] of Object.entries(data.confrontations)) {
     list.push([`${id}.intro`, c.intro], [`${id}.success`, c.success], [`${id}.wrong`, c.wrong], [`${id}.fail`, c.fail]);
     c.statements.forEach((s, i) => list.push([`${id}.press.${i}`, s.press]));
+    c.hints?.forEach((h, i) => list.push([`${id}.hint.${i}`, h]));
   }
   for (const h of data.hotspots) {
     list.push([`hs.${h.id}`, h.script]);

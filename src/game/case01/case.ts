@@ -39,6 +39,8 @@ async function buildSet(engine: Engine): Promise<void> {
   const crystal = new Crystal({ height: 0.62, envMap });
   lantern.add(crystal);
   engine.onFrame.add((dt) => crystal.update(dt));
+  // 開幕に紙が立ち上がる音（ユーザー提供の素材）
+  engine.sound.useFile('rise', engine.assets.url('audio/se_paper_rise.mp3'));
   const light = new THREE.PointLight('#ffd49a', 0, 11, 1.6);
   light.position.y = 0.45;
   light.userData.on = 9;
@@ -123,7 +125,7 @@ export const CASE01: CaseData = {
     { id: 'galleon', x: -6.7, z: -1.65, facing: 1 },
     { id: 'luwoh', x: -1.7, z: -1.3, facing: -1 },
     { id: 'fediel', x: 3.7, z: -1.9, facing: -1 },
-    { id: 'wamdus', x: 9.3, z: -1.7, facing: 1 },
+    { id: 'wamdus', x: 9.3, z: -1.7, facing: -1 },
   ],
   // 画像は仮（話が固まったら専用の証拠品画像に差し替える）
   evidence: [
@@ -312,19 +314,21 @@ export const CASE01: CaseData = {
       success: S.C1_SUCCESS,
       wrong: S.C1_WRONG,
       fail: S.C1_FAIL,
+      hints: [S.C1_HINT_1, S.C1_HINT_2],
     },
     fediel: {
       witness: 'fediel',
       title: 'だんごの見張り',
       intro: S.C2_INTRO,
       statements: [
-        { text: '雲蜜だんごは、\nこの台の上の皿に置いておいたのじゃ。', press: S.C2_PRESS_1 },
-        { text: '妾は片時も、\nだんごから目を離さなかったぞえ。', press: S.C2_PRESS_2, contradiction: ['fediel_saw'] },
-        { text: 'なのに気づけば皿は空。\nこれは妖術に違いないのう。', press: S.C2_PRESS_3 },
+        { text: '雲蜜だんごは、\nこの台の上の皿に置いておいたぞえ。', press: S.C2_PRESS_1 },
+        { text: '此方は片時も、\nだんごから目を離しはせなんだ。', press: S.C2_PRESS_2, contradiction: ['fediel_saw'] },
+        { text: 'なのに気づけば皿は空。\nこれは妖術に違いないわいな。', press: S.C2_PRESS_3 },
       ],
       success: S.C2_SUCCESS,
       wrong: S.C2_WRONG,
       fail: S.C2_FAIL,
+      hints: [S.C2_HINT_1, S.C2_HINT_2],
     },
     wamdus_crystal: {
       witness: 'wamdus',
@@ -338,6 +342,7 @@ export const CASE01: CaseData = {
       success: S.C3_SUCCESS,
       wrong: S.C3_WRONG,
       fail: S.C3_FAIL,
+      hints: [S.C3_HINT_1, S.C3_HINT_2],
     },
     wamdus_snack: {
       witness: 'wamdus',
@@ -352,6 +357,7 @@ export const CASE01: CaseData = {
       success: S.C4_SUCCESS,
       wrong: S.C4_WRONG,
       fail: S.C4_FAIL,
+      hints: [S.C4_HINT_1, S.C4_HINT_2],
     },
   },
   ending: S.ENDING,

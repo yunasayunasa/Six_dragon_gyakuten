@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Assets } from './Assets';
 import { Input } from './Input';
 import { Tweens } from './tween';
-import { gameSize, updateRotation } from './screen';
+import { gameSize, preventZoom, updateRotation } from './screen';
 import { PostFX } from '../render/PostFX';
 import { pickQuality, type QualityProfile } from '../render/quality';
 import { CameraRig } from '../stage/CameraRig';
@@ -63,6 +63,7 @@ export class Engine {
       this.statsEl.className = 'stats';
       document.body.appendChild(this.statsEl);
     }
+    preventZoom();
     addEventListener('resize', this.resize);
     document.addEventListener('visibilitychange', () => this.setPaused(document.hidden));
     addEventListener('pagehide', () => this.setPaused(true));

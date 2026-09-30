@@ -2,7 +2,7 @@
  * 効果音と音楽。効果音は素材が無くても鳴るように WebAudio で合成する。
  * スマホでは最初のタップまで音が出せないため unlock() を入力時に呼ぶ。
  */
-export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'reveal' | 'step';
+export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'reveal' | 'step';
 
 export class Sound {
   private ctx: AudioContext | null = null;
@@ -10,6 +10,8 @@ export class Sound {
   private bgmGain: GainNode | null = null;
   private bgmEl: HTMLAudioElement | null = null;
   private bgmSource: MediaElementAudioSourceNode | null = null;
+  /** 素材ファイルで鳴らす効果音（無ければ合成音） */
+  private files = new Map<SE, { data: Promise<ArrayBuffer>; buffer: AudioBuffer | null }>();
   muted = false;
   seVolume = 0.5;
   bgmVolume = 0.32;
@@ -69,9 +71,41 @@ export class Sound {
     if (this.bgmGain && this.ctx) this.bgmGain.gain.setTargetAtTime(to * this.bgmVolume, this.ctx.currentTime, seconds / 3);
   }
 
+  /** 効果音を素材ファイルに差し替える（先に読み込んでおき、鳴らす時に解読する） */
+  useFile(se: SE, url: string): void {
+    const data = fetch(url).then((r) => {
+      if (!r.ok) throw new Error(`効果音を読めません: ${url}`);
+      return r.arrayBuffer();
+    });
+    data.catch(() => this.files.delete(se)); // 読めなければ合成音のまま
+    this.files.set(se, { data, buffer: null });
+  }
+
+  private playFile(ctx: AudioContext, entry: { data: Promise<ArrayBuffer>; buffer: AudioBuffer | null }): void {
+    const start = (buf: AudioBuffer) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = this.seVolume * 1.6;
+      src.connect(g).connect(this.master!);
+      src.start();
+    };
+    if (entry.buffer) return start(entry.buffer);
+    // decodeAudioData は元のデータを使い切るので、複製して渡す
+    void entry.data
+      .then((d) => ctx.decodeAudioData(d.slice(0)))
+      .then((buf) => {
+        entry.buffer = buf;
+        start(buf);
+      })
+      .catch(() => {});
+  }
+
   play(se: SE): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || this.muted) return;
+    const file = this.files.get(se);
+    if (file) return this.playFile(ctx, file);
     const t = ctx.currentTime;
     const out = ctx.createGain();
     out.gain.value = this.seVolume;
@@ -125,6 +159,10 @@ export class Sound {
       case 'paper':
         noise(0, 0.22, 0.5, 2400, 0.6);
         noise(0.05, 0.15, 0.3, 5200, 0.7);
+        break;
+      case 'rise':
+        // 紙が次々に立ち上がる音（素材ファイルが無いときの代わり）
+        for (let i = 0; i < 6; i++) noise(i * 0.2, 0.18, 0.4, 2200 + i * 300, 0.6);
         break;
       case 'item':
         [0, 0.09, 0.18, 0.3].forEach((s, i) => tone('triangle', [784, 988, 1175, 1568][i], [784, 988, 1175, 1568][i], s, 0.28, 0.25));

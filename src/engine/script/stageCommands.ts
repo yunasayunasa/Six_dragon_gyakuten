@@ -15,6 +15,7 @@ const SE_NAMES: Record<string, SE> = {
   叫び: 'shout',
   失敗: 'wrong',
   紙: 'paper',
+  紙起こし: 'rise',
   発見: 'reveal',
   足音: 'step',
 };
@@ -151,5 +152,8 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
   });
   // 開幕の組み立て演出（@たたむ で倒し、@組み立て で左から順に起こす）
   d.register('flatten', () => engine.stage.flattenAll());
-  d.register('assemble', () => engine.stage.assemble((i) => i % 5 === 0 && engine.sound.play('paper')));
+  d.register('assemble', () => {
+    engine.sound.play('rise');
+    return engine.stage.assemble();
+  });
 }

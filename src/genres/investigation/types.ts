@@ -63,6 +63,8 @@ export interface ConfrontationDef {
   wrong: string;
   /** 信頼が尽きたときの台本（その後、信頼を戻して証言を最初から） */
   fail: string;
+  /** 間違えたあとのヒント。1回目は hints[0]、2回目は hints[1]…（最後のものをくり返す） */
+  hints?: string[];
 }
 
 /** まとめる：2つの手がかりをつなぐと新しい推理になる */
