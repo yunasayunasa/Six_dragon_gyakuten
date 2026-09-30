@@ -42,9 +42,10 @@ async function buildSet(engine: Engine): Promise<void> {
   engine.onFrame.add((dt) => crystal.update(dt));
   // 開幕に紙が立ち上がる音（ユーザー提供の素材）
   engine.sound.useFile('rise', engine.assets.url('audio/se_paper_rise.mp3'));
-  engine.sound.defineBgm('カフェ', engine.assets.url('audio/cafe.mp3'));
+  // 音声ファイルの曲は尋問のテクノより大きく聞こえるので、音量を下げてそろえる（スマホのスピーカーは低音が出ないので、低音を除いた大きさで合わせた）
+  engine.sound.defineBgm('カフェ', engine.assets.url('audio/cafe.mp3'), 0.35);
   engine.sound.defineBgm('尋問', technoBgm(0.8));
-  engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'));
+  engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'), 0.37);
   const light = new THREE.PointLight('#ffd49a', 0, 12, 1.6);
   light.position.y = 1.9; // 結晶の近くに置くと結晶そのものが白く飛ぶので、結晶の上から離して照らす
   light.userData.on = 12;
@@ -338,12 +339,26 @@ export const CASE01: CaseData = {
       statements: [
         { text: 'ワムは夕方からずーっと、\n桟橋のはしっこで釣りをしてた。', press: S.C3_PRESS_1 },
         { text: '灯りが消えて暗くなったから、\nワムは桟橋の先でじっとしてたので。', press: S.C3_PRESS_2 },
-        { text: 'それにワムは、灯台柱には\n一歩も近づいてないので。', press: S.C3_PRESS_3, contradiction: ['ribbon', 'footprints'] },
+        { text: 'それにワムは、灯台柱には\n一歩も近づいてないので。', press: S.C3_PRESS_3, contradiction: ['footprints'] },
       ],
       success: S.C3_SUCCESS,
       wrong: S.C3_WRONG,
       fail: S.C3_FAIL,
       hints: [S.C3_HINT_1, S.C3_HINT_2],
+    },
+    wamdus_ribbon: {
+      witness: 'wamdus',
+      title: 'あの足跡は',
+      intro: S.C3B_INTRO,
+      statements: [
+        { text: 'あの足跡がワムのだなんて、\nだれにもわからない。', press: S.C3B_PRESS_1 },
+        { text: 'ワムは釣り場から、\nずっと動いてないので。', press: S.C3B_PRESS_2 },
+        { text: 'ワムの物なんて、\n桟橋のどこにも落ちてないよ。', press: S.C3B_PRESS_3, contradiction: ['ribbon'] },
+      ],
+      success: S.C3B_SUCCESS,
+      wrong: S.C3_WRONG,
+      fail: S.C3_FAIL,
+      hints: [S.C3B_HINT_1, S.C3B_HINT_2],
     },
     wamdus_snack: {
       witness: 'wamdus',

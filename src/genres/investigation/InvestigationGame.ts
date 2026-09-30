@@ -289,7 +289,12 @@ export class InvestigationGame implements Mode {
     hud.setPrompt(null);
     this.player.setWalking(0);
     await this.engine.stage.setLook('confront', 0.6);
-    const clues = this.ownedClues().map(({ id, name, desc }) => ({ id, name, desc }));
+    // まとめ終わった推理メモ（使う組がすべて成立したもの）は一覧に出さない
+    const used = (id: string) =>
+      L.pairs.filter((p) => p.a === id || p.b === id).every((p) => this.state.flags.has(p.flag));
+    const clues = this.ownedClues()
+      .filter((c) => !used(c.id))
+      .map(({ id, name, desc }) => ({ id, name, desc }));
     for (;;) {
       const pick = await hud.logic(clues, L.title, L.hint);
       if (!pick) break;

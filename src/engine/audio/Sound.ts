@@ -19,6 +19,8 @@ export class Sound {
   private bgmEls = new Map<string, HTMLAudioElement>();
   /** 名前で呼ぶ BGM（音声ファイルのURLか、コードで鳴らす曲） */
   private bgmDefs = new Map<string, string | BgmTrack>();
+  /** 音声ファイルごとの音量（曲どうしの大きさをそろえる） */
+  private bgmFileVolume = new Map<string, number>();
   private bgmName: string | null = null;
   private bgmTrack: BgmTrack | null = null;
   /** 素材ファイルで鳴らす効果音（無ければ合成音） */
@@ -47,8 +49,9 @@ export class Sound {
   }
 
   /** BGM に名前を付けて登録する（音声ファイルのURL、またはコードで鳴らす曲） */
-  defineBgm(name: string, source: string | BgmTrack): void {
+  defineBgm(name: string, source: string | BgmTrack, volume = 1): void {
     this.bgmDefs.set(name, source);
+    if (typeof source === 'string') this.bgmFileVolume.set(source, volume);
   }
 
   /** 名前で BGM を切り替える。null で止める。音が出せるようになる前なら、出せるようになった時に鳴らす */
@@ -96,8 +99,12 @@ export class Sound {
       el.loop = true;
       el.preload = 'auto';
       el.crossOrigin = 'anonymous';
-      if (this.ctx && this.bgmGain) this.ctx.createMediaElementSource(el).connect(this.bgmGain);
-      else el.volume = this.bgmVolume;
+      const vol = this.bgmFileVolume.get(url) ?? 1;
+      if (this.ctx && this.bgmGain) {
+        const g = this.ctx.createGain();
+        g.gain.value = vol;
+        this.ctx.createMediaElementSource(el).connect(g).connect(this.bgmGain);
+      } else el.volume = this.bgmVolume * vol;
       this.bgmEls.set(url, el);
     }
     el.currentTime = 0;

@@ -52,11 +52,11 @@ describe('尋問', () => {
   const def = CASE01.confrontations.wamdus_crystal;
   it('矛盾する証言に正しい証拠なら正解、違えば信頼が減る', () => {
     const c = new Confrontation(def, 5, 5);
-    expect(c.present('ribbon')).toBe('wrong');
+    expect(c.present('footprints')).toBe('wrong');
     expect(c.talismans).toBe(4);
     c.next();
     c.next();
-    expect(c.present('ribbon')).toBe('correct');
+    expect(c.present('footprints')).toBe('correct');
     expect(c.talismans).toBe(4);
   });
   it('信頼は前の尋問の残りから始まり、尽きたらこの尋問を始めたときの残りに戻して最初から', () => {
