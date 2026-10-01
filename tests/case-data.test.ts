@@ -39,7 +39,8 @@ function allScripts(): Array<[string, string]> {
 const names = new Map(data.cast.map((c) => [c.name, c]));
 const ids = new Map(data.cast.map((c) => [c.id, c]));
 const actorOf = (n: string) => names.get(n) ?? ids.get(n);
-const namedObjects = ['灯台柱'];
+/** 舞台の名前付きの物（case.ts の buildSet で st.named に登録しているもの） */
+const namedObjects = ['灯台柱', '空魚', '飛空艇', '飛空艇の着く所'];
 const itemIds = new Set([...data.evidence.map((e) => e.id), ...data.clues.map((c) => c.id)]);
 
 describe('第一話のデータ検査', () => {
@@ -72,10 +73,11 @@ describe('第一話のデータ検査', () => {
           if (c.name === 'face' && c.args[1]) expect(Object.keys(a!.expressions)).toContain(c.args[1]);
         }
         if (c.name === 'cam' && c.args[0] && !['戻す', '引き', '固定', '自動'].includes(c.args[0])) {
-          // @カメラ 周回 対象 秒 は2番目が対象
-          const target = c.args[0] === '周回' ? c.args[1] : c.args[0];
+          // @カメラ 周回 対象 秒 ／ @カメラ 眺め 対象 距離… は2番目が対象
+          const target = ['周回', '眺め'].includes(c.args[0]) ? c.args[1] : c.args[0];
           expect(actorOf(target) || namedObjects.includes(target), `${key} カメラ対象 ${target}`).toBeTruthy();
         }
+        if (c.name === 'cue') expect(namedObjects, `${key} 演出の対象 ${c.args[0]}`).toContain(c.args[0]);
         if (c.name === 'give') c.args.forEach((id) => expect(itemIds.has(id), `${key} 証拠 ${id}`).toBe(true));
         if (c.name === 'confront') expect(data.confrontations[c.args[0]], `${key} 尋問 ${c.args[0]}`).toBeTruthy();
         if (c.name === 'look') expect(['sunset', 'confront', 'dusk']).toContain(c.args[0]);

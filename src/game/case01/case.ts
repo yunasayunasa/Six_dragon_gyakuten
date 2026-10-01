@@ -6,6 +6,8 @@ import { Crystal } from '../../engine/stage/Crystal';
 import { technoBgm } from '../../engine/audio/technoBgm';
 import type { CaseData } from '../../genres/investigation/types';
 import * as S from './scripts';
+import { Airship } from '../props/Airship';
+import { SkyFish } from '../props/SkyFish';
 
 const RAIL_Z = -3.05;
 
@@ -59,6 +61,25 @@ async function buildSet(engine: Engine): Promise<void> {
   lantern.add(glow);
   st.scene.add(lantern);
   st.named.set('灯台柱', lantern);
+
+  // 結末：灯晶の光に誘われる空魚の群れと、光を目印に帰ってくる最終便の飛空艇（どちらも呼ばれるまで隠れている）
+  const fish = new SkyFish(new THREE.Vector3(0, 2.6, -1.6));
+  st.scene.add(fish);
+  st.named.set('空魚', fish);
+  const ship = new Airship(engine.tweens);
+  ship.dock.set(6.4, 0.15, -8.4);
+  ship.attachTrail(st.scene);
+  st.scene.add(ship);
+  st.named.set('飛空艇', ship);
+  // 飛空艇が着く所（カメラで眺める目印）
+  const dock = new THREE.Object3D();
+  dock.position.set(5.2, 1.6, -8.4);
+  st.scene.add(dock);
+  st.named.set('飛空艇の着く所', dock);
+  engine.onFrame.add((dt) => {
+    fish.update(dt);
+    ship.update(dt);
+  });
 }
 
 /** 攻撃3コマ・被弾1枚（tools/prepare_poses.mjs で変換した追加素材） */

@@ -73,6 +73,15 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
       const p = a ? a.headPosition() : obj.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.3, 0));
       return engine.rig.orbit(p, 3.6, 0.55, Number(args[2] ?? 6));
     }
+    // @カメラ 眺め 飛空艇の着く所 16 2 -4 … 舞台の名前付きの物を、距離・高さ・横のずれを決めて遠くから眺める
+    if (target === '眺め' || target === 'view') {
+      const obj = engine.stage.named.get(second);
+      if (!obj) throw new Error(`カメラの対象が見つかりません: ${second}`);
+      const [dist = 12, height = 1.5, side = 0, fov = 34] = args.slice(2).map(Number);
+      ctx.setAutoCamera?.(false);
+      engine.rig.shot(obj.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(side, height, dist), fov);
+      return;
+    }
     if (target === '引き' || target === 'wide') {
       const x = engine.rig.look.x;
       engine.rig.shot(new THREE.Vector3(x, 1.3, 0), new THREE.Vector3(0, 2.8, 12), 32);
@@ -153,6 +162,12 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
   });
   // @音楽 名前（Sound.defineBgm で登録した名前）／ @音楽 止める
   d.register('bgm', (args) => engine.sound.setBgm(!args[0] || args[0] === '止める' || args[0] === 'stop' ? null : args[0]));
+  // @演出 名前 合図 … 舞台の名前付きの物に合図を送る（その物が cue(合図) を持っていれば呼び、終わるまで待つ）
+  d.register('cue', async (args) => {
+    const obj = engine.stage.named.get(args[0]) as (THREE.Object3D & { cue?: (signal: string, args: string[]) => unknown }) | undefined;
+    if (!obj?.cue) throw new Error(`合図を受け取れる物がありません: ${args[0]}`);
+    await obj.cue(args[1] ?? '', args.slice(2));
+  });
   // 会話枠と立ち絵をいったん下げる（演出を見せたいとき）
   d.register('hidetext', () => engine.hud.hideDialogue());
   // 開幕の組み立て演出（@たたむ で倒し、@組み立て で左から順に起こす）

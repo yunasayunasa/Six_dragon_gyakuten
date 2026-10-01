@@ -40,6 +40,7 @@ export const COMMAND_ALIASES: Record<string, string> = {
   会話を閉じる: 'hidetext',
   たたむ: 'flatten',
   組み立て: 'assemble',
+  演出: 'cue',
 };
 
 const SAY = /^([^「」（）()@#]+?)?\s*(?:[（(]([^）)]+)[）)])?\s*「([\s\S]*)」\s*$/;
