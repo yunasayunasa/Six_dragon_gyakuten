@@ -66,14 +66,14 @@ async function buildSet(engine: Engine): Promise<void> {
   const fish = new SkyFish(new THREE.Vector3(0, 2.6, -1.6));
   st.scene.add(fish);
   st.named.set('空魚', fish);
-  const ship = new Airship(engine.tweens);
-  ship.dock.set(6.4, 0.15, -8.4);
+  const ship = new Airship(engine.tweens, { envMap });
+  ship.dock.set(6.2, 0.2, -10.2);
   ship.attachTrail(st.scene);
   st.scene.add(ship);
   st.named.set('飛空艇', ship);
   // 飛空艇が着く所（カメラで眺める目印）
   const dock = new THREE.Object3D();
-  dock.position.set(5.2, 1.6, -8.4);
+  dock.position.set(5.6, 2.6, -10.2);
   st.scene.add(dock);
   st.named.set('飛空艇の着く所', dock);
   engine.onFrame.add((dt) => {
