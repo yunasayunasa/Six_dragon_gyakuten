@@ -95,6 +95,8 @@ export interface SceneDef {
   obstacles: Array<{ x: number; z: number; r: number }>;
   props: PropDef[];
   cameraBounds: { minX: number; maxX: number };
+  /** 歩くと水しぶきが上がる所（水たまりなど） */
+  wet?: Array<{ x: number; z: number; r: number }>;
   /** 画像以外の舞台装置（柱・手すり・灯りなど）を組み立てる */
   set?: (engine: Engine) => Promise<void> | void;
 }

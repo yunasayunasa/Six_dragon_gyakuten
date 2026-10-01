@@ -6,7 +6,7 @@ import type { QualityProfile } from '../render/quality';
 import { PaperActor } from '../paper/PaperActor';
 import { PaperSprite, type PaperOptions } from '../paper/PaperSprite';
 import { cloneState, lerpLook, lookState, LOOKS, type LookState } from './Look';
-import { Burst, Motes } from './Particles';
+import { Burst, Confetti, Motes, Spray } from './Particles';
 
 const backdropVert = /* glsl */ `
 varying vec2 vUv;
@@ -71,6 +71,10 @@ export class Stage {
   private backdropMat: THREE.ShaderMaterial;
   private motes: Motes[] = [];
   readonly burst: Burst;
+  /** 飛び散る粒（土ぼこり・水しぶき・墨・火花） */
+  readonly spray: Spray;
+  /** 紙吹雪 */
+  readonly confetti: Confetti;
   private look: LookState;
   wind = 0.3;
   private time = 0;
@@ -119,6 +123,9 @@ export class Stage {
     });
     this.burst = new Burst(Math.max(24, quality.particles), '#fff0bf', 0.14);
     this.scene.add(this.burst);
+    this.spray = new Spray(Math.max(80, quality.particles * 3));
+    this.confetti = new Confetti(Math.max(60, quality.particles * 2));
+    this.scene.add(this.spray, this.confetti);
     this.applyLook();
   }
 
@@ -304,6 +311,8 @@ export class Stage {
     for (const a of this.actors.values()) a.update(dt);
     for (const m of this.motes) m.update(dt, this.wind);
     this.burst.update(dt);
+    this.spray.update(dt);
+    this.confetti.update(dt);
     if (player) this.updateOcclusion(camera, player);
     if (this.backdrop) this.backdrop.position.x = camera.position.x * 0.85; // 遠景はほぼ動かない＝奥行き感
   }

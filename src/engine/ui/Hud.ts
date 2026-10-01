@@ -325,7 +325,19 @@ export class Hud {
 
   async shout(word: string, color?: string): Promise<void> {
     const s = el('div', 'shout', this.root);
+    el('div', 'flash', s);
+    el('div', 'lines', s);
     const sp = el('div', 'splash', s);
+    // 墨の飛び散り（毎回ちがう位置に）
+    for (let i = 0; i < 7; i++) {
+      const d = el('i', 'ink', s);
+      const a = Math.random() * Math.PI * 2;
+      const r = 26 + Math.random() * 18;
+      d.style.left = `${50 + Math.cos(a) * r}%`;
+      d.style.top = `${50 + Math.sin(a) * r * 0.9}%`;
+      d.style.setProperty('--s', `${0.5 + Math.random()}`);
+      d.style.animationDelay = `${0.05 + Math.random() * 0.12}s`;
+    }
     if (color) sp.style.background = color;
     el('div', 'word', s, escapeHtml(word));
     this.sound.play('shout');

@@ -143,7 +143,12 @@ export class InvestigationGame implements Mode {
       const from = light.intensity;
       obj.visible = true;
       // 立体の結晶などは、点灯の瞬間に強く光る
-      if (on) obj.traverse((o) => (o as { ignite?: () => void }).ignite?.());
+      if (on) {
+        obj.traverse((o) => (o as { ignite?: () => void }).ignite?.());
+        // 点灯の瞬間に金の火花が散る
+        const at = obj.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.4, 0));
+        this.engine.stage.spray.emit(at, { count: 50, color: '#ffd27a', spread: 1.6, up: 2.2, gravity: 2.2, size: 0.09, life: 1.4, glow: true });
+      }
       await this.engine.tweens.run(1.2, (k) => {
         light.intensity = from + (target - from) * k;
         if (glow) glow.scale.setScalar((on ? k : 1 - k) * Number(glow.userData.size ?? 2.2) + 0.001);
@@ -510,6 +515,10 @@ export class InvestigationGame implements Mode {
       await Promise.all([hud.shout(this.data.shouts?.present ?? 'これを見ろ！'), this.player.attack(this.engine.tweens)]);
       if (result === 'correct') {
         this.engine.rig.shake(0.4, 0.5);
+        // 見破った一撃：相手のまわりに墨が飛び、金の火花が散る
+        const at = witness.headPosition();
+        this.engine.stage.spray.emit(at, { count: 26, color: '#1e1418', spread: 2.2, up: 1.6, gravity: 5, size: 0.12, life: 0.8 });
+        this.engine.stage.spray.emit(at, { count: 30, color: '#ffcf7a', spread: 2.4, up: 2, gravity: 3, size: 0.08, life: 1, glow: true });
         await witness.damage(this.engine.tweens);
         await this.runScript(def.success);
         break;
@@ -562,6 +571,7 @@ export class InvestigationGame implements Mode {
     this.phase = 'done';
     this.markers.forEach((m) => (m.visible = false));
     this.options.onSolved?.();
+    this.engine.stage.confetti.fire(this.player.headPosition().add(new THREE.Vector3(0, 0.6, 0)), 110, 2.4);
     await hud.card('事件解決', this.data.chapter, 'タップでタイトルへ');
     if (this.options.toTitle) this.options.toTitle();
     else location.reload();
@@ -588,6 +598,7 @@ export class InvestigationGame implements Mode {
       if (this.stepClock <= 0) {
         this.stepClock = 0.34;
         engine.sound.play('step');
+        this.footstep(engine);
       }
     }
     p.setWalking(moving ? Math.min(1, Math.hypot(mv.x, mv.y) * 1.2) : 0);
@@ -620,6 +631,15 @@ export class InvestigationGame implements Mode {
       this.near = null;
       void this.interact(h);
     }
+  }
+
+  /** 足音に合わせて足元が反応する：ふだんは小さな土ぼこり、水たまりでは水しぶき */
+  private footstep(engine: Engine): void {
+    const p = this.player.position;
+    const at = new THREE.Vector3(p.x, 0.05, p.z);
+    const wet = this.data.scene.wet?.some((w) => Math.hypot(w.x - p.x, w.z - p.z) < w.r);
+    if (wet) engine.stage.spray.emit(at, { count: 16, color: '#eef8ff', spread: 1.1, up: 2, gravity: 7, size: 0.1, life: 0.6 });
+    else engine.stage.spray.emit(at, { count: 3, color: '#c9a582', spread: 0.35, up: 0.35, gravity: 0.6, size: 0.1, life: 0.6 });
   }
 
   private resolveCollision(x: number, z: number): THREE.Vector2 {

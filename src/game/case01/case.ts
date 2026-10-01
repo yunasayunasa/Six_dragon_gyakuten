@@ -179,6 +179,8 @@ export const CASE01: CaseData = {
     backdrop: { image: 'stage/cloudsea.webp', width: 150, height: 62, z: -46, y: 2 },
     walk: { minX: -10.4, maxX: 10.4, minZ: -2.25, maxZ: 2.5 },
     cameraBounds: { minX: -7.5, maxX: 7.5 },
+    // 灯台柱の根元の水たまり（歩くと水しぶき）
+    wet: [{ x: 1.2, z: -0.45, r: 0.55 }],
     obstacles: [
       { x: 0, z: -1.6, r: 0.42 },
       { x: -3.6, z: -2.45, r: 0.2 },

@@ -148,6 +148,13 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
   });
   d.register('wait', (args) => engine.tweens.wait(Number(args[0] ?? 0.5)));
   d.register('look', (args) => engine.stage.setLook(args[0], Number(args[1] ?? 1.2)));
+  // @紙吹雪 ウィルナス … その役者の頭の上で紙吹雪（役者を書かなければ画面の中心）
+  d.register('confetti', (args) => {
+    const a = args[0] ? ctx.actor(args[0]) : null;
+    const at = a ? a.headPosition().add(new THREE.Vector3(0, 0.3, 0)) : engine.rig.look.clone();
+    engine.stage.confetti.fire(at, 70);
+    engine.sound.play('item');
+  });
   d.register('sparkle', (args) => {
     const a = args[0] ? ctx.actor(args[0]) : null;
     const at = a ? a.headPosition() : engine.rig.look.clone();
