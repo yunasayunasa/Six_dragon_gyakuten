@@ -3,3 +3,6 @@ dist/
 .vite/
 test-results/
 *.log
+# APIキーなどの秘密（コミットしない）
+.env
+.env.*
