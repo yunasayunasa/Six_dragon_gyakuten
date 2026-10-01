@@ -294,6 +294,7 @@ export const CASE01: CaseData = {
   ],
   bgm: { field: 'カフェ', confront: '尋問' },
   talismans: 5,
+  shouts: { present: '刮目せよ！' },
   logic: {
     title: 'まとめる',
     hint: '関係のありそうな推理メモを2つ選んで、つなげよう。',

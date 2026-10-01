@@ -28,6 +28,16 @@ export class Sound {
   muted = false;
   seVolume = 0.5;
   bgmVolume = 0.32;
+  /** 作者が決めた基準の音量（設定の 100% に当たる） */
+  private static readonly BASE = { se: 0.5, bgm: 0.32 };
+
+  /** 設定の音量（0〜1）を反映する */
+  setVolumeScale(bgm: number, se: number): void {
+    this.bgmVolume = Sound.BASE.bgm * bgm;
+    this.seVolume = Sound.BASE.se * se;
+    if (this.bgmGain && this.ctx) this.bgmGain.gain.setTargetAtTime(this.bgmVolume, this.ctx.currentTime, 0.05);
+    else if (this.bgmEl) this.bgmEl.volume = this.bgmVolume * (this.bgmFileVolume.get(this.bgmEl.src) ?? 1);
+  }
 
   unlock(): void {
     if (!this.ctx) {

@@ -1,4 +1,5 @@
-import type { ActorDef, Engine, PropDef, Store } from '../../engine';
+import type { ActorDef, Engine, PropDef } from '../../engine';
+import type { PanelAction } from '../../engine/ui/Panels';
 import type { GuideStep } from '../../engine/ui/Hud';
 
 /** 逆転検事風「捜査→まとめる→尋問」の事件データ。ゲームごとにこれを書けば遊べる。 */
@@ -133,10 +134,27 @@ export interface TutorialDef {
   steps: GuideStep[];
 }
 
-/** 事件をまたいで共通の設定（どの話でも同じもの） */
+/** 事件をまたいで共通の設定と、アプリ（ホーム画面など）とのつなぎ */
 export interface GameOptions {
   /** 各場面を初めて遊ぶときに「見ますか？」と聞く説明 */
   tutorials?: Partial<Record<TutorialKey, TutorialDef>>;
-  /** 説明を聞いたかどうかを端末に残す場所（無ければその場限り） */
-  store?: Store;
+  /** メニューの「タイトルへ戻る」 */
+  toTitle?: () => void;
+  /** メニューの「ロード」で選んだセーブから遊び直す */
+  load?: (slot: number) => void;
+  /** 事件を解決したとき（結末を見終えたあと） */
+  onSolved?: () => void;
+  /** 設定画面に足すボタン */
+  settingsExtras?: () => PanelAction[];
+}
+
+/** 捜査ジャンルのセーブの中身（捜査中にだけ残す） */
+export interface InvestigationSave {
+  v: 1;
+  evidence: string[];
+  clues: string[];
+  flags: string[];
+  seen: string[];
+  talismans: number;
+  actors: Array<{ id: string; x: number; z: number; facing: 1 | -1; visible: boolean }>;
 }

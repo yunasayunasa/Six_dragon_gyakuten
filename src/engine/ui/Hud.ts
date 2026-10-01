@@ -2,18 +2,12 @@ import type { Input } from '../core/Input';
 import type { Sound } from '../audio/Sound';
 import { toGame } from '../core/screen';
 import { PortraitSlot, type PortraitData, type PortraitSide } from './Portrait';
+import { el, escapeHtml } from './dom';
+import { Panels } from './Panels';
+import { ReadMarks } from '../core/ReadMarks';
+import type { Settings } from '../core/Settings';
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', parent?: HTMLElement, html?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (html !== undefined) e.innerHTML = html;
-  parent?.appendChild(e);
-  return e;
-}
-
-export function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-}
+export { escapeHtml };
 
 export interface CardItem {
   id: string;
@@ -67,19 +61,33 @@ export class Hud {
   cps = 42;
   onSpeakTick: (() => void) | null = null;
   bookButton: HTMLElement;
+  /** メニュー（セーブ・ロード・設定など。中身はジャンルが決める） */
+  menuButton: HTMLElement;
   soundButton: HTMLElement;
   private portraits: Record<PortraitSide, PortraitSlot>;
   private speaking: PortraitSide | null = null;
   /** 説明で指し示せる画面の部品（名前 → 要素） */
   private targets = new Map<string, () => Element | null>();
+  /** 会話の記録（ログで読み返す） */
+  readonly backlog: Array<{ name: string | null; color?: string; text: string }> = [];
+  private skipButton: HTMLElement;
+  private skip = false;
+  /** 開いているパネルの数。開いている間は会話を進めない */
+  modal = 0;
+  /** パネルを閉じる処理（キーボードの取消で一番上のパネルを閉じる） */
+  readonly cancelStack: Array<() => void> = [];
+  /** ログ・設定・メニュー・セーブ一覧・ホーム画面 */
+  readonly panels: Panels;
 
-  constructor(private input: Input, private sound: Sound) {
+  constructor(readonly input: Input, readonly sound: Sound, readonly settings: Settings, private readMarks: ReadMarks) {
     this.root = document.getElementById('hud')!;
+    this.panels = new Panels(this);
     this.topbar = el('div', 'topbar', this.root);
     this.talismanEl = el('div', 'talismans hidden', this.topbar);
     this.goalEl = el('div', 'chip goal washi hidden', this.topbar);
     el('div', 'spacer', this.topbar);
     this.bookButton = el('div', 'chip washi hidden', this.topbar, '証拠品');
+    this.menuButton = el('div', 'chip washi hidden', this.topbar, 'メニュー');
     this.soundButton = el('div', 'chip washi', this.topbar, '音：切');
     this.soundButton.addEventListener('click', () => {
       sound.unlock();
@@ -98,6 +106,16 @@ export class Hud {
     this.dlgName = el('div', 'name', this.dlg);
     this.dlgText = el('div', 'text', this.dlg);
     el('div', 'next', this.dlg);
+    // 会話枠の右上：ログと早送り（押しても会話は進めない）
+    const tools = el('div', 'tools', this.dlg);
+    const logButton = el('div', 'tool', tools, 'ログ');
+    this.skipButton = el('div', 'tool', tools, '早送り');
+    for (const b of [logButton, this.skipButton]) b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    logButton.addEventListener('click', () => void this.panels.log());
+    this.skipButton.addEventListener('click', () => {
+      this.sound.play('select');
+      this.skipping = !this.skip;
+    });
     // 立ち絵は会話枠の後ろに置く
     this.portraits = { left: new PortraitSlot(this.root, this.dlg, 'left'), right: new PortraitSlot(this.root, this.dlg, 'right') };
     this.dlg.addEventListener('pointerdown', (e) => {
@@ -120,6 +138,36 @@ export class Hud {
     this.defineTarget('メモの一覧', () => this.root.querySelector('.logic .clues'));
     this.defineTarget('つなげる', () => this.root.querySelector('.logic .row .btn.shu'));
     this.defineTarget('あとで', () => this.root.querySelector('.logic .row .btn:not(.shu)'));
+  }
+
+  /** 早送り中か。読んでいない会話に来たら（設定で許していなければ）自動で止まる */
+  get skipping(): boolean {
+    return this.skip;
+  }
+
+  set skipping(on: boolean) {
+    this.skip = on;
+    this.skipButton.classList.toggle('on', on);
+  }
+
+  /**
+   * 決定を待つ。早送り中なら ms 待って自動で進む（待っている間に早送りを入れても進む）。
+   * パネルを開いている間は進まない。
+   */
+  private waitConfirmOrSkip(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      let waited = 0;
+      const timer = setInterval(() => {
+        waited = this.skip && this.modal === 0 ? waited + 30 : 0;
+        if (waited >= ms) done();
+      }, 30);
+      const done = () => {
+        clearInterval(timer);
+        this.confirmWaiters = this.confirmWaiters.filter((w) => w !== done);
+        resolve();
+      };
+      this.confirmWaiters.push(done);
+    });
   }
 
   /** 説明（guide）で指し示せる部品を登録する。ジャンル固有の部品もここに足す */
@@ -228,6 +276,11 @@ export class Hud {
 
   /** 会話を1つ表示し、読み終えて決定されるまで待つ */
   async say(name: string | null, color: string | undefined, text: string, onTalk?: (talking: boolean) => void): Promise<void> {
+    const key = ReadMarks.key(name, text);
+    // 早送りは、読んでいない会話に来たら止まる（設定で「すべて」にしていなければ）
+    if (this.skip && !this.readMarks.has(key) && !this.settings.values.skipUnread) this.skipping = false;
+    this.backlog.push({ name, color, text });
+    if (this.backlog.length > 300) this.backlog.shift();
     this.dlg.classList.remove('hidden', 'done');
     this.dlg.classList.toggle('narration', !name);
     this.dlgName.textContent = name ?? '';
@@ -242,9 +295,10 @@ export class Hud {
     });
     onTalk?.(false);
     if (slot) slot.talking = false;
+    this.readMarks.add(key);
     this.dlg.classList.add('done');
-    await this.waitConfirm();
-    this.sound.play('select');
+    await this.waitConfirmOrSkip(90);
+    if (!this.skip) this.sound.play('select');
   }
 
   hideDialogue(): void {
@@ -275,8 +329,14 @@ export class Hud {
     if (color) sp.style.background = color;
     el('div', 'word', s, escapeHtml(word));
     this.sound.play('shout');
-    await new Promise((r) => setTimeout(r, 1100));
+    await new Promise((r) => setTimeout(r, this.skip ? 450 : 1100));
     s.remove();
+  }
+
+  /** 画面上に短い知らせを出す（待たない） */
+  toast(text: string): void {
+    const t = el('div', 'toast washi', this.root, escapeHtml(text));
+    setTimeout(() => t.remove(), 1800);
   }
 
   async card(title: string, sub = '', hint = ''): Promise<void> {
@@ -290,7 +350,7 @@ export class Hud {
       this.input.press('confirm');
     });
     this.input.clearPressed();
-    await this.waitConfirm();
+    await this.waitConfirmOrSkip(350);
     this.sound.play('confirm');
     c.remove();
   }
@@ -303,6 +363,8 @@ export class Hud {
 
   /** 選択肢を出す。question があれば、画面を暗くして問いかけと一緒に出す（後ろは触れない） */
   async choose(options: string[], question?: string): Promise<number> {
+    // 選ぶ場面では早送りを止める
+    this.skipping = false;
     const layer = question ? el('div', 'ask', this.root) : null;
     const box = el('div', 'choices', layer ?? this.root);
     if (question) el('div', 'question washi', box, escapeHtml(question));
@@ -372,7 +434,7 @@ export class Hud {
     this.sound.play('item');
     w.addEventListener('pointerdown', () => this.input.press('confirm'));
     this.input.clearPressed();
-    await this.waitConfirm();
+    await this.waitConfirmOrSkip(400);
     this.sound.play('select');
     w.remove();
   }
@@ -489,13 +551,18 @@ export class Hud {
   update(dt: number): void {
     this.portraits.left.update(dt);
     this.portraits.right.update(dt);
+    // パネルを開いている間は会話を進めない（取消キーで一番上のパネルを閉じる）
+    if (this.modal > 0) {
+      if (this.input.consume('cancel')) this.cancelStack.at(-1)?.();
+      return;
+    }
     if (this.bookKeys) {
       for (const a of ['left', 'right', 'cancel', 'menu', 'confirm'] as const) if (this.input.consume(a)) this.bookKeys?.(a);
       return;
     }
     if (this.typing) {
       const t = this.typing;
-      if (this.input.consume('confirm')) t.shown = t.full.length;
+      if (this.skip || this.input.consume('confirm')) t.shown = t.full.length;
       else {
         t.acc += dt * this.cps;
         const add = Math.floor(t.acc);

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Director, Ease, PaperActor, CameraRig, type CastManifest, type Engine, type Mode } from '../../engine';
+import { Director, Ease, PaperActor, CameraRig, type CastManifest, type Engine, type Mode, type Store } from '../../engine';
 import { registerStageCommands, actorShot, twoShot } from '../../engine/script/stageCommands';
 import { tagTexture } from '../../engine/paper/textures';
 import type { PoseInfo } from '../../engine/paper/PaperActor';
@@ -7,7 +7,7 @@ import type { PortraitData } from '../../engine/ui/Portrait';
 import type { CardItem } from '../../engine/ui/Hud';
 import { CaseState, Confrontation, evaluateLogic } from './CaseState';
 import { TestimonyPanel } from './TestimonyPanel';
-import type { CaseData, GameOptions, HotspotDef, TutorialKey } from './types';
+import type { CaseData, GameOptions, HotspotDef, InvestigationSave, TutorialKey } from './types';
 
 /** このジャンルが台本に追加する命令 */
 export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'solve'] as const;
@@ -62,8 +62,9 @@ export class InvestigationGame implements Mode {
     }
     engine.hud.bookButton.classList.remove('hidden');
     engine.hud.bookButton.addEventListener('click', () => {
-      if (this.phase === 'explore') void this.openBook();
+      if (this.phase === 'explore' && !this.paused) void this.openBook();
     });
+    engine.hud.menuButton.addEventListener('click', () => void this.openMenu());
   }
 
   private async build(): Promise<void> {
@@ -219,26 +220,119 @@ export class InvestigationGame implements Mode {
       await this.director.play(source);
     } finally {
       this.engine.hud.hideDialogue();
+      // 早送りは台本ごとに止める（次の台本まで持ち越さない）
+      this.engine.hud.skipping = false;
       if (prev !== 'done' && this.phase === 'script') this.phase = prev === 'loading' ? 'explore' : prev;
     }
   }
 
   // ---------- 流れ ----------
-  async start(): Promise<void> {
+  /** はじめから（導入の台本から）。save を渡すと、そのセーブの捜査の場面から続ける */
+  async start(save?: InvestigationSave): Promise<void> {
+    if (save) this.restore(save);
     this.followCamera();
     this.engine.rig.snap();
     if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
-    await this.runScript(this.data.intro);
+    this.engine.hud.menuButton.classList.remove('hidden');
+    if (save) await this.engine.hud.card(this.data.title, this.data.chapter.replace(this.data.title, '').trim(), 'つづきから');
+    else await this.runScript(this.data.intro);
     this.beginExplore();
     await this.offerTutorial('explore');
+  }
+
+  // ---------- セーブ・ロード ----------
+  /** 今の進み具合（捜査中の状態）。尋問や会話の途中は残さない */
+  snapshot(): InvestigationSave {
+    const s = this.state;
+    return {
+      v: 1,
+      evidence: [...s.evidence],
+      clues: [...s.clues],
+      flags: [...s.flags],
+      seen: [...s.seen],
+      talismans: s.talismans,
+      actors: [...this.engine.stage.actors.values()].map((a) => ({ id: a.def.id, x: a.position.x, z: a.position.z, facing: a.facing, visible: a.visible })),
+    };
+  }
+
+  private restore(save: InvestigationSave): void {
+    const s = this.state;
+    s.evidence.push(...save.evidence.filter((id) => this.data.evidence.some((e) => e.id === id)));
+    s.clues.push(...save.clues.filter((id) => this.data.clues.some((c) => c.id === id)));
+    save.flags.forEach((f) => s.flags.add(f));
+    save.seen.forEach((k) => s.seen.add(k));
+    s.talismans = save.talismans;
+    for (const a of save.actors) {
+      const actor = this.engine.stage.actors.get(a.id);
+      if (!actor) continue;
+      actor.position.set(a.x, 0, a.z);
+      actor.faceInstant(a.facing);
+      actor.visible = a.visible;
+    }
+    this.log.push('restore');
+  }
+
+  private save(slot: number): void {
+    const goal = this.state.goal();
+    this.engine.saves.write(slot, { game: this.data.id, savedAt: Date.now(), title: this.data.chapter, detail: goal ? `目的：${goal}` : '', data: this.snapshot() });
+  }
+
+  /** メニュー：セーブ（捜査中だけ）・ロード・ログ・設定・タイトルへ */
+  private async openMenu(): Promise<void> {
+    const hud = this.engine.hud;
+    if (hud.modal > 0 || this.phase === 'loading' || this.phase === 'done') return;
+    hud.sound.play('select');
+    // メニューを開いている間（確認の問いかけを含む）は、会話も捜査も止める
+    hud.modal++;
+    try {
+      await this.menuFlow(this.phase === 'explore' && !this.paused);
+    } finally {
+      hud.modal--;
+      hud.input.clearPressed();
+    }
+  }
+
+  private async menuFlow(canSave: boolean): Promise<void> {
+    const hud = this.engine.hud;
+    const items = [
+      { id: 'save', label: 'セーブ', note: canSave ? '' : '捜査中（歩いて調べているとき）にセーブできます', disabled: !canSave },
+      { id: 'load', label: 'ロード', disabled: !this.engine.saves.any || !this.options.load },
+      { id: 'log', label: '会話のログ' },
+      { id: 'settings', label: '設定' },
+      { id: 'title', label: 'タイトルへ戻る', disabled: !this.options.toTitle },
+    ];
+    const i = await hud.panels.menu('メニュー', items);
+    const id = i === null ? null : items[i].id;
+    if (id === 'save') {
+      const slot = await hud.panels.slots('save', this.engine.saves.list());
+      if (slot === null) return;
+      if (this.engine.saves.read(slot) && (await hud.choose(['上書きする', 'やめる'], `${slot}番に上書きしますか？`)) !== 0) return;
+      this.save(slot);
+      hud.sound.play('item');
+      hud.toast(`${slot}番にセーブしました`);
+    } else if (id === 'load') {
+      const slot = await hud.panels.slots('load', this.engine.saves.list());
+      if (slot === null) return;
+      if ((await hud.choose(['ロードする', 'やめる'], '今の進み具合は残りません。ロードしますか？')) === 0) this.options.load?.(slot);
+    } else if (id === 'log') await hud.panels.log();
+    else if (id === 'settings') await hud.panels.settings(this.options.settingsExtras?.() ?? []);
+    else if (id === 'title') {
+      if ((await hud.choose(['戻る', 'やめる'], 'タイトルへ戻りますか？（オートセーブから続きを遊べます）')) === 0) this.options.toTitle?.();
+    }
+  }
+
+  /** 説明を聞いた記録を消し、次にその場面を遊ぶときにまた聞くようにする */
+  static resetTutorials(store: Store, game?: InvestigationGame | null): void {
+    for (const k of ['explore', 'confront', 'logic'] as const) store.set(`tutorial:${k}`, false);
+    game?.tutorialsAsked.clear();
   }
 
   /** その場面を初めて遊ぶときに、遊び方の説明を見るか聞く（答えたら、次からは聞かない） */
   private async offerTutorial(key: TutorialKey): Promise<void> {
     const t = this.options.tutorials?.[key];
-    const store = this.options.store;
+    const store = this.engine.store;
     const storeKey = `tutorial:${key}`;
-    if (!t || this.tutorialsAsked.has(key) || store?.get(storeKey, false)) return;
+    if (!t || this.tutorialsAsked.has(key) || store.get(storeKey, false)) return;
     // 説明の間は歩いたり調べたりしない（調べる所の印は見せたままにする）
     this.paused = true;
     try {
@@ -246,7 +340,7 @@ export class InvestigationGame implements Mode {
       this.log.push(`tutorial:${key}:${yes ? 'yes' : 'no'}`);
       if (yes) await this.engine.hud.guide(t.steps);
       this.tutorialsAsked.add(key);
-      store?.set(storeKey, true);
+      store.set(storeKey, true);
     } finally {
       this.paused = false;
       this.engine.input.clearPressed();
@@ -259,6 +353,8 @@ export class InvestigationGame implements Mode {
     this.followCamera();
     this.engine.hud.showTouch(true);
     this.refreshGoal();
+    // 捜査に戻るたびにオートセーブ
+    this.save(0);
   }
 
   private followCamera(): void {
@@ -465,13 +561,15 @@ export class InvestigationGame implements Mode {
     await this.runScript(this.data.ending);
     this.phase = 'done';
     this.markers.forEach((m) => (m.visible = false));
-    await hud.card('事件解決', this.data.chapter, 'タップでもう一度はじめから');
-    location.reload();
+    this.options.onSolved?.();
+    await hud.card('事件解決', this.data.chapter, 'タップでタイトルへ');
+    if (this.options.toTitle) this.options.toTitle();
+    else location.reload();
   }
 
   // ---------- 毎フレーム ----------
   update(dt: number, engine: Engine): void {
-    if (this.phase !== 'explore' || this.paused) {
+    if (this.phase !== 'explore' || this.paused || engine.hud.modal > 0) {
       this.player?.setWalking(0);
       return;
     }

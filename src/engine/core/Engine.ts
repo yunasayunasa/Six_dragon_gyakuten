@@ -9,6 +9,15 @@ import { CameraRig } from '../stage/CameraRig';
 import { Stage } from '../stage/Stage';
 import { Sound } from '../audio/Sound';
 import { Hud } from '../ui/Hud';
+import { Store } from './Store';
+import { Settings, TEXT_SPEEDS } from './Settings';
+import { ReadMarks } from './ReadMarks';
+import { SaveSlots } from './SaveSlots';
+
+export interface EngineOptions {
+  /** 端末に残す記録（設定・既読・セーブ）の名前空間。ゲームごとに変える */
+  namespace?: string;
+}
 
 /** ジャンルごとの遊び方。Engine は常に1つのモードを動かす。 */
 export interface Mode {
@@ -32,6 +41,10 @@ export class Engine {
   readonly sound = new Sound();
   readonly assets = new Assets();
   readonly hud: Hud;
+  /** 端末に残す記録 */
+  readonly store: Store;
+  readonly settings: Settings;
+  readonly saves: SaveSlots;
   private mode: Mode | null = null;
   private last = 0;
   private paused = false;
@@ -43,7 +56,10 @@ export class Engine {
   /** 手前の物を透かす基準になる主人公 */
   player: THREE.Object3D | null = null;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, options: EngineOptions = {}) {
+    this.store = new Store(options.namespace ?? 'paper-stage');
+    this.settings = new Settings(this.store);
+    this.saves = new SaveSlots(this.store);
     this.quality = pickQuality();
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -57,7 +73,13 @@ export class Engine {
     this.post = new PostFX(this.renderer, this.quality);
     this.rig = new CameraRig(16 / 9); // 実際の縦横比は resize() で決まる
     this.stage = new Stage(this.assets, this.tweens, this.post, this.quality);
-    this.hud = new Hud(this.input, this.sound);
+    this.hud = new Hud(this.input, this.sound, this.settings, new ReadMarks(this.store));
+    const apply = () => {
+      this.sound.setVolumeScale(this.settings.values.bgm, this.settings.values.se);
+      this.hud.cps = TEXT_SPEEDS[this.settings.values.textSpeed] ?? TEXT_SPEEDS[3];
+    };
+    this.settings.onChange.add(apply);
+    apply();
     if (new URLSearchParams(location.search).has('stats')) {
       this.statsEl = document.createElement('div');
       this.statsEl.className = 'stats';
@@ -110,10 +132,12 @@ export class Engine {
     this.renderer.info.reset();
     this.input.poll();
     this.hud.update(dt);
-    this.tweens.update(dt);
+    // 早送り中は演出の動き（Tween・カメラ）も速める
+    const sdt = this.hud.skipping ? dt * 4 : dt;
+    this.tweens.update(sdt);
     this.mode?.update(dt, this);
     this.onFrame.forEach((f) => f(dt));
-    this.rig.update(dt);
+    this.rig.update(sdt);
     this.stage.update(dt, this.rig.camera, this.player);
     this.post.grade.focusDistance = this.focusOverride ?? this.rig.focusDistance();
     this.post.render(this.stage.scene, this.rig.camera, dt);
