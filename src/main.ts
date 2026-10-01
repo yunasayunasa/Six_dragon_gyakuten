@@ -1,14 +1,15 @@
 import './engine/ui/ui.css';
-import { Engine } from './engine';
+import { Engine, Store } from './engine';
 import { InvestigationGame } from './genres/investigation/InvestigationGame';
 import { CASE01 } from './game/case01/case';
+import { TUTORIALS } from './game/tutorials';
 
 async function boot(): Promise<void> {
   const loading = document.getElementById('loading')!;
   const bar = loading.querySelector('i')!;
   bar.style.width = '15%';
   const engine = new Engine(document.getElementById('app')!);
-  const game = new InvestigationGame(CASE01);
+  const game = new InvestigationGame(CASE01, { tutorials: TUTORIALS, store: new Store('six-dragon-gyakuten') });
   // 自動テスト・実機確認用（本番の遊びには影響しない）
   (window as unknown as { __paper: unknown }).__paper = { engine, game };
   engine.start();

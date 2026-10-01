@@ -4,7 +4,7 @@ export type TestimonyAction = 'prev' | 'next' | 'press' | 'present';
 
 /** 対決の証言パネル（◀▶で証言を切り替え、「問いただす」「証拠を示す」） */
 export class TestimonyPanel {
-  private root: HTMLElement;
+  readonly root: HTMLElement;
   private stmt: HTMLElement;
   private tag: HTMLElement;
   private text: HTMLElement;

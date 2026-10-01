@@ -7,7 +7,7 @@ import type { PortraitData } from '../../engine/ui/Portrait';
 import type { CardItem } from '../../engine/ui/Hud';
 import { CaseState, Confrontation, evaluateLogic } from './CaseState';
 import { TestimonyPanel } from './TestimonyPanel';
-import type { CaseData, HotspotDef } from './types';
+import type { CaseData, GameOptions, HotspotDef, TutorialKey } from './types';
 
 /** このジャンルが台本に追加する命令 */
 export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'solve'] as const;
@@ -41,8 +41,12 @@ export class InvestigationGame implements Mode {
   private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), done: tagTexture('✓', '#b8322a') };
   /** テストや自動確認から進行を観察するためのログ */
   readonly log: string[] = [];
+  /** この場で説明を聞き終えた場面（端末に残せない環境でも、同じ遊びの中では二度聞かない） */
+  private tutorialsAsked = new Set<TutorialKey>();
+  /** 説明を見せている間は、探索中でも操作を止める */
+  private paused = false;
 
-  constructor(readonly data: CaseData) {
+  constructor(readonly data: CaseData, private options: GameOptions = {}) {
     this.state = new CaseState(data);
     this.director = new Director({ say: (s, e, t) => this.say(s, e, t) });
   }
@@ -53,6 +57,9 @@ export class InvestigationGame implements Mode {
     this.registerCommands();
     await this.build();
     this.testimony = new TestimonyPanel(engine.hud.root);
+    for (const [name, sel] of [['証言', '.stmt'], ['問いただす', '[data-a="press"]'], ['証拠を示す', '[data-a="present"]']] as const) {
+      engine.hud.defineTarget(name, () => this.testimony.root.querySelector(sel));
+    }
     engine.hud.bookButton.classList.remove('hidden');
     engine.hud.bookButton.addEventListener('click', () => {
       if (this.phase === 'explore') void this.openBook();
@@ -223,6 +230,27 @@ export class InvestigationGame implements Mode {
     if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
     await this.runScript(this.data.intro);
     this.beginExplore();
+    await this.offerTutorial('explore');
+  }
+
+  /** その場面を初めて遊ぶときに、遊び方の説明を見るか聞く（答えたら、次からは聞かない） */
+  private async offerTutorial(key: TutorialKey): Promise<void> {
+    const t = this.options.tutorials?.[key];
+    const store = this.options.store;
+    const storeKey = `tutorial:${key}`;
+    if (!t || this.tutorialsAsked.has(key) || store?.get(storeKey, false)) return;
+    // 説明の間は歩いたり調べたりしない（調べる所の印は見せたままにする）
+    this.paused = true;
+    try {
+      const yes = (await this.engine.hud.choose(['はい', 'いいえ'], t.question)) === 0;
+      this.log.push(`tutorial:${key}:${yes ? 'yes' : 'no'}`);
+      if (yes) await this.engine.hud.guide(t.steps);
+      this.tutorialsAsked.add(key);
+      store?.set(storeKey, true);
+    } finally {
+      this.paused = false;
+      this.engine.input.clearPressed();
+    }
   }
 
   private beginExplore(): void {
@@ -296,7 +324,9 @@ export class InvestigationGame implements Mode {
       .filter((c) => !used(c.id))
       .map(({ id, name, desc }) => ({ id, name, desc }));
     for (;;) {
-      const pick = await hud.logic(clues, L.title, L.hint);
+      const opened = hud.logic(clues, L.title, L.hint);
+      await this.offerTutorial('logic');
+      const pick = await opened;
       if (!pick) break;
       const hit = evaluateLogic(this.data, pick[0], pick[1]);
       if (hit && this.state.flags.has(hit.flag)) {
@@ -353,6 +383,7 @@ export class InvestigationGame implements Mode {
       witness.talking = true;
       setTimeout(() => (witness.talking = false), 900);
       this.testimony.show(`${witness.def.name}の証言`, c.statement.text, c.index, c.visible.length);
+      await this.offerTutorial('confront');
       const a = await this.testimony.wait();
       if (a === 'next' || a === 'prev') {
         this.engine.sound.play('select');
@@ -365,7 +396,7 @@ export class InvestigationGame implements Mode {
         const statement = c.statement;
         const revealed = c.press();
         this.log.push(`press:${id}:${c.number}`);
-        await this.runScript(`@叫び 待った！\n${statement.press}`);
+        await this.runScript(`@叫び ${this.data.shouts?.press ?? '待った！'}\n${statement.press}`);
         if (revealed !== null) {
           // 揺さぶりで新しい証言が出た：その証言へ移る
           this.engine.sound.play('reveal');
@@ -380,7 +411,7 @@ export class InvestigationGame implements Mode {
       const result = c.present(chosen);
       this.state.talismans = c.talismans;
       this.log.push(`present:${id}:${c.number}:${chosen}:${result}`);
-      await Promise.all([hud.shout('これを見ろ！'), this.player.attack(this.engine.tweens)]);
+      await Promise.all([hud.shout(this.data.shouts?.present ?? 'これを見ろ！'), this.player.attack(this.engine.tweens)]);
       if (result === 'correct') {
         this.engine.rig.shake(0.4, 0.5);
         await witness.damage(this.engine.tweens);
@@ -440,7 +471,7 @@ export class InvestigationGame implements Mode {
 
   // ---------- 毎フレーム ----------
   update(dt: number, engine: Engine): void {
-    if (this.phase !== 'explore') {
+    if (this.phase !== 'explore' || this.paused) {
       this.player?.setWalking(0);
       return;
     }

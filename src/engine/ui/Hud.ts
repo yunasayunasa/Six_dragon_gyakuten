@@ -30,6 +30,22 @@ export interface ClueItem {
   desc: string;
 }
 
+/** 遊び方の説明の1ページ */
+export interface GuideStep {
+  text: string;
+  /** 指し示す画面の部品（defineTarget で登録した名前）。無ければ画面全体を暗くするだけ */
+  target?: string;
+}
+
+/** 要素の位置をゲーム画面の座標で返す（画面を回しているときも正しく）。見えていなければ null */
+function gameRect(e: Element): { x: number; y: number; w: number; h: number } | null {
+  const r = e.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return null;
+  const a = toGame(r.left, r.top);
+  const b = toGame(r.right, r.bottom);
+  return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+}
+
 /**
  * 画面上のUI一式（DOM）。ゲームの状態は持たず、表示と入力待ちだけを担当する。
  * どのジャンルでも使う部品：会話、叫び、字幕、選択肢、アイテム一覧、入手演出、暗転、タッチ操作。
@@ -54,6 +70,8 @@ export class Hud {
   soundButton: HTMLElement;
   private portraits: Record<PortraitSide, PortraitSlot>;
   private speaking: PortraitSide | null = null;
+  /** 説明で指し示せる画面の部品（名前 → 要素） */
+  private targets = new Map<string, () => Element | null>();
 
   constructor(private input: Input, private sound: Sound) {
     this.root = document.getElementById('hud')!;
@@ -94,6 +112,19 @@ export class Hud {
       this.input.press('confirm');
     });
     this.fader = el('div', 'fader', this.root);
+
+    this.defineTarget('目的', () => this.goalEl);
+    this.defineTarget('信', () => this.talismanEl);
+    this.defineTarget('証拠品', () => this.bookButton);
+    this.defineTarget('音', () => this.soundButton);
+    this.defineTarget('メモの一覧', () => this.root.querySelector('.logic .clues'));
+    this.defineTarget('つなげる', () => this.root.querySelector('.logic .row .btn.shu'));
+    this.defineTarget('あとで', () => this.root.querySelector('.logic .row .btn:not(.shu)'));
+  }
+
+  /** 説明（guide）で指し示せる部品を登録する。ジャンル固有の部品もここに足す */
+  defineTarget(name: string, get: () => Element | null): void {
+    this.targets.set(name, get);
   }
 
   private buildTouch(): void {
@@ -160,6 +191,9 @@ export class Hud {
       this.sound.unlock();
       this.input.press('confirm');
     });
+    this.defineTarget('移動', () => zone);
+    this.defineTarget('まとめる', () => logic);
+    this.defineTarget('調べる', () => act);
   }
 
   syncSoundLabel(): void {
@@ -267,18 +301,62 @@ export class Hud {
     return new Promise((r) => setTimeout(r, seconds * 1000));
   }
 
-  async choose(options: string[]): Promise<number> {
-    const box = el('div', 'choices', this.root);
+  /** 選択肢を出す。question があれば、画面を暗くして問いかけと一緒に出す（後ろは触れない） */
+  async choose(options: string[], question?: string): Promise<number> {
+    const layer = question ? el('div', 'ask', this.root) : null;
+    const box = el('div', 'choices', layer ?? this.root);
+    if (question) el('div', 'question washi', box, escapeHtml(question));
     return new Promise((resolve) => {
       options.forEach((o, i) => {
         const b = el('div', 'btn', box, escapeHtml(o));
         b.addEventListener('click', () => {
           this.sound.play('confirm');
-          box.remove();
+          (layer ?? box).remove();
           resolve(i);
         });
       });
     });
+  }
+
+  /** 遊び方の説明。画面の部品を照らしながら1ページずつ見せ、タップで進める */
+  async guide(steps: GuideStep[]): Promise<void> {
+    const g = el('div', 'guide', this.root);
+    const spot = el('div', 'spot', g);
+    const box = el('div', 'box washi', g);
+    el('div', 'name', box, '遊び方');
+    const text = el('div', 'text', box);
+    const count = el('div', 'count', box);
+    el('div', 'next', box);
+    g.addEventListener('pointerdown', () => {
+      this.sound.unlock();
+      this.input.press('confirm');
+    });
+    for (const [i, step] of steps.entries()) {
+      const target = step.target ? this.targets.get(step.target)?.() : null;
+      const r = target ? gameRect(target) : null;
+      const pad = 8;
+      // 指す物が無いときは、光の穴を画面の真ん中で閉じて全体を暗くする
+      const s = r ? { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 } : { x: this.root.clientWidth / 2, y: this.root.clientHeight / 2, w: 0, h: 0 };
+      Object.assign(spot.style, { left: `${s.x}px`, top: `${s.y}px`, width: `${s.w}px`, height: `${s.h}px` });
+      spot.classList.toggle('none', !r);
+      text.textContent = step.text;
+      count.textContent = `${i + 1} / ${steps.length}`;
+      box.classList.toggle('mid', !r);
+      box.style.top = '';
+      if (r) {
+        // 説明の枠は、指す物の上か下の広く空いている側に、なるべく重ならないように置く（上には見出しの札の分をあける）
+        const H = this.root.clientHeight;
+        const bh = box.offsetHeight;
+        const gap = 10;
+        const tag = 30;
+        const top = s.y >= H - (s.y + s.h) ? Math.max(tag, s.y - gap - bh) : Math.min(H - bh - gap, s.y + s.h + gap + tag);
+        box.style.top = `${top}px`;
+      }
+      this.input.clearPressed();
+      await this.waitConfirm();
+      this.sound.play('select');
+    }
+    g.remove();
   }
 
   async itemGet(item: CardItem, label = '証拠品を手に入れた'): Promise<void> {

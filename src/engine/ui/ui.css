@@ -86,7 +86,7 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-user-select: no
   background: radial-gradient(circle at 50% 50%, rgba(255,245,220,.0) 0 30%, rgba(30,10,20,.35) 100%);
 }
 .shout .word {
-  font-family: var(--font-brush); font-size: calc(var(--u) * 16); color: #fff9ee; letter-spacing: 0.06em;
+  font-family: var(--font-brush); font-size: calc(var(--u) * 16); color: #fff9ee; letter-spacing: 0.06em; white-space: nowrap;
   -webkit-text-stroke: calc(var(--u) * 0.5) var(--ink);
   paint-order: stroke fill;
   text-shadow: calc(var(--u) * 0.8) calc(var(--u) * 0.8) 0 var(--shu), 0 0 calc(var(--u) * 4) rgba(255, 180, 90, .7);
@@ -171,6 +171,36 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-user-select: no
 /* ---- 選択肢 ---- */
 .choices { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: calc(var(--u) * 1.6); min-width: min(calc(var(--vw) * 70), calc(var(--u) * 60)); }
 .choices .btn { text-align: center; }
+.ask { position: absolute; inset: 0; background: rgba(20, 10, 22, .5); animation: fade-in .2s; }
+.choices .question { padding: calc(var(--u) * 2.4) calc(var(--u) * 4); font-size: calc(var(--u) * 2.8); text-align: center; margin-bottom: calc(var(--u) * 1); }
+
+/* ---- 遊び方の説明（部品を照らす） ---- */
+.guide { position: absolute; inset: 0; cursor: pointer; animation: fade-in .25s; }
+.guide .spot {
+  position: absolute; border-radius: calc(var(--u) * 1.4); pointer-events: none;
+  box-shadow: 0 0 0 200vmax rgba(15, 6, 18, .62); outline: 3px solid #ffd27a; outline-offset: 2px;
+  transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease; animation: spot-pulse 1.2s ease-in-out infinite;
+}
+.guide .spot.none { outline-color: transparent; animation: none; }
+@keyframes spot-pulse { 50% { outline-offset: 7px; } }
+.guide .box {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: min(calc(var(--vw) * 82), calc(var(--u) * 100));
+  padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 2.4);
+  font-size: calc(var(--u) * 2.7); line-height: 1.6; letter-spacing: 0.03em;
+}
+.guide .box.mid { top: 50%; transform: translate(-50%, -50%); }
+.guide .box .name {
+  position: absolute; top: calc(var(--u) * -2.8); left: calc(var(--u) * 3);
+  padding: calc(var(--u) * 0.4) calc(var(--u) * 2.2); font-family: var(--font-brush); font-size: calc(var(--u) * 2.8);
+  color: #fff8ec; background: #3a2c6b; border: calc(var(--u) * 0.3) solid var(--paper-edge); border-radius: 3px; transform: rotate(-2deg);
+}
+.guide .box .text { white-space: pre-wrap; min-height: 3.2em; }
+.guide .box .count { position: absolute; right: calc(var(--u) * 6.5); bottom: calc(var(--u) * 1.4); font-size: calc(var(--u) * 1.9); color: var(--ink-soft); }
+.guide .box .next {
+  position: absolute; right: calc(var(--u) * 3); bottom: calc(var(--u) * 1.6); width: calc(var(--u) * 2.2); height: calc(var(--u) * 2.2);
+  background: var(--shu); clip-path: polygon(0 20%, 100% 20%, 50% 90%); animation: bob 0.9s ease-in-out infinite;
+}
 
 /* ---- 証拠品ファイル ---- */
 .book { position: absolute; inset: 0; background: rgba(20, 10, 22, .6); display: grid; place-items: center; animation: fade-in .2s; }

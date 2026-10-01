@@ -1,4 +1,5 @@
-import type { ActorDef, Engine, PropDef } from '../../engine';
+import type { ActorDef, Engine, PropDef, Store } from '../../engine';
+import type { GuideStep } from '../../engine/ui/Hud';
 
 /** 逆転検事風「捜査→まとめる→尋問」の事件データ。ゲームごとにこれを書けば遊べる。 */
 export interface EvidenceDef {
@@ -115,8 +116,27 @@ export interface CaseData {
   bgm?: { field?: string; confront?: string };
   /** 尋問で間違えられる回数（事件全体で共通） */
   talismans: number;
+  /** 尋問の叫び。press＝問いただすとき、present＝証拠を示すとき（省略時は「待った！」「これを見ろ！」） */
+  shouts?: { press?: string; present?: string };
   logic: LogicDef;
   /** 尋問（id → 内容） */
   confrontations: Record<string, ConfrontationDef>;
   ending: string;
+}
+
+/** 遊び方の説明を出す場面：捜査を始めたとき・尋問を始めたとき・まとめるを開いたとき */
+export type TutorialKey = 'explore' | 'confront' | 'logic';
+
+export interface TutorialDef {
+  /** 見るかどうかの問いかけ */
+  question: string;
+  steps: GuideStep[];
+}
+
+/** 事件をまたいで共通の設定（どの話でも同じもの） */
+export interface GameOptions {
+  /** 各場面を初めて遊ぶときに「見ますか？」と聞く説明 */
+  tutorials?: Partial<Record<TutorialKey, TutorialDef>>;
+  /** 説明を聞いたかどうかを端末に残す場所（無ければその場限り） */
+  store?: Store;
 }

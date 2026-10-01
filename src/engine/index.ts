@@ -1,6 +1,7 @@
 export { Engine, type Mode } from './core/Engine';
 export { Ease, Tweens } from './core/tween';
 export { Emitter } from './core/Emitter';
+export { Store } from './core/Store';
 export { Director } from './script/Director';
 export { parseScript, COMMAND_ALIASES, type ScriptCommand } from './script/parser';
 export { PaperActor, type ActorDef, type CastManifest } from './paper/PaperActor';
