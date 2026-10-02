@@ -27,3 +27,18 @@ node tools/prepare_poses.mjs <追加素材を展開したフォルダ> public/as
 
 効果音は素材ファイルを使わず、WebAudioで合成しています（`src/engine/audio/Sound.ts`）。
 立ち絵はAI生成の差分のため、手指や装飾の細部はポーズ間で完全には一致しません。
+
+## 声（フルボイス）
+
+セリフの声は Gemini TTS で作っています（`tools/voices.mjs`。APIキーは `.env` の `GEMINI_API_KEY`）。
+
+```sh
+npm i --no-save @breezystack/lamejs
+node tools/voices.mjs list                 # セリフ数と料金の目安
+node tools/voices.mjs design [名前...]     # キャラの声を作る（作り直す）
+node tools/voices.mjs generate [名前...]   # 作っていない・変わったセリフだけ声を作る
+```
+
+- 出力は `public/assets/voice/<話のid>/`（MP3 と、声のあるセリフの一覧 `index.json`）
+- 台本のセリフを直したら `generate` を実行する（直した行だけ作り直す。消えた行の声は片付ける）
+- 声の説明・行ごとの話し方・読み方の辞書はツールの冒頭（`CAST_VOICES` / `STYLE` / `READINGS`）

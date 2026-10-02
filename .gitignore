@@ -6,3 +6,5 @@ test-results/
 # APIキーなどの秘密（コミットしない）
 .env
 .env.*
+# 声の試聴用（tools/voices.mjs design が書き出す）
+voice-samples/

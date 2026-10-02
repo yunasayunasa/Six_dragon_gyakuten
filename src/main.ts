@@ -63,6 +63,9 @@ async function play(engine: Engine, episodeId: string, save?: InvestigationSave)
   debug.game = game;
   bar.style.width = '60%';
   await engine.setMode(game);
+  // 結末の飛空艇などを読み込み中に準備しておく（出てきた瞬間に重くならないように）
+  bar.style.width = '85%';
+  await engine.warmUp();
   engine.hud.panels.closeHome();
   hideLoading();
   await game.start(save);

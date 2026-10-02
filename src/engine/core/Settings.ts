@@ -6,13 +6,15 @@ export interface SettingValues {
   bgm: number;
   /** 効果音の音量（0〜1） */
   se: number;
+  /** 声の音量（0〜1） */
+  voice: number;
   /** 文字の速さ（1〜5） */
   textSpeed: number;
   /** 早送りで、まだ読んでいない会話も飛ばすか */
   skipUnread: boolean;
 }
 
-export const DEFAULT_SETTINGS: SettingValues = { bgm: 1, se: 1, textSpeed: 3, skipUnread: false };
+export const DEFAULT_SETTINGS: SettingValues = { bgm: 1, se: 1, voice: 1, textSpeed: 3, skipUnread: false };
 
 /** 文字の速さ（1〜5）→ 1秒あたりの文字数 */
 export const TEXT_SPEEDS = [0, 18, 28, 42, 64, 400];

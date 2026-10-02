@@ -115,6 +115,7 @@ export class Panels {
     const volume = ['切', '1', '2', '3', '4', '5'];
     seg('音楽', volume, () => Math.round(st.values.bgm * 5), (i) => st.set('bgm', i / 5));
     seg('効果音', volume, () => Math.round(st.values.se * 5), (i) => st.set('se', i / 5));
+    seg('声', volume, () => Math.round(st.values.voice * 5), (i) => st.set('voice', i / 5));
     seg('文字の速さ', TEXT_SPEED_LABELS.slice(1), () => st.values.textSpeed - 1, (i) => st.set('textSpeed', i + 1));
     seg('早送り', ['読んだ会話だけ', 'すべて'], () => (st.values.skipUnread ? 1 : 0), (i) => st.set('skipUnread', i === 1));
     if (extras.length) {

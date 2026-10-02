@@ -48,7 +48,10 @@ export class InvestigationGame implements Mode {
 
   constructor(readonly data: CaseData, private options: GameOptions = {}) {
     this.state = new CaseState(data);
-    this.director = new Director({ say: (s, e, t) => this.say(s, e, t) });
+    this.director = new Director({
+      say: (s, e, t) => this.say(s, e, t),
+      upcoming: (s, t) => this.engine.hud.preloadVoice(this.speakerName(s), t),
+    });
   }
 
   // ---------- 準備 ----------
@@ -84,6 +87,9 @@ export class InvestigationGame implements Mode {
       st.addActor(a, pl?.x ?? 0, pl?.z ?? 0, pl?.facing ?? 1);
     }
     this.player = st.actor(data.player);
+    // 声（public/assets/voice/<話のid>/。無ければ声なし）。叫びは主人公の声
+    await engine.voices.load(engine.assets.url(`voice/${data.id}/`));
+    engine.hud.shoutSpeaker = this.player.def.name;
     for (const a of actors) a.onPose = (who) => this.syncPortrait(who);
     engine.player = this.player;
     engine.rig.bounds = sc.cameraBounds;
@@ -167,6 +173,11 @@ export class InvestigationGame implements Mode {
   }
 
   // ---------- 会話 ----------
+  /** 台本の話し手（名前か id）を、表示する名前にする */
+  private speakerName(speaker: string | null): string | null {
+    return speaker ? (this.findActor(speaker)?.def.name ?? speaker) : null;
+  }
+
   private async say(speaker: string | null, expr: string | null, text: string): Promise<void> {
     const actor = speaker ? this.findActor(speaker) : null;
     if (actor && expr) actor.setExpression(expr, false, this.engine.tweens);
@@ -484,8 +495,11 @@ export class InvestigationGame implements Mode {
       witness.talking = true;
       setTimeout(() => (witness.talking = false), 900);
       this.testimony.show(`${witness.def.name}の証言`, c.statement.text, c.index, c.visible.length);
+      const voice = this.engine.voices.url(witness.def.name, c.statement.text);
+      if (voice) this.engine.sound.playVoice(voice);
       await this.offerTutorial('confront');
       const a = await this.testimony.wait();
+      if (voice) this.engine.sound.stopVoice();
       if (a === 'next' || a === 'prev') {
         this.engine.sound.play('select');
         if (a === 'next') c.next();

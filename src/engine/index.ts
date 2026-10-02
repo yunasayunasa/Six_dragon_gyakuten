@@ -2,6 +2,7 @@ export { Engine, type Mode, type EngineOptions } from './core/Engine';
 export { Ease, Tweens } from './core/tween';
 export { Emitter } from './core/Emitter';
 export { Store } from './core/Store';
+export { Voices } from './audio/Voices';
 export { Settings, type SettingValues } from './core/Settings';
 export { SaveSlots, type SaveEntry } from './core/SaveSlots';
 export { Director } from './script/Director';

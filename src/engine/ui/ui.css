@@ -374,14 +374,15 @@ html.rotated #hud {
 .home .title-block { position: absolute; left: calc(var(--u) * 8 + var(--safe-l)); top: 18%; color: #fff6e8; text-shadow: 0 calc(var(--u) * .4) calc(var(--u) * 2) rgba(20, 8, 20, .6); }
 .home .title-block .sub { font-size: calc(var(--u) * 2.6); letter-spacing: .5em; opacity: .9; }
 .home .title-block .title {
-  font-family: var(--font-brush); font-size: calc(var(--u) * 13); letter-spacing: .08em; line-height: 1.2; white-space: nowrap;
+  /* 右のメニューと重ならないよう、画面の左半分ほどに収まる大きさまで縮める（ノッチ側の余白も引く） */
+  font-family: var(--font-brush); font-size: min(calc(var(--u) * 13), calc((var(--vw) * 52 - var(--safe-l) - var(--u) * 8) / 4.5)); letter-spacing: .08em; line-height: 1.2; white-space: nowrap;
   -webkit-text-stroke: calc(var(--u) * .25) rgba(43, 29, 23, .8); paint-order: stroke fill;
 }
 .home .menu {
-  position: absolute; right: calc(var(--u) * 8 + var(--safe-r)); bottom: calc(var(--u) * 6 + var(--safe-b));
-  display: flex; flex-direction: column; gap: calc(var(--u) * 1.4); min-width: calc(var(--u) * 34);
+  position: absolute; right: calc(var(--u) * 4 + var(--safe-r)); bottom: calc(var(--u) * 5 + var(--safe-b));
+  display: flex; flex-direction: column; gap: calc(var(--u) * 1.2); min-width: calc(var(--u) * 26);
 }
-.home .menu .btn { text-align: center; }
+.home .menu .btn { text-align: center; font-size: calc(var(--u) * 2.6); padding: calc(var(--u) * 1) calc(var(--u) * 2.6); }
 .home .menu .btn[disabled] { opacity: .45; }
 .home .foot { position: absolute; left: calc(var(--u) * 8 + var(--safe-l)); bottom: calc(var(--u) * 3 + var(--safe-b)); font-size: calc(var(--u) * 1.8); color: rgba(255, 246, 232, .7); }
 

@@ -4,6 +4,8 @@ export type CommandHandler = (args: string[], cmd: ScriptCommand) => Promise<voi
 
 export interface DirectorHooks {
   say(speaker: string | null, expr: string | null, text: string): Promise<void>;
+  /** 次に出るセリフ（声の先読みなどに使う） */
+  upcoming?(speaker: string | null, text: string): void;
 }
 
 /**
@@ -46,8 +48,12 @@ export class Director {
   async play(source: string): Promise<void> {
     this.running++;
     try {
-      for (const cmd of this.compile(source)) {
+      const cmds = this.compile(source);
+      for (let i = 0; i < cmds.length; i++) {
+        const cmd = cmds[i];
         if (cmd.op === 'say') {
+          const next = cmds.slice(i + 1).find((c) => c.op === 'say');
+          if (next?.op === 'say') this.hooks.upcoming?.(next.speaker, next.text);
           await this.hooks.say(cmd.speaker, cmd.expr, cmd.text);
           continue;
         }

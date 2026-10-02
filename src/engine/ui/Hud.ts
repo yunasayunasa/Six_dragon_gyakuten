@@ -6,6 +6,7 @@ import { el, escapeHtml } from './dom';
 import { Panels } from './Panels';
 import { ReadMarks } from '../core/ReadMarks';
 import type { Settings } from '../core/Settings';
+import type { Voices } from '../audio/Voices';
 
 export { escapeHtml };
 
@@ -78,8 +79,10 @@ export class Hud {
   readonly cancelStack: Array<() => void> = [];
   /** ログ・設定・メニュー・セーブ一覧・ホーム画面 */
   readonly panels: Panels;
+  /** 叫び（待った！など）の声を出す人の名前。null なら叫びに声は付けない */
+  shoutSpeaker: string | null = null;
 
-  constructor(readonly input: Input, readonly sound: Sound, readonly settings: Settings, private readMarks: ReadMarks) {
+  constructor(readonly input: Input, readonly sound: Sound, readonly settings: Settings, private readMarks: ReadMarks, readonly voices: Voices) {
     this.root = document.getElementById('hud')!;
     this.panels = new Panels(this);
     this.topbar = el('div', 'topbar', this.root);
@@ -287,6 +290,9 @@ export class Hud {
     this.dlgName.style.background = color ?? '';
     this.dlgText.textContent = '';
     this.input.clearPressed();
+    // 声（あれば）。早送り中は鳴らさない
+    const voice = this.voices.url(name, text);
+    if (voice && !this.skip) this.sound.playVoice(voice);
     const slot = this.speaking ? this.portraits[this.speaking] : null;
     onTalk?.(true);
     if (slot) slot.talking = true;
@@ -298,7 +304,15 @@ export class Hud {
     this.readMarks.add(key);
     this.dlg.classList.add('done');
     await this.waitConfirmOrSkip(90);
+    // 次へ進んだら声は止める
+    if (voice) this.sound.stopVoice();
     if (!this.skip) this.sound.play('select');
+  }
+
+  /** 次に出るセリフの声を先に読み込んでおく */
+  preloadVoice(name: string | null, text: string): void {
+    const voice = this.voices.url(name, text);
+    if (voice) this.sound.preloadVoice(voice);
   }
 
   hideDialogue(): void {
@@ -341,6 +355,8 @@ export class Hud {
     if (color) sp.style.background = color;
     el('div', 'word', s, escapeHtml(word));
     this.sound.play('shout');
+    const voice = this.voices.url(this.shoutSpeaker, word);
+    if (voice && !this.skip) this.sound.playVoice(voice);
     await new Promise((r) => setTimeout(r, this.skip ? 450 : 1100));
     s.remove();
   }

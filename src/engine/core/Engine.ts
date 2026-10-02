@@ -13,6 +13,7 @@ import { Store } from './Store';
 import { Settings, TEXT_SPEEDS } from './Settings';
 import { ReadMarks } from './ReadMarks';
 import { SaveSlots } from './SaveSlots';
+import { Voices } from '../audio/Voices';
 
 export interface EngineOptions {
   /** 端末に残す記録（設定・既読・セーブ）の名前空間。ゲームごとに変える */
@@ -40,6 +41,8 @@ export class Engine {
   readonly input = new Input();
   readonly sound = new Sound();
   readonly assets = new Assets();
+  /** セリフの声（話ごとに load する） */
+  readonly voices = new Voices();
   readonly hud: Hud;
   /** 端末に残す記録 */
   readonly store: Store;
@@ -48,6 +51,7 @@ export class Engine {
   private mode: Mode | null = null;
   private last = 0;
   private paused = false;
+  private warming = false;
   private statsEl: HTMLElement | null = null;
   private fpsAcc = { t: 0, frames: 0, fps: 0 };
   /** 毎フレーム呼ばれる追加処理（デバッグ・演出用） */
@@ -73,9 +77,9 @@ export class Engine {
     this.post = new PostFX(this.renderer, this.quality);
     this.rig = new CameraRig(16 / 9); // 実際の縦横比は resize() で決まる
     this.stage = new Stage(this.assets, this.tweens, this.post, this.quality);
-    this.hud = new Hud(this.input, this.sound, this.settings, new ReadMarks(this.store));
+    this.hud = new Hud(this.input, this.sound, this.settings, new ReadMarks(this.store), this.voices);
     const apply = () => {
-      this.sound.setVolumeScale(this.settings.values.bgm, this.settings.values.se);
+      this.sound.setVolumeScale(this.settings.values.bgm, this.settings.values.se, this.settings.values.voice);
       this.hud.cps = TEXT_SPEEDS[this.settings.values.textSpeed] ?? TEXT_SPEEDS[3];
     };
     this.settings.onChange.add(apply);
@@ -120,13 +124,42 @@ export class Engine {
     await mode.enter(this);
   }
 
+  /**
+   * 舞台の物を、隠れている物（結末の飛空艇など）も含めて先に1回描いておく。
+   * 初めて現れた瞬間のカクつき（シェーダーの準備・画像の転送）を読み込み中に済ませる。
+   */
+  async warmUp(): Promise<void> {
+    const restore: (() => void)[] = [];
+    this.warming = true;
+    this.stage.scene.traverse((o) => {
+      // 光は数が変わるとシェーダーが変わるので、今のままにする
+      if (o instanceof THREE.Light) return;
+      if (!o.visible) {
+        o.visible = true;
+        restore.push(() => (o.visible = false));
+      }
+      if (o.frustumCulled) {
+        o.frustumCulled = false;
+        restore.push(() => (o.frustumCulled = true));
+      }
+    });
+    try {
+      await this.post.prewarm(this.stage.scene, this.rig.camera);
+    } finally {
+      restore.forEach((f) => f());
+      this.warming = false;
+      this.last = performance.now();
+    }
+  }
+
   start(): void {
     this.last = performance.now();
     this.renderer.setAnimationLoop(this.frame);
   }
 
   private frame = (now: number) => {
-    if (this.paused) return;
+    // warmUp 中は隠れた物を一時的に出しているので、動かしも描きもしない
+    if (this.paused || this.warming) return;
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.renderer.info.reset();

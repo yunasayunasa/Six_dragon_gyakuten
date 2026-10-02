@@ -240,6 +240,19 @@ export class PostFX {
     (this.compMat.uniforms.uResolution.value as THREE.Vector2).set(w, h);
   }
 
+  /** シェーダーの準備と、画像・形のGPUへの転送を先に済ませる（画面には出さない） */
+  async prewarm(scene: THREE.Scene, camera: THREE.PerspectiveCamera): Promise<void> {
+    const r = this.renderer;
+    r.setRenderTarget(this.sceneRT);
+    try {
+      await r.compileAsync(scene, camera);
+      r.setRenderTarget(this.sceneRT); // 待っている間に変わっていても描き先を戻す
+      r.render(scene, camera);
+    } finally {
+      r.setRenderTarget(null);
+    }
+  }
+
   render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, dt: number): void {
     const r = this.renderer;
     this.time += dt;

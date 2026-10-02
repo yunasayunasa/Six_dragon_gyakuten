@@ -1,0 +1,36 @@
+{
+  "model": "gemini-3.8-flash-tts",
+  "voices": {
+    "ウィルナス": {
+      "id": "voice_fx21hfdqnxp3",
+      "description": "30代くらいの成人男性。雄々しく猛々しい、張りのある太く力強い声。それでいて凛々しく、品のある響きもある。豪放磊落な武人。",
+      "gender": "male"
+    },
+    "ワムデュス": {
+      "id": "Leda",
+      "prebuilt": true
+    },
+    "フェディエル": {
+      "id": "voice_z9o50bsuvnaw",
+      "description": "大人の女性、お姉さん。落ち着いた低めの、深みのあるミステリアスな声。大人の余裕と、凛とした気品と強さがある。古風で少し高貴な話し方。",
+      "gender": "female"
+    },
+    "ガレヲン": {
+      "id": "voice_vii2yac5r7mx",
+      "description": "大人の女性。お淑やかで穏やか、全てを包み込む母のような、温かく柔らかい声。ゆったりと丁寧に話す。",
+      "gender": "female"
+    },
+    "ルオー": {
+      "id": "voice_ele1u1n2azzi",
+      "description": "20代の青年。真面目で堅物な、落ち着いた明瞭な声。理知的で、少し尊大な響きがある。",
+      "gender": "male"
+    }
+  },
+  "lines": {
+    "epwe4r": "o9snn8",
+    "16web6y": "sow5s9",
+    "osqnvt": "xgho51",
+    "1ezmdmh": "1clrd5o",
+    "1iat7j9": "189anl9"
+  }
+}

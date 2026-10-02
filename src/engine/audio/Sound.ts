@@ -25,16 +25,23 @@ export class Sound {
   private bgmTrack: BgmTrack | null = null;
   /** 素材ファイルで鳴らす効果音（無ければ合成音） */
   private files = new Map<SE, { data: Promise<ArrayBuffer>; buffer: AudioBuffer | null }>();
+  /** 声（セリフの音声ファイル）。URLごとに解読済みの音を少しだけ覚えておく */
+  private voices = new Map<string, Promise<AudioBuffer | null>>();
+  private voiceSrc: AudioBufferSourceNode | null = null;
+  /** いま鳴らそうとしている声（読み込み中に次のセリフへ進んだら鳴らさない） */
+  private voiceWanted: string | null = null;
   muted = false;
   seVolume = 0.5;
   bgmVolume = 0.32;
+  voiceVolume = 1;
   /** 作者が決めた基準の音量（設定の 100% に当たる） */
-  private static readonly BASE = { se: 0.5, bgm: 0.32 };
+  private static readonly BASE = { se: 0.5, bgm: 0.32, voice: 1 };
 
   /** 設定の音量（0〜1）を反映する */
-  setVolumeScale(bgm: number, se: number): void {
+  setVolumeScale(bgm: number, se: number, voice = 1): void {
     this.bgmVolume = Sound.BASE.bgm * bgm;
     this.seVolume = Sound.BASE.se * se;
+    this.voiceVolume = Sound.BASE.voice * voice;
     if (this.bgmGain && this.ctx) this.bgmGain.gain.setTargetAtTime(this.bgmVolume, this.ctx.currentTime, 0.05);
     else if (this.bgmEl) this.bgmEl.volume = this.bgmVolume * (this.bgmFileVolume.get(this.bgmEl.src) ?? 1);
   }
@@ -154,6 +161,48 @@ export class Sound {
         start(buf);
       })
       .catch(() => {});
+  }
+
+  /** 声を先に読み込んでおく（次のセリフの分など）。音が出せるようになる前は何もしない */
+  preloadVoice(url: string): void {
+    const ctx = this.ctx;
+    if (!ctx || this.voices.has(url)) return;
+    const p = fetch(url)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => ctx.decodeAudioData(d))
+      .catch(() => null); // 読めなければ声なしで進める
+    this.voices.set(url, p);
+    // 覚えておくのは最近の分だけ
+    if (this.voices.size > 24) this.voices.delete(this.voices.keys().next().value!);
+  }
+
+  /** 声を鳴らす（前の声は止める） */
+  playVoice(url: string): void {
+    this.stopVoice();
+    const ctx = this.ctx;
+    if (!ctx || !this.master || this.muted || this.voiceVolume <= 0) return;
+    this.preloadVoice(url);
+    this.voiceWanted = url;
+    void this.voices.get(url)?.then((buf) => {
+      if (!buf || this.voiceWanted !== url) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = this.voiceVolume;
+      src.connect(g).connect(this.master!);
+      src.start();
+      this.voiceSrc = src;
+    });
+  }
+
+  stopVoice(): void {
+    this.voiceWanted = null;
+    try {
+      this.voiceSrc?.stop();
+    } catch {
+      // すでに止まっている
+    }
+    this.voiceSrc = null;
   }
 
   play(se: SE): void {
