@@ -17,6 +17,7 @@
  */
 import { createServer } from 'vite';
 import fs from 'node:fs';
+import { pitchShift } from './voice_audio.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,22 +27,29 @@ const API = 'https://generativelanguage.googleapis.com/v1beta';
 const STATE_FILE = path.join(ROOT, 'tools/voices.json');
 const SAMPLE_DIR = path.join(ROOT, 'voice-samples');
 
-/** キャラの声（変わらない特徴だけ。場面ごとの調子は STYLE で付ける）。ユーザーのイメージ（2026-10-02）から */
+/**
+ * キャラの声（変わらない特徴だけ。場面ごとの調子は STYLE で付ける）。ユーザーのイメージ（2026-10-02）から。
+ * pitch は作った声の高さを後から上げる量（半音。速さは変わらない）
+ */
 const CAST_VOICES = {
   ウィルナス: {
     gender: 'male',
-    description: '30代くらいの成人男性。雄々しく猛々しい、張りのある太く力強い声。それでいて凛々しく、品のある響きもある。豪放磊落な武人。',
-    style: '堂々と、張りのある声で',
+    // 1回目の声はかすれて怯えたように聞こえた（ユーザー所見）ので、芯のある声で作り直す
+    description: '30代の成人男性。凛々しく勇ましい、芯の通った力強い声。太く張りがあり、自信に満ちて堂々としている。恐れを知らない豪放磊落な英雄。',
+    style: '凛々しく堂々と、自信に満ちて、腹から声を張って',
   },
-  // 子供の声は Google の安全ポリシーで作れない（2026-10-02 確認）ため、用意された若々しい声に話し方の指示を付ける
+  // 子供の声は Google の安全ポリシーで作れない（2026-10-02 確認）ため、用意された若々しい声に話し方の指示を付け、
+  // さらに高さを上げて幼くする（元は約210Hz＝大人の女性の高さ → +8半音で約310Hz）
   ワムデュス: {
     prebuilt: 'Leda',
     style: '子供っぽく、舌っ足らずで可愛らしく、のんびりマイペースに',
+    pitch: 8,
   },
   フェディエル: {
     gender: 'female',
     description: '大人の女性、お姉さん。落ち着いた低めの、深みのあるミステリアスな声。大人の余裕と、凛とした気品と強さがある。古風で少し高貴な話し方。',
-    style: '大人の余裕たっぷりに、少しからかうように',
+    // 「からかうように」だと囁き声になった（ユーザー所見）。声そのものははっきりしているので、話し方の指示で凛々しくする
+    style: '凛として、気品と自信をもって、はっきりと声を張って',
   },
   ガレヲン: {
     gender: 'female',
@@ -57,7 +65,7 @@ const CAST_VOICES = {
 
 /** 表情 → その行の話し方 */
 const STYLE = {
-  驚き: '驚いて、声を上げて',
+  驚き: '驚いて、勢いよく声を張って',
   説明: '落ち着いて、分かりやすく説明するように',
   考え: '考え込みながら、ゆっくりと',
   得意: '得意げに',
@@ -113,7 +121,11 @@ async function api(method, url, body) {
     });
     if (r.ok) return r.status === 204 ? {} : r.json();
     const err = await r.json().catch(() => ({}));
-    // 混雑・回数制限は待ってやり直す
+    // 1日の回数の上限（Tier 1 は1日100回）は、待っても翌日まで戻らないので止める
+    if (r.status === 429 && /per day/i.test(err.error?.message ?? '')) {
+      throw Object.assign(new Error(`1日の回数の上限に達しました（${err.error.message}）`), { daily: true });
+    }
+    // 混雑・短い時間の回数制限は待ってやり直す
     if ((r.status === 429 || r.status >= 500) && attempt < 5) {
       await new Promise((ok) => setTimeout(ok, 2000 * 2 ** attempt));
       continue;
@@ -294,7 +306,10 @@ async function generate(names) {
   const missing = [...new Set(lines.map((l) => l.speaker))].filter((n) => !state.voices[n]);
   if (missing.length) throw new Error(`声がまだありません: ${missing.join('、')}（先に design）`);
 
-  const sigOf = (l) => fnv([MODEL, state.voices[l.speaker].id, CAST_VOICES[l.speaker].style, l.style ?? '', ttsText(l.text)].join('|'));
+  const sigOf = (l) => {
+    const v = CAST_VOICES[l.speaker];
+    return fnv([MODEL, state.voices[l.speaker].id, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l.text)].join('|'));
+  };
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
   const todo = lines.filter((l) => state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l)));
   console.log(`作る: ${todo.length} 行 / ${lines.length} 行`);
@@ -313,7 +328,7 @@ async function generate(names) {
     const audio = res.steps?.flatMap((s) => s.content ?? []).find((c) => c.type === 'audio' && c.data);
     if (!audio) throw new Error('音声が返ってきませんでした');
     const { rate, pcm } = readWav(Buffer.from(audio.data, 'base64'));
-    const mp3 = await toMp3(trimSilence(pcm, rate), rate);
+    const mp3 = await toMp3(pitchShift(trimSilence(pcm, rate), rate, CAST_VOICES[l.speaker].pitch ?? 0), rate);
     fs.mkdirSync(path.dirname(fileOf(l)), { recursive: true });
     fs.writeFileSync(fileOf(l), mp3);
     state.lines[l.key] = sigOf(l);
@@ -333,6 +348,11 @@ async function generate(names) {
         } catch (e) {
           failed++;
           console.error(`失敗: ${l.speaker}「${l.text.slice(0, 20)}」 ${e.message}`);
+          // 1日の上限なら残りも作れないので、ここまでで終える（作れた分は残る）
+          if (e.daily) {
+            failed += queue.length;
+            queue.length = 0;
+          }
         }
       }
     }),
