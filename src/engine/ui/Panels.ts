@@ -18,6 +18,8 @@ export interface PanelAction {
 export interface HomeOptions {
   title: string;
   subtitle?: string;
+  /** 作品名のロゴ画像（URL）。あれば作品名の文字の代わりに出す */
+  logo?: string;
   items: Array<{ id: string; label: string; disabled?: boolean }>;
   footer?: string;
 }
@@ -28,6 +30,8 @@ export interface EpisodeCard {
   number: string;
   title: string;
   state: 'open' | 'cleared' | 'locked';
+  /** 扉絵（URL） */
+  cover?: string;
 }
 
 function formatDate(t: number): string {
@@ -198,8 +202,14 @@ export class Panels {
         p.style.setProperty('--s', `${0.6 + Math.random() * 0.9}`);
       }
       const tb = el('div', 'title-block', h);
-      if (opts.subtitle) el('div', 'sub', tb, escapeHtml(opts.subtitle));
-      el('div', 'title', tb, escapeHtml(opts.title));
+      if (opts.logo) {
+        const img = el('img', 'logo', tb);
+        img.src = opts.logo;
+        img.alt = `${opts.subtitle ?? ''} ${opts.title}`.trim();
+      } else {
+        if (opts.subtitle) el('div', 'sub', tb, escapeHtml(opts.subtitle));
+        el('div', 'title', tb, escapeHtml(opts.title));
+      }
       this.homeMenu = el('div', 'menu', h);
       if (opts.footer) el('div', 'foot', h, escapeHtml(opts.footer));
     }
@@ -230,6 +240,7 @@ export class Panels {
     let picked: string | null = null;
     for (const ep of list) {
       const c = el('div', `ep ${ep.state}`, s.body);
+      if (ep.cover && ep.state !== 'locked') el('div', 'cover', c).style.backgroundImage = `url("${ep.cover}")`;
       el('div', 'num', c, escapeHtml(ep.number));
       el('div', 'ttl', c, escapeHtml(ep.state === 'locked' ? '準備中' : ep.title));
       if (ep.state === 'cleared') el('div', 'stamp', c, '解決');

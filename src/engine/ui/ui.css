@@ -339,6 +339,7 @@ html.rotated #hud {
   position: relative; padding: calc(var(--u) * 1.8) calc(var(--u) * 2.2); min-height: calc(var(--u) * 12); cursor: pointer;
   background: #fffaf0; border: 2px solid rgba(43,29,23,.35); border-radius: 4px; overflow: hidden;
 }
+.episodes .ep .cover { aspect-ratio: 16 / 9; margin: calc(var(--u) * -1.8) calc(var(--u) * -2.2) calc(var(--u) * 1.2); background: center / cover no-repeat; border-bottom: 2px solid rgba(43,29,23,.35); }
 .episodes .ep .num { font-size: calc(var(--u) * 2); color: var(--shu); letter-spacing: .2em; }
 .episodes .ep .ttl { font-family: var(--font-brush); font-size: calc(var(--u) * 2.7); line-height: 1.35; margin-top: calc(var(--u) * .4); padding-right: calc(var(--u) * 6); }
 .episodes .ep.locked { background: rgba(43,29,23,.08); color: var(--ink-soft); cursor: default; }
@@ -377,6 +378,11 @@ html.rotated #hud {
   /* 右のメニューと重ならないよう、画面の左半分ほどに収まる大きさまで縮める（ノッチ側の余白も引く） */
   font-family: var(--font-brush); font-size: min(calc(var(--u) * 13), calc((var(--vw) * 52 - var(--safe-l) - var(--u) * 8) / 4.5)); letter-spacing: .08em; line-height: 1.2; white-space: nowrap;
   -webkit-text-stroke: calc(var(--u) * .25) rgba(43, 29, 23, .8); paint-order: stroke fill;
+}
+.home .title-block .logo {
+  /* 文字の作品名と同じく、右のメニューと重ならない幅に収める */
+  display: block; width: min(calc(var(--u) * 62), calc(var(--vw) * 52 - var(--safe-l) - var(--u) * 8)); height: auto;
+  filter: drop-shadow(0 calc(var(--u) * .4) calc(var(--u) * 1.4) rgba(20, 8, 20, .55));
 }
 .home .menu {
   position: absolute; right: calc(var(--u) * 4 + var(--safe-r)); bottom: calc(var(--u) * 5 + var(--safe-b));

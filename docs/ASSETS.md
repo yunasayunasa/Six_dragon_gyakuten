@@ -25,6 +25,28 @@ node tools/prepare_poses.mjs <追加素材を展開したフォルダ> public/as
 - 攻撃・被弾の絵はすべて画面右向き。足元は `motion_layout.json` の `ground_y` にそろえる
 - ガレヲンはいつも目を閉じたキャラなので、目のパーツ（まばたき）は無い
 
+## 第一話の専用素材（2026-10-02、Codex の画像生成で制作）
+
+素材リスト（Google スプレッドシート「第一話 素材リスト」）の絵は、Codex（gpt-6-astra の画像生成）で作り、`tools/prepare_props.mjs` で変換しています。
+元の PNG と依頼文は `コウセイ\asset-work\case01-materials\`（`PROMPT.md` / `out/` / `out/REPORT.md`）にあります（リポジトリ外）。
+
+| 出力 | 使いどころ | 変換 |
+|---|---|---|
+| `props/evidence_*.webp`（map・wrapper・footprints・ribbon・honey_puddle） | 証拠品の絵 | 長辺512（見取り図は640）・白フチ |
+| `props/lighthouse_pillar.webp` | 灯台柱（`billboard: 'y'`。台座の上面が灯晶の高さ 2.16 に来る大きさ 2.3） | 長辺1024・白フチ |
+| `props/notice_board.webp` ＋ `evidence_map.webp` | 無地の掲示板に見取り図を重ねて貼る | 白フチ |
+| `props/fediel_table.webp` / `rope_ribbon.webp` / `fishing_gear.webp` | フェディエルの台・リボンの引っかかった係留ロープ・釣り道具 | 白フチ（ロープは `--despeckle`） |
+| `props/footprints_trail.webp` | 床に寝かせる濡れた足跡（2枚つなぎ） | `--no-edge` |
+| `stage/cloudsea_sunset.webp` / `stage/pier_planks.webp` | 背景の夕焼けの雲海・床板 | `--plain`（床板は彩度0.55・明るさ1.18） |
+| `ui/title_logo.webp` / `ui/cover_case01.webp` | ホーム画面のロゴ・第一話の扉絵 | ロゴは白フチ、扉絵は `--plain` |
+| `public/icon-512.png` / `icon-180.png` | ホーム画面に追加したときのアイコン | `--plain` |
+
+```sh
+node tools/prepare_props.mjs <元PNG> public/assets/props/<名前>.webp --max 768
+```
+
+前の `stage/cloudsea.webp`・`stage/wood.webp` と流用していた小物の絵は、第二話以降で使えるよう残しています。
+
 効果音は素材ファイルを使わず、WebAudioで合成しています（`src/engine/audio/Sound.ts`）。
 立ち絵はAI生成の差分のため、手指や装飾の細部はポーズ間で完全には一致しません。
 

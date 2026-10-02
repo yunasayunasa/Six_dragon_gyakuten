@@ -3,7 +3,7 @@ import { Engine } from './engine';
 import type { EpisodeCard, PanelAction } from './engine/ui/Panels';
 import { InvestigationGame } from './genres/investigation/InvestigationGame';
 import type { InvestigationSave } from './genres/investigation/types';
-import { EPISODES, GAME_SUBTITLE, GAME_TITLE } from './game/episodes';
+import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE } from './game/episodes';
 import { TUTORIALS } from './game/tutorials';
 
 /** 端末に残す記録の名前空間（設定・既読・セーブ・説明を見たか・解決した話） */
@@ -37,7 +37,7 @@ const cleared = (engine: Engine, id: string) => engine.store.get(`clear:${id}`, 
 function episodeCards(engine: Engine): EpisodeCard[] {
   return EPISODES.map((ep, i) => {
     const open = !!ep.load && (i === 0 || cleared(engine, EPISODES[i - 1].id));
-    return { id: ep.id, number: ep.number, title: ep.title, state: !open ? 'locked' : cleared(engine, ep.id) ? 'cleared' : 'open' };
+    return { id: ep.id, number: ep.number, title: ep.title, state: !open ? 'locked' : cleared(engine, ep.id) ? 'cleared' : 'open', cover: ep.cover && engine.assets.url(ep.cover) };
   });
 }
 
@@ -78,6 +78,7 @@ async function home(engine: Engine): Promise<void> {
     const choice = await panels.home({
       title: GAME_TITLE,
       subtitle: GAME_SUBTITLE,
+      logo: engine.assets.url(GAME_LOGO),
       items: [
         { id: 'continue', label: 'つづきから', disabled: !engine.saves.any },
         { id: 'new', label: 'はじめから' },

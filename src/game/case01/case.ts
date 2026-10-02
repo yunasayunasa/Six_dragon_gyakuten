@@ -23,15 +23,9 @@ async function buildSet(engine: Engine): Promise<void> {
   st.addBlock([24.4, 0.07, 0.08], [0, 0.55, RAIL_Z], wood, { cast: false });
   // 桟橋の縁（床の厚み）
   st.addBlock([44, 0.5, 0.4], [0, -0.25, -4.55], woodDark, { cast: false });
-  // 掲示板の柱
-  st.addBlock([0.12, 1.2, 0.12], [-3.6, 0.6, -2.45], woodDark);
   // 係留柱
   st.addCylinder(0.15, 0.85, [6.2, 0, -2.35], woodDark);
-  // 灯台柱（石）と台座
-  st.addCylinder(0.26, 2.05, [0, 0, -1.6], '#b8a58c');
-  st.addBlock([0.72, 0.16, 0.72], [0, 0.08, -1.6], '#9a8670');
-  st.addBlock([0.62, 0.12, 0.62], [0, 2.1, -1.6], '#9a8670');
-  // 灯晶（最初は消えている）
+  // 灯晶（最初は消えている。灯台柱の絵の台座の上に載る）
   const lantern = new THREE.Group();
   lantern.name = '灯台柱';
   lantern.position.set(0, 2.16, -1.6);
@@ -159,13 +153,12 @@ export const CASE01: CaseData = {
     { id: 'wamdus', x: 9.3, z: -1.7, facing: -1 },
   ],
   // 証拠品＝尋問でつきつける物。推理メモ（clues）＝まとめるで使う物。どれも必ずどこかで使う（tests/case-data.test.ts で確認）
-  // 画像は仮（話が固まったら専用の証拠品画像に差し替える）
   evidence: [
-    { id: 'map', name: '桟橋の見取り図', desc: '掲示板に貼られた凪ノ桟橋の見取り図。\n桟橋のはしから見ると、灯台柱の前はフェディエルの物干しの陰になる。', image: 'props/sign_hanging_small.webp' },
-    { id: 'wrapper', name: '包み紙の切れ端', desc: 'ガレヲンの積荷のそばに落ちていた、だんごの包み紙の切れ端。\nべたべたした蜜が付いている。', image: 'props/sack_small.webp' },
-    { id: 'footprints', name: '濡れた足跡', desc: '灯台柱の根元の水たまりから、桟橋の先へ点々と続く小さな足跡。\nまだ乾いていない。', image: 'props/puddle.webp' },
-    { id: 'ribbon', name: '青いリボンの切れ端', desc: '係留ロープのささくれに引っかかっていた、青い布の切れ端。\n金の縁取りがある。', image: 'props/banner_small_blue.webp' },
-    { id: 'honey_puddle', name: '甘い水たまり', desc: '灯台柱の根元の水たまり。ほんのり甘い匂いがして、触るとべたつく。\n蜜が溶けている。', image: 'props/puddle.webp' },
+    { id: 'map', name: '桟橋の見取り図', desc: '掲示板に貼られた凪ノ桟橋の見取り図。\n桟橋のはしから見ると、灯台柱の前はフェディエルの物干しの陰になる。', image: 'props/evidence_map.webp' },
+    { id: 'wrapper', name: '包み紙の切れ端', desc: 'ガレヲンの積荷のそばに落ちていた、だんごの包み紙の切れ端。\nべたべたした蜜が付いている。', image: 'props/evidence_wrapper.webp' },
+    { id: 'footprints', name: '濡れた足跡', desc: '灯台柱の根元の水たまりから、桟橋の先へ点々と続く小さな足跡。\nまだ乾いていない。', image: 'props/evidence_footprints.webp' },
+    { id: 'ribbon', name: '青いリボンの切れ端', desc: '係留ロープのささくれに引っかかっていた、青い布の切れ端。\n白い縁取りがある。', image: 'props/evidence_ribbon.webp' },
+    { id: 'honey_puddle', name: '甘い水たまり', desc: '灯台柱の根元の水たまり。ほんのり甘い匂いがして、触るとべたつく。\n蜜が溶けている。', image: 'props/evidence_honey_puddle.webp' },
   ],
   clues: [
     { id: 'no_crumbs', name: '食べこぼしの無い皿', desc: 'フェディエルの台の皿には、蜜の跡だけが残っていた。\nだんごのかけらも、食べこぼしも無い。' },
@@ -178,14 +171,14 @@ export const CASE01: CaseData = {
     { id: 'skyfish', name: '空魚の言い伝え', desc: '夕焼けの空魚は、光と甘い匂いに寄ってくる。\n昔の釣り人は、灯りと蜜で誘ったという（ルオー談）。' },
   ],
   scene: {
-    floor: { image: 'stage/wood.webp', width: 44, depth: 10, z: 0.45, repeat: [11, 2.5], color: '#e6d6c8' },
-    backdrop: { image: 'stage/cloudsea.webp', width: 150, height: 62, z: -46, y: 2 },
+    floor: { image: 'stage/pier_planks.webp', width: 44, depth: 10, z: 0.45, repeat: [11, 2.5], color: '#e6d6c8' },
+    backdrop: { image: 'stage/cloudsea_sunset.webp', width: 150, height: 62, z: -46, y: 2 },
     walk: { minX: -10.4, maxX: 10.4, minZ: -2.25, maxZ: 2.5 },
     cameraBounds: { minX: -7.5, maxX: 7.5 },
     // 灯台柱の根元の水たまり（歩くと水しぶき）
     wet: [{ x: 1.2, z: -0.45, r: 0.55 }],
     obstacles: [
-      { x: 0, z: -1.6, r: 0.42 },
+      { x: 0, z: -1.6, r: 0.5 },
       { x: -3.6, z: -2.45, r: 0.2 },
       { x: -7.9, z: -2.2, r: 0.55 },
       { x: 6.6, z: -2.2, r: 0.55 },
@@ -209,19 +202,25 @@ export const CASE01: CaseData = {
       { image: 'banner_small_blue', x: 2.2, z: -2.9, height: 1.35, sway: 0.02 },
       { image: 'lamp_small', x: -4.8, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
       { image: 'lamp_small', x: 4.8, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
-      // 掲示板
-      { image: 'sign_hanging_small', x: -3.6, z: -2.38, y: 0.72, height: 0.62, blob: false, castShadow: true, id: 'board' },
+      // 掲示板（無地の板に見取り図を貼る）
+      { image: 'notice_board', x: -3.6, z: -2.4, height: 1.3, castShadow: true, id: 'board' },
+      { image: 'evidence_map', x: -3.6, z: -2.36, y: 0.6, height: 0.5, blob: false },
+      // 灯台柱（カメラが周りを回っても正面を向く。台座の上面が灯晶の高さ 2.16 に来る大きさ）
+      { image: 'lighthouse_pillar', x: 0, z: -1.6, height: 2.3, billboard: 'y', castShadow: true },
       // 灯台柱の水たまり・汚れ
       { image: 'puddle', x: 1.2, z: -0.45, height: 1.0, flat: true },
+      // 水たまりから桟橋の先（釣り場）へ続く濡れた足跡
+      { image: 'footprints_trail', x: 3.35, z: -0.75, height: 0.4, flat: true, rotY: 0.09 },
+      { image: 'footprints_trail', x: 7.0, z: -1.2, height: 0.4, flat: true, rotY: 0.09 },
       { image: 'dirt_stain', x: -6.3, z: -0.3, height: 1.3, flat: true },
       // フェディエルの物干し
       { image: 'laundry_line_small', x: 4.7, z: -2.85, height: 1.25, sway: 0.03 },
       // フェディエルの台（だんごの皿が載っていた）
-      { image: 'food_bundle_shop', x: 5.5, z: -2.35, height: 0.7, castShadow: true },
+      { image: 'fediel_table', x: 5.5, z: -2.35, height: 0.75, castShadow: true },
       // 係留ロープ
-      { image: 'rope_bundle_large', x: 6.85, z: -2.15, height: 0.62, castShadow: true },
+      { image: 'rope_ribbon', x: 6.85, z: -2.15, height: 0.62, castShadow: true },
       // 桟橋の先（釣り道具）
-      { image: 'shop_goods_bundle_B', x: 10.3, z: -2.4, height: 0.6, castShadow: true },
+      { image: 'fishing_gear', x: 10.3, z: -2.4, height: 0.95, castShadow: true },
       { image: 'grass_small', x: 11.2, z: -1.2, height: 0.5, sway: 0.05 },
       // 手前の前景（ぼけて奥行きを出す）
       { image: 'grass_tall_A', x: -6.2, z: 3.5, height: 1.1, sway: 0.05, occluder: true, blob: false },
