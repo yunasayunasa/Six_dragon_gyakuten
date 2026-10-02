@@ -485,10 +485,11 @@ export class InvestigationGame implements Mode {
     await this.director.play(`@移動 ${this.player.def.id} ${standX.toFixed(2)} ${witness.position.z.toFixed(2)}`);
     await Promise.all([this.player.face(side as 1 | -1, this.engine.tweens), witness.face((-side) as 1 | -1, this.engine.tweens)]);
     await this.engine.stage.setLook('confront', 1);
-    if (this.data.bgm?.confront) this.engine.sound.setBgm(this.data.bgm.confront);
+    const bgm = def.bgm ?? this.data.bgm?.confront;
+    if (bgm) this.engine.sound.setBgm(bgm);
     hud.setTalismans(max, c.talismans);
     await this.runScript(def.intro);
-    await hud.card(def.title, '尋問開始', '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう');
+    await this.versus(witness, def.title);
     for (;;) {
       // 証言パネルが画面下半分を使うので、証人は上寄りに映す
       this.engine.rig.shot(witness.position.clone().add(new THREE.Vector3(0, -0.15, 0)), new THREE.Vector3(0.3 * witness.facing, 1.15, 5.6), 30);
@@ -526,7 +527,10 @@ export class InvestigationGame implements Mode {
       const result = c.present(chosen);
       this.state.talismans = c.talismans;
       this.log.push(`present:${id}:${c.number}:${chosen}:${result}`);
+      // 2人を収めてから、叫んで証拠品を投げつける
+      twoShot(this.engine.rig, this.player, witness);
       await Promise.all([hud.shout(this.data.shouts?.present ?? 'これを見ろ！'), this.player.attack(this.engine.tweens)]);
+      await this.throwEvidence(chosen, witness, result === 'correct');
       if (result === 'correct') {
         this.engine.rig.shake(0.4, 0.5);
         // 見破った一撃：相手のまわりに墨が飛び、金の火花が散る
@@ -555,7 +559,7 @@ export class InvestigationGame implements Mode {
         this.state.talismans = c.talismans;
         hud.setTalismans(max, c.talismans);
         await this.runScript(def.intro);
-        await hud.card(def.title, '尋問開始', '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう');
+        await this.versus(witness, def.title);
         continue;
       }
       // 間違えるたびに、少しずつはっきりしたヒントを出す
@@ -572,6 +576,122 @@ export class InvestigationGame implements Mode {
     await this.engine.stage.setLook('sunset', 0.8);
     hud.bookButton.classList.remove('hidden');
     this.refreshGoal();
+  }
+
+  /** 尋問の始まり：主人公と証人が向かい合う対峙のカットイン */
+  private versus(witness: PaperActor, title: string): Promise<void> {
+    return this.engine.hud.versus(
+      { portrait: this.portraitOf(this.player), color: this.player.def.color },
+      { portrait: this.portraitOf(witness), color: witness.def.color },
+      title,
+      '尋問開始',
+      '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう',
+    );
+  }
+
+  /** 証拠品の紙の札（画像と名前）。一度作ったら使い回す */
+  private cardTextures = new Map<string, Promise<THREE.Texture>>();
+  private evidenceCard(id: string): Promise<THREE.Texture> {
+    let p = this.cardTextures.get(id);
+    if (!p) {
+      const ev = this.data.evidence.find((e) => e.id === id)!;
+      p = this.engine.assets.texture(ev.image).then((pic) => {
+        const W = 256;
+        const H = 330;
+        const c = document.createElement('canvas');
+        c.width = W;
+        c.height = H;
+        const g = c.getContext('2d')!;
+        g.fillStyle = '#fffaf0';
+        g.beginPath();
+        g.roundRect(0, 0, W, H, 16);
+        g.fill();
+        g.fillStyle = '#f7efdc';
+        g.fillRect(10, 10, W - 20, H - 20);
+        g.strokeStyle = '#2b1d17';
+        g.lineWidth = 4;
+        g.strokeRect(16, 16, W - 32, H - 32);
+        const img = pic.image as CanvasImageSource & { width: number; height: number };
+        const box = 190;
+        const s = Math.min(box / img.width, box / img.height);
+        g.drawImage(img, (W - img.width * s) / 2, 30 + (box - img.height * s) / 2, img.width * s, img.height * s);
+        g.fillStyle = '#2b1d17';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        let size = 30;
+        do g.font = `bold ${size--}px 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Meiryo', sans-serif`;
+        while (g.measureText(ev.name).width > W - 44 && size > 14);
+        g.fillText(ev.name, W / 2, H - 58);
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      });
+      this.cardTextures.set(id, p);
+    }
+    return p;
+  }
+
+  /**
+   * つきつけた証拠品の札が、主人公の手元から回転しながら相手へ飛ぶ。
+   * 正しければ相手に突き刺さってしばらく残り、間違いなら弾かれて床へ落ちる
+   */
+  private async throwEvidence(id: string, witness: PaperActor, hit: boolean): Promise<void> {
+    const tw = this.engine.tweens;
+    const tex = await this.evidenceCard(id);
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.645), new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide }));
+    card.renderOrder = 3;
+    this.engine.stage.scene.add(card);
+    const from = this.player.headPosition().add(new THREE.Vector3(0.35 * this.player.facing, -0.25, 0.3));
+    const to = witness.headPosition().add(new THREE.Vector3(0, -0.3, 0.25));
+    this.engine.sound.play('paper');
+    await tw.run(
+      0.3,
+      (k) => {
+        card.position.lerpVectors(from, to, k);
+        card.position.y += Math.sin(k * Math.PI) * 0.35;
+        card.rotation.set(0, (1 - k) * Math.PI * 5, (1 - k) * 0.8);
+        card.scale.setScalar(0.5 + 0.5 * k);
+      },
+      Ease.inQuad,
+      card,
+    );
+    const remove = () => {
+      this.engine.stage.scene.remove(card);
+      card.geometry.dispose();
+      (card.material as THREE.Material).dispose();
+    };
+    if (hit) {
+      // ズバッと突き刺さる：少しめり込み、傾いたまま残って、あとで落ちる
+      this.engine.sound.play('impact');
+      card.rotation.set(0, 0, -0.18 * this.player.facing);
+      void tw
+        .run(0.12, (k) => (card.position.z = to.z - 0.08 * k), Ease.outCubic, card.position)
+        .then(() => tw.wait(1.4))
+        .then(() =>
+          tw.run(0.5, (k) => {
+            card.position.y = to.y - k * 1.0;
+            card.rotation.x = (-Math.PI / 2) * k;
+          }, Ease.inQuad, card.rotation),
+        )
+        .then(remove);
+      return;
+    }
+    // ペシッと弾かれる：くるくる回りながら跳ね返って、床に落ちる
+    this.engine.sound.play('cancel');
+    const back = from.clone().lerp(to, 0.55);
+    back.y = 0.04;
+    const at = card.position.clone();
+    await tw.run(
+      0.45,
+      (k) => {
+        card.position.lerpVectors(at, back, k);
+        card.position.y += Math.sin(k * Math.PI) * 0.5;
+        card.rotation.set((-Math.PI / 2) * k, k * Math.PI * 3, 0);
+      },
+      Ease.linear,
+      card,
+    );
+    void tw.wait(0.6).then(remove);
   }
 
   /** 事件解決：結末を流して最初から */

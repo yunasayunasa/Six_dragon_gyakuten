@@ -42,6 +42,7 @@ export const COMMAND_ALIASES: Record<string, string> = {
   組み立て: 'assemble',
   演出: 'cue',
   紙吹雪: 'confetti',
+  ブレイク: 'break',
 };
 
 const SAY = /^([^「」（）()@#]+?)?\s*(?:[（(]([^）)]+)[）)])?\s*「([\s\S]*)」\s*$/;

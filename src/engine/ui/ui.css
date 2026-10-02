@@ -411,3 +411,71 @@ html.rotated #hud {
   border-radius: 46% 54% 38% 62% / 55% 40% 60% 45%; transform: translate(-50%, -50%) scale(0); animation: ink-pop .3s cubic-bezier(.2, 1.6, .4, 1) forwards;
 }
 @keyframes ink-pop { to { transform: translate(-50%, -50%) scale(1); } }
+
+/* ---- 対峙のカットイン（Hud.versus）：斜めに割った左右に立ち絵、まん中に題名 ---- */
+.versus { position: absolute; inset: 0; overflow: hidden; transition: opacity .2s; }
+.versus.leave { opacity: 0; }
+.versus.hit { animation: vs-shake .28s linear; }
+.vs-side {
+  position: absolute; inset: 0; --c: #3a2a30;
+  background:
+    repeating-linear-gradient(103deg, rgba(255, 248, 232, .1) 0 2px, transparent 2px 26px),
+    radial-gradient(120% 90% at 50% 50%, transparent 30%, rgba(20, 8, 20, .55) 100%),
+    var(--c);
+}
+.vs-side.left { clip-path: polygon(0 0, 56% 0, 44% 100%, 0 100%); animation: vs-in-l .32s cubic-bezier(.2, .9, .3, 1) both; }
+.vs-side.right { clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%); animation: vs-in-r .32s cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes vs-in-l { from { transform: translateX(-70%); } }
+@keyframes vs-in-r { from { transform: translateX(70%); } }
+.vs-side .fig { position: absolute; bottom: -62%; height: 158%; filter: drop-shadow(0 0 calc(var(--u) * 0.5) #fffaf0) drop-shadow(calc(var(--u) * 1) calc(var(--u) * 1) 0 rgba(20, 8, 20, .5)); }
+.vs-side.left .fig { left: calc(4% + var(--safe-l)); }
+.vs-side.right .fig { right: calc(4% + var(--safe-r)); }
+.vs-side .fig img { position: absolute; display: block; }
+.vs-side .fig img:first-child { inset: 0; width: 100%; height: 100%; }
+.vs-seam {
+  position: absolute; left: 50%; top: -10%; height: 120%; width: calc(var(--u) * 1.1); background: #fffaf0;
+  box-shadow: 0 0 calc(var(--u) * 2) rgba(255, 220, 160, .9); transform: translateX(-50%) rotate(13deg) scaleY(0);
+}
+.versus.hit .vs-seam { animation: vs-seam .25s ease-out forwards; }
+@keyframes vs-seam { to { transform: translateX(-50%) rotate(13deg) scaleY(1); } }
+.vs-title { position: absolute; left: 50%; top: 70%; text-align: center; white-space: nowrap; opacity: 0; transform: translate(-50%, -50%) rotate(-5deg); }
+.versus.hit .vs-title { animation: vs-title .4s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+@keyframes vs-title { from { opacity: 0; transform: translate(-50%, -50%) rotate(-5deg) scale(2.4); } to { opacity: 1; transform: translate(-50%, -50%) rotate(-5deg) scale(1); } }
+.vs-title .sub {
+  display: inline-block; padding: calc(var(--u) * 0.4) calc(var(--u) * 2.4); background: var(--shu); color: #fff9ee;
+  font-size: calc(var(--u) * 2.8); letter-spacing: .4em; text-indent: .4em;
+}
+.vs-title .title {
+  margin-top: calc(var(--u) * 1); font-family: var(--font-brush); font-size: calc(var(--u) * 9.5); color: #fff9ee; letter-spacing: .06em;
+  -webkit-text-stroke: calc(var(--u) * 0.45) var(--ink); paint-order: stroke fill;
+  text-shadow: calc(var(--u) * 0.7) calc(var(--u) * 0.7) 0 var(--shu), 0 0 calc(var(--u) * 4) rgba(255, 180, 90, .6);
+}
+.versus .hint {
+  position: absolute; left: 50%; bottom: calc(var(--u) * 4 + var(--safe-b)); transform: translateX(-50%); white-space: nowrap;
+  padding: calc(var(--u) * 0.8) calc(var(--u) * 2.4); border-radius: calc(var(--u) * 0.6);
+  background: rgba(247, 239, 220, .92); color: var(--ink); font-size: calc(var(--u) * 2.2); opacity: 0;
+}
+.versus.hit .hint { animation: vs-hint .3s .35s ease-out forwards; }
+@keyframes vs-hint { to { opacity: 1; } }
+@keyframes vs-shake { 0%, 100% { translate: 0 0; } 20% { translate: -1.2% .8%; } 40% { translate: 1% -.6%; } 60% { translate: -.6% .4%; } 80% { translate: .4% 0; } }
+
+/* ---- 画面の白い光・画面が割れる演出（Hud.flash / Hud.shatter） ---- */
+.flashfx { position: absolute; inset: 0; background: #fffaf0; pointer-events: none; opacity: 0; }
+.shatter { position: absolute; inset: 0; pointer-events: none; perspective: 700px; overflow: hidden; }
+.shatter .shard {
+  position: absolute; inset: 0; background-size: 100% 100%; background-repeat: no-repeat;
+  backface-visibility: visible; will-change: transform, opacity;
+}
+.shatter .cracks { position: absolute; inset: 0; }
+.shatter .cracks svg { width: 100%; height: 100%; overflow: visible; }
+.shatter .cracks line {
+  stroke: #fffaf0; stroke-width: 1.8px; stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(255, 220, 160, .9)) drop-shadow(1px 1px 0 rgba(43, 29, 23, .8));
+}
+/* ひびの中心の白い光 */
+.shatter .cracks::before {
+  content: ""; position: absolute; left: var(--cx); top: var(--cy); width: calc(var(--u) * 14); height: calc(var(--u) * 14);
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 235, .95) 0 12%, rgba(255, 230, 180, .35) 40%, transparent 70%);
+}
+.shatter.broken .cracks { display: none; }

@@ -19,6 +19,10 @@ const SE_NAMES: Record<string, SE> = {
   きらり: 'shine',
   発見: 'reveal',
   足音: 'step',
+  ダン: 'impact',
+  ひび: 'crack',
+  割れる: 'glass',
+  破れる: 'tear',
 };
 
 export interface StageCommandContext {
@@ -174,6 +178,42 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     const obj = engine.stage.named.get(args[0]) as (THREE.Object3D & { cue?: (signal: string, args: string[]) => unknown }) | undefined;
     if (!obj?.cue) throw new Error(`合図を受け取れる物がありません: ${args[0]}`);
     await obj.cue(args[1] ?? '', args.slice(2));
+  });
+  // @ブレイク ワムデュス … 論破の決め：斜めのカメラで3回「ダン！」と寄り、画面が割れて飛び散る。割れた向こうで役者の紙が破れる
+  d.register('break', async (args) => {
+    const a = need(args[0]);
+    engine.hud.hideDialogue();
+    ctx.setAutoCamera?.(false);
+    const side = a.facing || 1;
+    const head = a.headPosition();
+    // 寄るたびに近く・反対向きに傾く
+    const cuts = [
+      { x: 1.5, y: 0.25, z: 3.8, lookY: -0.35, fov: 30, roll: 0.22 },
+      { x: -1.1, y: -0.3, z: 2.7, lookY: -0.15, fov: 27, roll: -0.3 },
+      { x: 0.5, y: 0.12, z: 1.7, lookY: 0, fov: 24, roll: 0.4 },
+    ];
+    for (let i = 0; i < cuts.length; i++) {
+      const c = cuts[i];
+      engine.rig.cut(head.clone().add(new THREE.Vector3(0, c.lookY, 0)), new THREE.Vector3(c.x * side, c.y, c.z), c.fov, c.roll);
+      engine.sound.play('impact');
+      engine.hud.flash(0.45 + i * 0.1, 0.15);
+      engine.rig.shake(0.12 + i * 0.08, 0.25);
+      engine.stage.spray.emit(head, { count: 10 + i * 6, color: '#1e1418', spread: 1.6, up: 1.2, gravity: 5, size: 0.1, life: 0.6 });
+      if (i === cuts.length - 1) void a.damage(engine.tweens);
+      await engine.tweens.wait(i < cuts.length - 1 ? 0.42 : 0.6);
+    }
+    // 割れた画面の向こうには、落ち着いた構図の舞台を見せる
+    const image = engine.snapshot();
+    actorShot(engine.rig, a);
+    engine.rig.snap();
+    const tear = async () => {
+      // ひびが入ってから割れるまで待ち、破片の向こうで紙が裂ける
+      await engine.tweens.wait(0.5);
+      engine.sound.play('tear');
+      await a.tear(engine.tweens);
+    };
+    await Promise.all([engine.hud.shatter(image), tear()]);
+    ctx.setAutoCamera?.(true);
   });
   // 会話枠と立ち絵をいったん下げる（演出を見せたいとき）
   d.register('hidetext', () => engine.hud.hideDialogue());

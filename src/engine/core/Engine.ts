@@ -157,6 +157,20 @@ export class Engine {
     this.renderer.setAnimationLoop(this.frame);
   }
 
+  /**
+   * 今の画面を1枚の絵に写し取る（画面が割れる演出などに使う）。
+   * 描いた直後の同じ処理の中で写すので、preserveDrawingBuffer は要らない。scale で縮めて軽くする
+   */
+  snapshot(scale = 0.5): HTMLCanvasElement {
+    this.post.render(this.stage.scene, this.rig.camera, 0);
+    const src = this.renderer.domElement;
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(src.width * scale));
+    c.height = Math.max(1, Math.round(src.height * scale));
+    c.getContext('2d')?.drawImage(src, 0, 0, c.width, c.height);
+    return c;
+  }
+
   private frame = (now: number) => {
     // warmUp 中は隠れた物を一時的に出しているので、動かしも描きもしない
     if (this.paused || this.warming) return;

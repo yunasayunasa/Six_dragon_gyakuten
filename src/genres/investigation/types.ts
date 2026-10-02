@@ -58,6 +58,8 @@ export interface StatementDef {
 export interface ConfrontationDef {
   witness: string;
   title: string;
+  /** この尋問だけ曲を変える（Sound.defineBgm で登録した名前）。犯人を追い詰める最後の尋問など */
+  bgm?: string;
   intro: string;
   statements: StatementDef[];
   /** 正しい証拠をぶつけた後の台本（ここで尋問は終わる） */

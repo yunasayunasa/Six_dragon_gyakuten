@@ -361,6 +361,96 @@ export class Hud {
     s.remove();
   }
 
+  /** 画面全体が一瞬白く光る（待たない） */
+  flash(strength = 0.8, seconds = 0.25): void {
+    const f = el('div', 'flashfx', this.root);
+    f.animate([{ opacity: strength }, { opacity: 0 }], { duration: seconds * 1000, easing: 'ease-out' }).onfinish = () => f.remove();
+  }
+
+  /**
+   * 画面が割れる演出。写し取った画面の絵(image)にひびを入れ、破片にして飛び散らせる。
+   * 破片の向こうには、いま動いている舞台がそのまま見える。(cx, cy) はひびの中心（画面の%）
+   */
+  async shatter(image: HTMLCanvasElement, cx = 50, cy = 45): Promise<void> {
+    const fast = this.skip ? 0.4 : 1;
+    const url = image.toDataURL('image/jpeg', 0.85);
+    const box = el('div', 'shatter', this.root);
+    const rect = box.getBoundingClientRect();
+    const aspect = rect.width / Math.max(1, rect.height);
+    // ひびの線：中心から放射状の線と、それを結ぶ2つの輪
+    const rays = 13;
+    const angles = Array.from({ length: rays }, (_, i) => ((i + 0.15 + Math.random() * 0.7) / rays) * Math.PI * 2);
+    // 輪の半径は線ごとに大きくばらつかせ、蜘蛛の巣のように整って見えないようにする
+    const rings = [5, 17, 140];
+    const spread = [0.5, 0.75, 0];
+    const pt = (a: number, r: number): [number, number] => [cx + Math.cos(a) * r, cy + Math.sin(a) * r * aspect];
+    const pts = rings.map((r, ri) =>
+      angles.map((a) => pt(a + (ri ? (Math.random() - 0.5) * 0.18 : 0), r * (1 + (Math.random() - 0.3) * spread[ri]))),
+    );
+    const shards: { poly: [number, number][]; ring: number }[] = [];
+    for (let i = 0; i < rays; i++) {
+      const j = (i + 1) % rays;
+      shards.push({ poly: [[cx, cy], pts[0][i], pts[0][j]], ring: 0 });
+      for (let r = 1; r < rings.length; r++) shards.push({ poly: [pts[r - 1][i], pts[r][i], pts[r][j], pts[r - 1][j]], ring: r });
+    }
+    // ひび：中心から外へ走る線と、輪の線（ところどころ途切れさせる）。同じ線を二重に描かない
+    const seg = (a: [number, number], b: [number, number]) => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`;
+    let lines = '';
+    for (let i = 0; i < rays; i++) {
+      const j = (i + 1) % rays;
+      lines += seg([cx, cy], pts[0][i]) + seg(pts[0][i], pts[1][i]) + seg(pts[1][i], pts[2][i]);
+      if (Math.random() < 0.6) lines += seg(pts[0][i], pts[0][j]);
+      if (Math.random() < 0.4) lines += seg(pts[1][i], pts[1][j]);
+    }
+    const pieces = shards.map((s) => {
+      const d = el('div', 'shard', box);
+      d.style.backgroundImage = `url(${url})`;
+      d.style.clipPath = `polygon(${s.poly.map(([x, y]) => `${x}% ${y}%`).join(',')})`;
+      const gx = s.poly.reduce((a, p) => a + p[0], 0) / s.poly.length;
+      const gy = s.poly.reduce((a, p) => a + p[1], 0) / s.poly.length;
+      d.style.transformOrigin = `${gx}% ${gy}%`;
+      return { d, gx, gy, ring: s.ring };
+    });
+    const cracks = el('div', 'cracks', box, `<svg viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg>`);
+    cracks.style.setProperty('--cx', `${cx}%`);
+    cracks.style.setProperty('--cy', `${cy}%`);
+    // ピキッ：ひびが入って、破片がわずかにずれる
+    this.sound.play('crack');
+    this.flash(0.6, 0.18);
+    for (const p of pieces) {
+      const len = Math.hypot(p.gx - cx, p.gy - cy) || 1;
+      const k = 0.15 + p.ring * 0.12;
+      p.d.style.transform = `translate(${((p.gx - cx) / len) * k}%, ${((p.gy - cy) / len) * k}%) rotate(${(Math.random() - 0.5) * 0.5}deg)`;
+    }
+    await new Promise((r) => setTimeout(r, 480 * fast));
+    // パリーン：破片が手前へ飛び散って落ちる
+    this.sound.play('glass');
+    this.flash(0.9, 0.35);
+    box.classList.add('broken');
+    const anims = pieces.map((p) => {
+      const len = Math.hypot(p.gx - cx, p.gy - cy) || 1;
+      const ux = (p.gx - cx) / len;
+      const uy = (p.gy - cy) / len;
+      const power = (3 - p.ring) * 14 + Math.random() * 18;
+      const from = p.d.style.transform;
+      const rx = (Math.random() - 0.5) * 220;
+      const ry = (Math.random() - 0.5) * 220;
+      const rz = (Math.random() - 0.5) * 120;
+      return p.d.animate(
+        [
+          { transform: from, opacity: 1 },
+          {
+            transform: `translate3d(${ux * power}%, ${uy * power + 40 + Math.random() * 30}%, ${(3 - p.ring) * 120 + 80}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
+            opacity: 0,
+          },
+        ],
+        { duration: (900 + Math.random() * 500) * fast, delay: p.ring * 40 * fast, easing: 'cubic-bezier(.2,.6,.5,1)', fill: 'forwards' },
+      ).finished;
+    });
+    await Promise.all(anims);
+    box.remove();
+  }
+
   /** 画面上に短い知らせを出す（待たない） */
   toast(text: string): void {
     const t = el('div', 'toast washi', this.root, escapeHtml(text));
@@ -381,6 +471,70 @@ export class Hud {
     await this.waitConfirmOrSkip(350);
     this.sound.play('confirm');
     c.remove();
+  }
+
+  /**
+   * 対峙のカットイン：画面を斜めに割り、左に主人公・右に相手の立ち絵を大きく出して、題名を叩きつける。タップで閉じる。
+   * 尋問の始まりなどに使う
+   */
+  async versus(
+    left: { portrait: PortraitData; color?: string },
+    right: { portrait: PortraitData; color?: string },
+    title: string,
+    sub = '',
+    hint = '',
+  ): Promise<void> {
+    const v = el('div', 'versus', this.root);
+    const side = (s: PortraitSide, d: { portrait: PortraitData; color?: string }) => {
+      const p = el('div', `vs-side ${s}`, v);
+      if (d.color) p.style.setProperty('--c', d.color);
+      const data = d.portrait;
+      const fig = el('div', 'fig', p);
+      fig.style.aspectRatio = `${data.width} / ${data.height}`;
+      // 左は右向き、右は左向きにそろえて、向かい合わせる
+      if (data.artFacing !== (s === 'left' ? 1 : -1)) fig.style.transform = 'scaleX(-1)';
+      const img = (url: string, part?: { x: number; y: number; w: number; h: number }) => {
+        const i = el('img', '', fig);
+        i.src = url;
+        i.alt = '';
+        i.draggable = false;
+        if (!part) return;
+        i.style.left = `${(part.x / data.width) * 100}%`;
+        i.style.top = `${(part.y / data.height) * 100}%`;
+        i.style.width = `${(part.w / data.width) * 100}%`;
+        i.style.height = `${(part.h / data.height) * 100}%`;
+      };
+      img(data.base);
+      if (data.eyes.open) img(data.eyes.open.url, data.eyes.open);
+      if (data.mouth.closed) img(data.mouth.closed.url, data.mouth.closed);
+    };
+    side('left', left);
+    side('right', right);
+    el('div', 'vs-seam', v);
+    const t = el('div', 'vs-title', v);
+    if (sub) el('div', 'sub', t, escapeHtml(sub));
+    el('div', 'title', t, escapeHtml(title));
+    if (hint) el('div', 'hint', v, escapeHtml(hint));
+    v.addEventListener('pointerdown', () => {
+      this.sound.unlock();
+      this.input.press('confirm');
+    });
+    this.sound.play('paper');
+    // 左右がぶつかる瞬間に、ダン！
+    setTimeout(() => {
+      if (!v.isConnected) return;
+      this.sound.play('impact');
+      this.flash(0.55, 0.2);
+      v.classList.add('hit');
+    }, this.skip ? 120 : 300);
+    // ぶつかる演出の途中でタップしても閉じないよう、少し待ってから受け付ける
+    await new Promise((r) => setTimeout(r, this.skip ? 150 : 550));
+    this.input.clearPressed();
+    await this.waitConfirmOrSkip(350);
+    this.sound.play('confirm');
+    v.classList.add('leave');
+    await new Promise((r) => setTimeout(r, 220));
+    v.remove();
   }
 
   fade(to: 0 | 1, seconds = 0.5): Promise<void> {

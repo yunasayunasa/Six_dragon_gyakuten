@@ -2,7 +2,7 @@
  * 効果音と音楽。効果音は素材が無くても鳴るように WebAudio で合成する。
  * スマホでは最初のタップまで音が出せないため unlock() を入力時に呼ぶ。
  */
-export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'shine' | 'reveal' | 'step';
+export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'shine' | 'reveal' | 'step' | 'impact' | 'crack' | 'glass' | 'tear';
 
 /** コードで鳴らす BGM（テクノなど）。ゲームの AudioContext の、BGM 用の音量ノードへ出す */
 export interface BgmTrack {
@@ -295,6 +295,37 @@ export class Sound {
         noise(0, 0.35, 0.9, 700, 0.5);
         tone('sawtooth', 160, 60, 0, 0.45, 0.35);
         tone('square', 320, 120, 0, 0.25, 0.12);
+        break;
+      case 'impact':
+        // ダン！（低い一撃と、締まった打撃音）
+        tone('sine', 120, 38, 0, 0.42, 0.9);
+        tone('triangle', 240, 70, 0, 0.18, 0.4);
+        noise(0, 0.16, 1.0, 1400, 0.6);
+        noise(0, 0.05, 0.8, 4200, 0.8);
+        break;
+      case 'crack':
+        // ピキッ（ガラスにひびが入る）
+        noise(0, 0.05, 0.9, 5200, 2.5);
+        noise(0.04, 0.04, 0.6, 7600, 3);
+        tone('square', 3100, 2400, 0, 0.05, 0.08);
+        break;
+      case 'glass': {
+        // パリーン（割れる一撃と、こまかい破片がきらきら散る音）
+        noise(0, 0.5, 1.0, 3800, 0.5);
+        noise(0, 0.12, 0.9, 1100, 0.7);
+        tone('sine', 140, 45, 0, 0.4, 0.6);
+        for (let i = 0; i < 16; i++) {
+          const f = 2600 + Math.random() * 5200;
+          const at = 0.03 + Math.random() * 0.7;
+          tone('triangle', f, f * 0.97, at, 0.16 + Math.random() * 0.2, 0.06 + Math.random() * 0.05);
+        }
+        noise(0.1, 0.9, 0.25, 8500, 0.6);
+        break;
+      }
+      case 'tear':
+        // ビリビリッ（紙が裂ける：細かいざらつきが続けて走る）
+        for (let i = 0; i < 9; i++) noise(i * 0.035, 0.05, 0.5 + Math.random() * 0.3, 1800 + Math.random() * 2600, 1.4);
+        noise(0, 0.36, 0.35, 3200, 0.5);
         break;
       case 'wrong':
         tone('square', 300, 220, 0, 0.16, 0.18);

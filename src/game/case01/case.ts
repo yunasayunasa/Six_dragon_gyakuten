@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { glowTexture } from '../../engine/paper/textures';
 import { Crystal } from '../../engine/stage/Crystal';
 import { technoBgm } from '../../engine/audio/technoBgm';
+import { tenseBgm } from '../../engine/audio/tenseBgm';
 import type { CaseData } from '../../genres/investigation/types';
 import * as S from './scripts';
 import { Airship } from '../props/Airship';
@@ -47,6 +48,8 @@ async function buildSet(engine: Engine): Promise<void> {
   // 音声ファイルの曲は尋問のテクノより大きく聞こえるので、音量を下げてそろえる（スマホのスピーカーは低音が出ないので、低音を除いた大きさで合わせた）
   engine.sound.defineBgm('カフェ', engine.assets.url('audio/cafe.mp3'), 0.35);
   engine.sound.defineBgm('尋問', technoBgm(0.8));
+  // 犯人を追い詰める最後の尋問の曲（コードで鳴らす緊迫した曲）
+  engine.sound.defineBgm('追及', tenseBgm());
   engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'), 0.37);
   const light = new THREE.PointLight('#ffd49a', 0, 12, 1.6);
   light.position.y = 1.9; // 結晶の近くに置くと結晶そのものが白く飛ぶので、結晶の上から離して照らす
@@ -390,6 +393,7 @@ export const CASE01: CaseData = {
     wamdus_snack: {
       witness: 'wamdus',
       title: 'だんごは知らない',
+      bgm: '追及',
       intro: S.C4_INTRO,
       statements: [
         { text: 'ワム、甘いものは\nそんなに好きじゃない。', press: S.C4_PRESS_1, reveals: 3 },

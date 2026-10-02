@@ -11,6 +11,9 @@ export class CameraRig {
   private goalLook = new THREE.Vector3(0, 1.1, 0);
   private goalOffset = new THREE.Vector3(0, 2.4, 9.5);
   private goalFov = 32;
+  /** 画面の傾き（ラジアン）。斜めの構図に使う */
+  private roll = 0;
+  private goalRoll = 0;
   private follow: THREE.Object3D | null = null;
   private followHeight = 1.1;
   bounds = { minX: -Infinity, maxX: Infinity };
@@ -44,15 +47,25 @@ export class CameraRig {
     this.followHeight = height;
     this.goalOffset.copy(offset);
     this.goalFov = fov;
+    this.goalRoll = 0;
     this.focusPoint = null;
   }
 
-  /** 決まった点を見る構図。追従は解除 */
-  shot(look: THREE.Vector3, offset: THREE.Vector3, fov = 32): void {
+  /** 決まった点を見る構図。追従は解除。roll で画面を傾ける（斜めの構図） */
+  shot(look: THREE.Vector3, offset: THREE.Vector3, fov = 32, roll = 0): void {
     this.follow = null;
     this.goalLook.copy(look);
     this.goalOffset.copy(offset);
     this.goalFov = fov;
+    this.goalRoll = roll;
+  }
+
+  /** shot と同じだが、滑らかにつながず一瞬で切り替える（カット割り） */
+  cut(look: THREE.Vector3, offset: THREE.Vector3, fov = 32, roll = 0): void {
+    this.orbitState?.done();
+    this.orbitState = null;
+    this.shot(look, offset, fov, roll);
+    this.snap();
   }
 
   /**
@@ -62,6 +75,7 @@ export class CameraRig {
   orbit(center: THREE.Vector3, radius: number, height: number, seconds: number): Promise<void> {
     this.follow = null;
     this.goalLook.copy(center);
+    this.goalRoll = 0;
     this.orbitState?.done();
     return new Promise((done) => {
       this.orbitState = {
@@ -120,6 +134,7 @@ export class CameraRig {
     if (this.orbitState) this.updateOrbit(dt);
     else this.offset.lerp(this.goalOffset, k);
     this.camera.fov += (this.goalFov - this.camera.fov) * k;
+    this.roll += (this.goalRoll - this.roll) * k;
     this.camera.updateProjectionMatrix();
     this.apply();
     if (this.shakeTime > 0) {
@@ -133,6 +148,7 @@ export class CameraRig {
   private apply(): void {
     this.camera.position.copy(this.look).add(this.offset);
     this.camera.lookAt(this.look);
+    if (this.roll) this.camera.rotateZ(this.roll);
   }
 
   setAspect(aspect: number): void {

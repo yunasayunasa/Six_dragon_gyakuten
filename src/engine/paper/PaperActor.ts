@@ -172,6 +172,75 @@ export class PaperActor extends THREE.Group {
     this.showPose(this.def.expressions[this.expression]);
   }
 
+  /**
+   * 紙が破れる（論破の決め）：今の絵がギザギザに縦に裂け、左右へ倒れて床に落ちる。
+   * そのあと床から起き上がって元に戻る（台本の続きで、この役者がまた話せるように）
+   */
+  async tear(tweens: Tweens): Promise<void> {
+    const base = this.baseMesh;
+    // 裂け目：上から下へ、少し斜めにギザギザ
+    const n = 10;
+    const slant = (Math.random() - 0.5) * 0.12;
+    const line = Array.from({ length: n + 1 }, (_, k) => new THREE.Vector2(slant * (k / n - 0.5) + (k === 0 || k === n ? 0 : (Math.random() - 0.5) * 0.14), 0.5 - k / n));
+    const half = (side: -1 | 1) => {
+      const shape = new THREE.Shape();
+      shape.moveTo(0.5 * side, 0.5);
+      line.forEach((p) => shape.lineTo(p.x, p.y));
+      shape.lineTo(0.5 * side, -0.5);
+      shape.closePath();
+      const geo = new THREE.ShapeGeometry(shape);
+      const pos = geo.attributes.position;
+      const uv = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) {
+        uv[i * 2] = pos.getX(i) + 0.5;
+        uv[i * 2 + 1] = pos.getY(i) + 0.5;
+      }
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      const mesh = new THREE.Mesh(geo, (base.material as THREE.Material).clone());
+      mesh.castShadow = true;
+      mesh.scale.copy(base.scale);
+      // 足元を軸に倒れるよう、軸の箱に入れる
+      const pivot = new THREE.Group();
+      pivot.position.set(base.position.x + side * base.scale.x * 0.25, base.position.y - base.scale.y / 2, 0);
+      mesh.position.set(-side * base.scale.x * 0.25, base.scale.y / 2, 0);
+      pivot.add(mesh);
+      this.paper.add(pivot);
+      return pivot;
+    };
+    const halves = [half(-1), half(1)] as const;
+    base.visible = this.eyeMesh.visible = this.mouthMesh.visible = false;
+    const x0 = halves.map((h) => h.position.x);
+    // ビリッ：左右へ裂けて倒れる
+    await tweens.run(
+      0.55,
+      (k) => {
+        halves.forEach((h, i) => {
+          const s = i === 0 ? -1 : 1;
+          h.rotation.z = -s * 0.75 * k;
+          h.rotation.y = s * 0.35 * k;
+          h.position.x = x0[i] + s * 0.12 * k;
+        });
+      },
+      Ease.outCubic,
+      halves[0],
+    );
+    await tweens.wait(0.25);
+    // 床へぱたりと落ちる
+    await tweens.run(0.3, (k) => halves.forEach((h) => (h.rotation.x = (-Math.PI / 2) * k)), Ease.inQuad, halves[1]);
+    halves.forEach((h) => {
+      this.paper.remove(h);
+      const m = h.children[0] as THREE.Mesh;
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose();
+    });
+    base.visible = true;
+    this.showPose(this.def.expressions[this.expression]);
+    this.eyeMesh.visible = !!this.current.info.parts.eye_open;
+    this.mouthMesh.visible = !!this.current.info.parts.mouth_closed;
+    await tweens.wait(0.2);
+    await this.popIn(tweens);
+  }
+
   /** ポーズの絵を差し替える。変わったら true */
   private showPose(pid: string): boolean {
     const pose = this.poses.get(pid);
