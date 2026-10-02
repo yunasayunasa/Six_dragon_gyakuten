@@ -199,7 +199,8 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
       engine.hud.flash(0.45 + i * 0.1, 0.15);
       engine.rig.shake(0.12 + i * 0.08, 0.25);
       engine.stage.spray.emit(head, { count: 10 + i * 6, color: '#1e1418', spread: 1.6, up: 1.2, gravity: 5, size: 0.1, life: 0.6 });
-      if (i === cuts.length - 1) void a.damage(engine.tweens);
+      // 3回目でやられの絵になり、破れて起き上がるまでそのまま
+      if (i === cuts.length - 1) void a.damage(engine.tweens, true);
       await engine.tweens.wait(i < cuts.length - 1 ? 0.42 : 0.6);
     }
     // 割れた画面の向こうには、落ち着いた構図の舞台を見せる
@@ -210,7 +211,7 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
       // ひびが入ってから割れるまで待ち、破片の向こうで紙が裂ける
       await engine.tweens.wait(0.5);
       engine.sound.play('tear');
-      await a.tear(engine.tweens);
+      await a.tear(engine.tweens, () => engine.sound.play('paper'));
     };
     await Promise.all([engine.hud.shatter(image), tear()]);
     ctx.setAutoCamera?.(true);

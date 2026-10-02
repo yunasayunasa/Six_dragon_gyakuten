@@ -163,20 +163,20 @@ export class PaperActor extends THREE.Group {
     this.showPose(this.def.expressions[this.expression]);
   }
 
-  /** 被弾（論破された）：のけぞって、少し後ろへ押し戻される */
-  async damage(tweens: Tweens): Promise<void> {
+  /** 被弾（論破された）：のけぞって、少し後ろへ押し戻される。hold なら、やられの絵のまま戻さない（tear などで戻す） */
+  async damage(tweens: Tweens, hold = false): Promise<void> {
     const pid = this.def.motions?.damage;
     if (!pid) return;
     this.showPose(pid);
     await tweens.run(0.4, (k) => (this.body.position.x = -Math.sin(k * Math.PI) * 0.16 * this.facing), Ease.outCubic, this.body.position);
-    this.showPose(this.def.expressions[this.expression]);
+    if (!hold) this.showPose(this.def.expressions[this.expression]);
   }
 
   /**
-   * 紙が破れる（論破の決め）：今の絵がギザギザに縦に裂け、左右へ倒れて床に落ちる。
-   * そのあと床から起き上がって元に戻る（台本の続きで、この役者がまた話せるように）
+   * 紙が破れる（論破の決め）：今の絵（やられの絵など）がギザギザに縦に裂け、左右へ倒れて床に落ちる。
+   * そのあと元の表情の絵で、床からパタンと起き上がる（台本の続きで、この役者がまた話せるように）。onRise は起き上がる瞬間に呼ぶ
    */
-  async tear(tweens: Tweens): Promise<void> {
+  async tear(tweens: Tweens, onRise?: () => void): Promise<void> {
     const base = this.baseMesh;
     // 裂け目：上から下へ、少し斜めにギザギザ
     const n = 10;
@@ -233,11 +233,14 @@ export class PaperActor extends THREE.Group {
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();
     });
+    // 元の絵に戻し、床に寝かせた状態から、パタンと起き上がる（立った姿を一瞬も見せない）
+    this.paper.rotation.x = -Math.PI / 2;
     base.visible = true;
     this.showPose(this.def.expressions[this.expression]);
     this.eyeMesh.visible = !!this.current.info.parts.eye_open;
     this.mouthMesh.visible = !!this.current.info.parts.mouth_closed;
-    await tweens.wait(0.2);
+    await tweens.wait(0.3);
+    onRise?.();
     await this.popIn(tweens);
   }
 
