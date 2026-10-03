@@ -28,8 +28,11 @@ export class Sound {
   /** 声（セリフの音声ファイル）。URLごとに解読済みの音を少しだけ覚えておく */
   private voices = new Map<string, Promise<AudioBuffer | null>>();
   private voiceSrc: AudioBufferSourceNode | null = null;
-  /** いま鳴らそうとしている声（読み込み中に次のセリフへ進んだら鳴らさない） */
-  private voiceWanted: string | null = null;
+  /**
+   * 声を鳴らす依頼の番号。読み込みが終わったとき、最後の依頼でなければ鳴らさない。
+   * （URL で比べると、同じ声を読み込み中に2回頼んだとき両方鳴って冒頭が二重に聞こえた）
+   */
+  private voiceTicket = 0;
   muted = false;
   seVolume = 0.5;
   bgmVolume = 0.32;
@@ -182,9 +185,10 @@ export class Sound {
     const ctx = this.ctx;
     if (!ctx || !this.master || this.muted || this.voiceVolume <= 0) return;
     this.preloadVoice(url);
-    this.voiceWanted = url;
+    const ticket = this.voiceTicket;
     void this.voices.get(url)?.then((buf) => {
-      if (!buf || this.voiceWanted !== url) return;
+      if (!buf || this.voiceTicket !== ticket) return;
+      this.voiceTicket++; // この依頼で鳴らすのは1回だけ
       const src = ctx.createBufferSource();
       src.buffer = buf;
       const g = ctx.createGain();
@@ -196,7 +200,7 @@ export class Sound {
   }
 
   stopVoice(): void {
-    this.voiceWanted = null;
+    this.voiceTicket++;
     try {
       this.voiceSrc?.stop();
     } catch {

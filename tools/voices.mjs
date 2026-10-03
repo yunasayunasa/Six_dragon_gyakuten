@@ -130,13 +130,31 @@ const READINGS = [
   ['鼎', 'かなえ'],
   // 正しくは頭高。「ヲ」のままだと中高に聞こえた（2026-10-03 ユーザーが6案を聞いて「ガレオン」表記を選んだ）
   ['ガレヲン', 'ガレオン'],
+  // 漢字のままだと「かかむくせよ」に聞こえた（2026-10-03 ユーザー所見・書き起こしでも確認）
+  ['刮目', 'かつもく'],
+  // 第一話の書き起こしで読み間違いが見つかったもの（2026-10-03）
+  ['係留', 'けいりゅう'],
+  ['外し方', 'はずしかた'],
+  ['最終便', 'さいしゅうびん'],
+  ['鐘の音', 'かねのおと'],
+  // 何度作り直しても冒頭を2回読んだ行（読点・短い熟語のあとで繰り返しやすい）
+  ['光と、甘いもの……か。', 'ひかりと、あまいもの……か。'],
+  ['否定。いいえ', '否定……いいえ'],
 ];
 
-/** 画面の文章 → 読み上げる文章 */
-function ttsText(text) {
-  let t = text.replace(/\n/g, '');
-  // ガレヲンの「熟語（言い足し）」は、熟語のあとに一拍おいて続ける
-  t = t.replace(/([^\s（「」]+)（([^）]+)）/g, '$1。$2');
+/** 声を作り終えた話（読み方の決まりを後から変えても作り直さない。トークン節約のためユーザー指示 2026-10-03） */
+const FROZEN_EPISODES = new Set(['case01']);
+
+/** 画面の文章 → 読み上げる文章。l はセリフ（episode・speaker・text） */
+function ttsText(l) {
+  let t = l.text.replace(/\n/g, '');
+  if (FROZEN_EPISODES.has(l.episode)) {
+    // 第一話：ガレヲンの「熟語（言い足し）」は、熟語のあとに一拍おいて続ける
+    t = t.replace(/([^\s（「」]+)（([^）]+)）/g, '$1。$2');
+  } else if (l.speaker === 'ガレヲン') {
+    // 第二話から：ガレヲンの熟語は読まず、（ ）の中の言い足しだけ読む（ユーザー指示 2026-10-03）
+    t = t.replace(/([^\s（「」]+)（([^）]+)）/g, '$2');
+  }
   for (const [w, r] of READINGS) t = t.split(w).join(r);
   return t;
 }
@@ -314,7 +332,7 @@ async function list() {
   let chars = 0;
   for (const l of lines) {
     by[l.speaker] = (by[l.speaker] ?? 0) + 1;
-    chars += ttsText(l.text).length;
+    chars += ttsText(l).length;
   }
   // 日本語はおよそ1秒7文字、音声は1秒25トークン、1Mトークン9ドル（2026年末まで）
   const sec = chars / 7;
@@ -343,7 +361,7 @@ async function designEleven(name, v, state, pick) {
   let text = '';
   for (const l of (await collect()).filter((l) => l.speaker === name)) {
     if (text.length >= 150) break;
-    text += ttsText(l.text);
+    text += ttsText(l);
   }
   const res = await elApi('POST', '/v1/text-to-voice/design?output_format=mp3_44100_128', { voice_description: v.description, model_id: EL_DESIGN_MODEL, text });
   state.candidates = { ...state.candidates, [name]: res.previews.map((p) => p.generated_voice_id) };
@@ -384,13 +402,15 @@ async function design(args) {
   }
 }
 
-async function generate(names) {
+/** retake … 印（key）の集まり。台本が変わっていなくても作り直す（check --fix から使う） */
+async function generate(names, retake = null) {
   const state = loadState();
   // --first … 各キャラの最初のセリフ（遊ぶ順で最初に出る1行）だけ作る。声の確かめ用
   const first = names.includes('--first');
   names = names.filter((n) => n !== '--first');
   const all = await collect();
   let lines = all.filter((l) => !names.length || names.includes(l.speaker));
+  if (retake) lines = lines.filter((l) => retake.has(l.key));
   if (first) {
     lines = lines.filter((l, i) => lines.findIndex((x) => x.speaker === l.speaker) === i);
     for (const l of lines) console.log(`  ${l.speaker}（${l.key}）「${l.text.replace(/\n/g, '')}」`);
@@ -402,10 +422,10 @@ async function generate(names) {
   const sigOf = (l) => {
     const v = CAST_VOICES[l.speaker];
     const model = providerOf(l.speaker) === 'elevenlabs' ? EL_MODEL : MODEL;
-    return fnv([model, state.voices[l.speaker].id, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l.text)].join('|'));
+    return fnv([model, state.voices[l.speaker].id, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l)].join('|'));
   };
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
-  const todo = lines.filter((l) => state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l)));
+  const todo = lines.filter((l) => retake || state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l)));
   console.log(`作る: ${todo.length} 行 / ${lines.length} 行`);
 
   let done = 0;
@@ -414,7 +434,7 @@ async function generate(names) {
   const speakEleven = async (l) => {
     const tags = [CAST_VOICES[l.speaker].style, STYLE_TAG[l.style]].filter(Boolean).join(', ');
     const buf = await elApi('POST', `/v1/text-to-speech/${state.voices[l.speaker].id}?output_format=pcm_24000`, {
-      text: `[${tags}] ${ttsText(l.text)}`,
+      text: `[${tags}] ${ttsText(l)}`,
       model_id: EL_MODEL,
     });
     return { rate: 24000, pcm: new Int16Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + (buf.length & ~1))) };
@@ -424,7 +444,7 @@ async function generate(names) {
     const res = await api('POST', '/interactions', {
       model: MODEL,
       store: false,
-      input: [{ type: 'user_input', content: [{ type: 'text', text: ttsText(l.text), annotations: [{ type: 'speech_metadata', style }] }] }],
+      input: [{ type: 'user_input', content: [{ type: 'text', text: ttsText(l), annotations: [{ type: 'speech_metadata', style }] }] }],
       response_format: { type: 'audio' },
       generation_config: { speech_config: [{ voice: state.voices[l.speaker].id }] },
     });
@@ -479,10 +499,66 @@ async function generate(names) {
   if (failed) process.exitCode = 1;
 }
 
+/**
+ * 作った声を Gemini に聞かせて、台本どおりに読めているかを確かめる（読み間違い・冒頭の繰り返し・言いよどみ）。
+ * check [名前...] [--text 文字列] [--fix]  … --text はその文字列を含むセリフだけ。--fix は問題の行を作り直す
+ */
+async function check(args) {
+  const fix = args.includes('--fix');
+  args = args.filter((a) => a !== '--fix');
+  const textAt = args.indexOf('--text');
+  const only = textAt >= 0 ? args[textAt + 1] : null;
+  const names = textAt >= 0 ? args.filter((a, i) => i !== textAt && i !== textAt + 1) : args;
+  const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
+  let lines = (await collect()).filter((l) => (!names.length || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
+  // --fix … 問題のあった行を作り直して確かめ直す（3回まで。声の作り直しは毎回少し違う読み方になる）
+  for (let round = 0; ; round++) {
+    console.log(`確かめる: ${lines.length} 行`);
+    const bad = await checkLines(lines, fileOf);
+    console.log(`問題あり: ${bad.length} 行 / ${lines.length} 行（機械の判定なので、最後は耳で確かめる）`);
+    if (!fix || !bad.length || round === 3) return;
+    console.log(`--- 作り直し ${round + 1} 回目 ---`);
+    await generate([], new Set(bad.map((l) => l.key)));
+    lines = bad;
+  }
+}
+
+async function checkLines(lines, fileOf) {
+  const bad = [];
+  for (let i = 0; i < lines.length; i += 8) {
+    const batch = lines.slice(i, i + 8);
+    const parts = [
+      {
+        text:
+          '日本語のセリフの音声を順に渡します。それぞれ、台本の文章どおりに読めているかを厳しく確かめてください。' +
+          '問題とするもの: 読み間違い（別の読み方・別の言葉に聞こえる）、言葉の繰り返し（冒頭が2回など）、言いよどみ・どもり、抜け、余計な言葉（英語の指示を読み上げる等）。' +
+          'アクセントの違いや、話し方の調子は問題にしない。（ ）の中の言い足しは読まれていてよい。' +
+          'JSON の配列だけを返す: [{"n":番号,"ok":true/false,"heard":"聞こえたとおりにひらがなで","problem":"問題（無ければ空）"}]',
+      },
+    ];
+    batch.forEach((l, k) => {
+      parts.push({ text: `${k + 1}番 台本:「${l.text.replace(/\n/g, '')}」` });
+      parts.push({ inline_data: { mime_type: 'audio/mpeg', data: fs.readFileSync(fileOf(l)).toString('base64') } });
+    });
+    const res = await api('POST', '/models/gemini-3.8-flash:generateContent', {
+      contents: [{ role: 'user', parts }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+    });
+    const out = JSON.parse(res.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') || '[]');
+    for (const r of out) {
+      const l = batch[r.n - 1];
+      if (!l || r.ok) continue;
+      bad.push(l);
+      console.log(`× ${l.speaker}（${l.key}）「${l.text.replace(/\n/g, '')}」\n    聞こえた: ${r.heard}\n    問題: ${r.problem}`);
+    }
+  }
+  return bad;
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-const run = { list, design, generate }[cmd];
+const run = { list, design, generate, check }[cmd];
 if (!run) {
-  console.log('使い方: node tools/voices.mjs list | design [名前...] | generate [名前...]');
+  console.log('使い方: node tools/voices.mjs list | design [名前...] | generate [名前...] | check [名前...] [--text 文字列]');
   process.exit(1);
 }
 await run(args);
