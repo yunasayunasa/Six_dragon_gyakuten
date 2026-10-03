@@ -141,7 +141,7 @@ varying float vAlpha;
 varying vec3 vColor;
 void main() {
   float r = length(gl_PointCoord - 0.5);
-  float a = smoothstep(0.5, 0.15, r) * vAlpha;
+  float a = (1.0 - smoothstep(0.15, 0.5, r)) * vAlpha;
   if (a < 0.08) discard;
   gl_FragColor = vec4(vColor, a);
   #include <colorspace_fragment>

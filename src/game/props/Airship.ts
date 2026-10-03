@@ -484,7 +484,7 @@ export class Airship extends THREE.Group {
     this.envMat.onBeforeCompile = (sh) => {
       sh.fragmentShader = sh.fragmentShader.replace(
         '#include <opaque_fragment>',
-        'outgoingLight += vec3(0.55, 0.88, 1.0) * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.75;\n#include <opaque_fragment>',
+        'outgoingLight += vec3(0.55, 0.88, 1.0) * pow(max(0.0, 1.0 - abs(dot(normal, normalize(vViewPosition)))), 3.0) * 0.75;\n#include <opaque_fragment>',
       );
     };
     const gold = new THREE.MeshStandardMaterial({ color: '#d9a944', metalness: 0.9, roughness: 0.28, envMap: env, envMapIntensity: 1.4, side: THREE.DoubleSide });

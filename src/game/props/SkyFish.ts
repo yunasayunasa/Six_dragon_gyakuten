@@ -95,9 +95,9 @@ varying vec3 vTint;
 varying vec3 vLocal;
 void main() {
   vec3 n = normalize(vN);
-  float fres = pow(1.0 - abs(dot(n, vView)), 2.2);
+  float fres = pow(max(0.0, 1.0 - abs(dot(n, vView))), 2.2);
   // 背は濃く、腹は明るい金色。頭のほうが明るい
-  float belly = smoothstep(0.2, -0.6, n.y);
+  float belly = 1.0 - smoothstep(-0.6, 0.2, n.y);
   vec3 col = mix(vTint, vec3(1.0, 0.86, 0.55), belly * 0.7);
   col = mix(col * 0.75, col, smoothstep(0.0, 0.8, vX));
   // うろこのきらめき
@@ -112,8 +112,8 @@ void main() {
   vec2 eye = vec2(0.5, 0.045);
   float de = length(vec2(vLocal.x, vLocal.y) - eye);
   float side = step(0.035, abs(vLocal.z));
-  col = mix(col, vec3(0.08, 0.04, 0.06), smoothstep(0.034, 0.026, de) * side);
-  col = mix(col, vec3(1.0), smoothstep(0.011, 0.006, length(vec2(vLocal.x, vLocal.y) - eye - vec2(0.008, 0.01))) * side);
+  col = mix(col, vec3(0.08, 0.04, 0.06), (1.0 - smoothstep(0.026, 0.034, de)) * side);
+  col = mix(col, vec3(1.0), (1.0 - smoothstep(0.006, 0.011, length(vec2(vLocal.x, vLocal.y) - eye - vec2(0.008, 0.01)))) * side);
   gl_FragColor = vec4(col, 0.96);
   #include <colorspace_fragment>
 }`;
@@ -145,7 +145,8 @@ void main() {
   float far = vUv.y;
   float rib = 0.9 + 0.1 * sin(vUv.x * 70.0);
   vec3 col = mix(vTint * 1.25, vec3(1.0, 0.93, 0.8), smoothstep(0.1, 0.9, far)) * rib;
-  float a = pow(1.0 - far, 1.3) * 0.85 * (0.6 + uGlow * 0.4);
+  // pow は負の数を入れると結果が決まらない（先端で 1.0 - far がわずかに負になり、NaN がぼかしで黒い四角に広がった）
+  float a = pow(max(0.0, 1.0 - far), 1.3) * 0.85 * (0.6 + uGlow * 0.4);
   if (a < 0.04) discard;
   gl_FragColor = vec4(col * a, a);
   #include <colorspace_fragment>
@@ -169,7 +170,8 @@ varying float vAlpha;
 void main() {
   vec2 d = gl_PointCoord - 0.5;
   float r = length(d);
-  float a = smoothstep(0.5, 0.0, r);
+  // smoothstep は「下の端 < 上の端」でないと結果が決まらない（Windows の Edge/Chrome では黒い四角になった）
+  float a = 1.0 - smoothstep(0.0, 0.5, r);
   a = a * a * vAlpha;
   gl_FragColor = vec4(uColor * a, a);
 }`;
