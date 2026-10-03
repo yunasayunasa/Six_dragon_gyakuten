@@ -1,13 +1,14 @@
 /**
- * フルボイスの声を作る開発用ツール（Gemini TTS）。
+ * フルボイスの声を作る開発用ツール（Gemini TTS。CAST_VOICES で provider: 'elevenlabs' のキャラは ElevenLabs）。
  *
  * 準備:
- *   リポジトリ直下の .env に GEMINI_API_KEY=... を書く（.env は Git に入らない）
+ *   リポジトリ直下の .env に GEMINI_API_KEY=... と ELEVENLABS_API_KEY=... を書く（.env は Git に入らない）
  *   npm i --no-save @breezystack/lamejs   … MP3 に変換するため
  *
  * 使い方:
  *   node tools/voices.mjs list                  声を付けるセリフの数と、料金の目安
  *   node tools/voices.mjs design [名前...]      キャラの声を作る（作り直す）。試聴用の音声を voice-samples/ に書き出す
+ *   node tools/voices.mjs design 名前 --pick N  ElevenLabs のキャラ：候補 N を保存してゲームで使う声にする
  *   node tools/voices.mjs generate [名前...]    セリフの声を作る。作っていない・文章や声が変わったセリフだけ作り直す
  *   node tools/voices.mjs generate --first      各キャラの最初のセリフだけ作る（声の確かめ用）
  *
@@ -24,42 +25,57 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODEL = 'gemini-3.8-flash-tts';
 const API = 'https://generativelanguage.googleapis.com/v1beta';
+// ElevenLabs（CAST_VOICES の provider: 'elevenlabs' のキャラ）。.env に ELEVENLABS_API_KEY
+const EL_API = 'https://api.elevenlabs.io';
+const EL_MODEL = 'eleven_v4';
+const EL_DESIGN_MODEL = 'eleven_ttv_v3';
 const STATE_FILE = path.join(ROOT, 'tools/voices.json');
 const SAMPLE_DIR = path.join(ROOT, 'voice-samples');
 
 /**
  * キャラの声（変わらない特徴だけ。場面ごとの調子は STYLE で付ける）。ユーザーのイメージ（2026-10-02）から。
- * pitch は作った声の高さを後から上げる量（半音。速さは変わらない）
+ * 2026-10-03 ユーザーの指示で全員 ElevenLabs に移した（説明文・話し方は英語のほうが効く）。
+ * provider を外すと Gemini（gender・日本語の description/style、prebuilt、pitch＝後から上げる半音）に戻せる
  */
 const CAST_VOICES = {
   ウィルナス: {
-    gender: 'male',
-    // 1回目の声はかすれて怯えたように聞こえた（ユーザー所見）ので、芯のある声で作り直す
-    description: '30代の成人男性。凛々しく勇ましい、芯の通った力強い声。太く張りがあり、自信に満ちて堂々としている。恐れを知らない豪放磊落な英雄。',
-    style: '凛々しく堂々と、自信に満ちて、腹から声を張って',
+    provider: 'elevenlabs',
+    // 雄々しく猛々しいが凛々しい。Gemini の1回目はかすれて怯えたように聞こえた（ユーザー所見）
+    description:
+      'A Japanese man in his thirties, native Japanese speaker. Bold, fierce and heroic yet dignified and noble voice. ' +
+      'Deep, powerful and resonant with a strong core, full of confidence and command. A brave warrior who fears nothing. Clear, not raspy.',
+    style: 'confident, bold, heroic',
   },
-  // 子供の声は Google の安全ポリシーで作れない（2026-10-02 確認）ため、用意された若々しい声に話し方の指示を付け、
-  // さらに高さを上げて幼くする（元は約210Hz＝大人の女性の高さ → +8半音で約310Hz）
+  // 子供の声は Google でも ElevenLabs でも安全ポリシーで作れない（2026-10-03 確認）。
+  // ユーザーの了承のもと、アニメで子供役を演じる大人の声のように「幼く可愛い声の大人の女性」として作る（年齢を偽る言い換えはしない）
   ワムデュス: {
-    prebuilt: 'Leda',
-    style: '子供っぽく、舌っ足らずで可愛らしく、のんびりマイペースに',
-    pitch: 8,
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker, with a very high-pitched, soft, sweet and cute youthful voice, ' +
+      'in the style of an anime voice actress. Slightly lisping, clumsy pronunciation. Relaxed, sleepy, carefree, laid-back pace.',
+    style: 'cute, sleepy, laid-back',
   },
+  // 妖艶さと凛々しさのお姉さん。「からかうように」だと囁き声になった（ユーザー所見）ので、はっきりした声にする
   フェディエル: {
-    gender: 'female',
-    description: '大人の女性、お姉さん。落ち着いた低めの、深みのあるミステリアスな声。大人の余裕と、凛とした気品と強さがある。古風で少し高貴な話し方。',
-    // 「からかうように」だと囁き声になった（ユーザー所見）。声そのものははっきりしているので、話し方の指示で凛々しくする
-    style: '凛として、気品と自信をもって、はっきりと声を張って',
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her late twenties, native Japanese speaker, a mature big-sister type. Calm, low, deep and mysterious voice ' +
+      'with composure, elegance, dignity and strength. Speaks in an old-fashioned, slightly aristocratic manner. Clear and projected, not breathy or whispery.',
+    style: 'dignified, confident, composed',
   },
   ガレヲン: {
-    gender: 'female',
-    description: '大人の女性。お淑やかで穏やか、全てを包み込む母のような、温かく柔らかい声。ゆったりと丁寧に話す。',
-    style: '穏やかに、ゆったりと',
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her thirties, native Japanese speaker. Graceful, modest and calm, with a warm, soft, motherly voice that embraces everything. ' +
+      'Speaks slowly, gently and politely.',
+    style: 'gentle, calm, warm',
   },
   ルオー: {
-    gender: 'male',
-    description: '20代の青年。真面目で堅物な、落ち着いた明瞭な声。理知的で、少し尊大な響きがある。',
-    style: '落ち着いて、きっぱりと',
+    provider: 'elevenlabs',
+    description:
+      'A Japanese young man in his twenties, native Japanese speaker. Serious, stiff and rigid personality with a calm, clear and articulate voice. ' +
+      'Intellectual, with a slightly arrogant, self-assured tone.',
+    style: 'calm, firm, self-assured',
   },
 };
 
@@ -83,6 +99,25 @@ const STYLE = {
 const STATEMENT_STYLE = '証言するように、はっきりと';
 const SHOUT_STYLE = '腹の底から、力強く叫ぶ';
 
+/** ElevenLabs 用：話し方の指示 → 文頭に付ける音声タグ（英語のほうが効く） */
+const STYLE_TAG = {
+  [STYLE.驚き]: 'surprised',
+  [STYLE.説明]: 'explaining calmly',
+  [STYLE.考え]: 'thoughtful, slowly',
+  [STYLE.得意]: 'proud, smug',
+  [STYLE.よそ見]: 'evasive, playing dumb',
+  [STYLE.困惑]: 'confused, hesitant',
+  [STYLE.挑発]: 'teasing',
+  [STYLE.構え]: 'tense, sharp',
+  [STYLE.笑い]: 'laughing',
+  [STYLE.指差し]: 'firm, assertive',
+  [STYLE.怒り]: 'annoyed, pouting',
+  [STYLE.笑み]: 'smiling, gentle',
+  [STYLE.投げキッス]: 'sweet, playful',
+  [STATEMENT_STYLE]: 'testifying clearly',
+  [SHOUT_STYLE]: 'shouting',
+};
+
 /** 読み間違えやすい言葉（声のための読みだけ。画面の文字は変わらない）。要確認のものもある */
 const READINGS = [
   ['凪ノ桟橋', 'なぎのさんばし'],
@@ -105,11 +140,29 @@ function ttsText(text) {
 }
 
 // ---------- 共通 ----------
-function apiKey() {
+function apiKey(name = 'GEMINI_API_KEY') {
   const env = fs.existsSync(path.join(ROOT, '.env')) ? fs.readFileSync(path.join(ROOT, '.env'), 'utf8') : '';
-  const key = process.env.GEMINI_API_KEY ?? env.match(/^\s*GEMINI_API_KEY\s*=\s*(.+?)\s*$/m)?.[1];
-  if (!key) throw new Error('.env に GEMINI_API_KEY がありません');
+  const key = process.env[name] ?? env.match(new RegExp(`^\\s*${name}\\s*=\\s*(.+?)\\s*$`, 'm'))?.[1];
+  if (!key) throw new Error(`.env に ${name} がありません`);
   return key.replace(/^["']|["']$/g, '');
+}
+
+/** ElevenLabs の API。音声（バイナリ）が返るときは Buffer を返す */
+async function elApi(method, url, body) {
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch(`${EL_API}${url}`, {
+      method,
+      headers: { 'xi-api-key': apiKey('ELEVENLABS_API_KEY'), 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (r.ok) return (r.headers.get('content-type') ?? '').includes('json') ? r.json() : Buffer.from(await r.arrayBuffer());
+    const err = await r.json().catch(() => ({}));
+    if ((r.status === 429 || r.status >= 500) && attempt < 5) {
+      await new Promise((ok) => setTimeout(ok, 2000 * 2 ** attempt));
+      continue;
+    }
+    throw new Error(`${method} ${url} → ${r.status} ${JSON.stringify(err.detail ?? err).slice(0, 300)}`);
+  }
 }
 
 async function api(method, url, body) {
@@ -267,12 +320,49 @@ async function list() {
   console.log(`料金の目安: 約 ${((sec * 25 * 9) / 1e6).toFixed(2)} ドル（全部作り直した場合）`);
 }
 
-async function design(names) {
+/**
+ * ElevenLabs の声作り。説明文から候補を3つ作り voice-samples/<名前>_候補N.mp3 に書き出す（試聴文はそのキャラのセリフ）。
+ * 聞いて選んだら design <名前> --pick N で保存し、ゲームで使う声にする
+ */
+async function designEleven(name, v, state, pick) {
+  if (pick) {
+    const generated = state.candidates?.[name]?.[pick - 1];
+    if (!generated) throw new Error(`${name} の候補${pick}がありません（先に design ${name}）`);
+    const old = state.voices[name]?.provider === 'elevenlabs' ? state.voices[name].id : null;
+    const res = await elApi('POST', '/v1/text-to-voice', { voice_name: `six-dragon ${name}`, voice_description: v.description, generated_voice_id: generated });
+    state.voices[name] = { provider: 'elevenlabs', id: res.voice_id, description: v.description };
+    delete state.candidates[name];
+    saveState(state);
+    if (old && old !== res.voice_id) await elApi('DELETE', `/v1/voices/${old}`).catch((e) => console.warn(`古い声を消せませんでした（${e.message}）`));
+    console.log(`${name}: 候補${pick}を保存 → ${res.voice_id}`);
+    return;
+  }
+  // 試聴文は 100〜1000 文字。そのキャラのセリフをつなぐ
+  let text = '';
+  for (const l of (await collect()).filter((l) => l.speaker === name)) {
+    if (text.length >= 150) break;
+    text += ttsText(l.text);
+  }
+  const res = await elApi('POST', '/v1/text-to-voice/design?output_format=mp3_44100_128', { voice_description: v.description, model_id: EL_DESIGN_MODEL, text });
+  state.candidates = { ...state.candidates, [name]: res.previews.map((p) => p.generated_voice_id) };
+  saveState(state);
+  res.previews.forEach((p, i) => fs.writeFileSync(path.join(SAMPLE_DIR, `${name}_候補${i + 1}.mp3`), Buffer.from(p.audio_base_64, 'base64')));
+  console.log(`${name}: 候補 ${res.previews.length} つ（試聴: voice-samples/${name}_候補N.mp3、決めたら design ${name} --pick N）`);
+}
+
+async function design(args) {
   const state = loadState();
   fs.mkdirSync(SAMPLE_DIR, { recursive: true });
+  const pickAt = args.indexOf('--pick');
+  const pick = pickAt >= 0 ? Number(args[pickAt + 1]) : 0;
+  const names = pickAt >= 0 ? args.filter((a, i) => i !== pickAt && i !== pickAt + 1) : args;
   for (const name of names.length ? names : Object.keys(CAST_VOICES)) {
     const v = CAST_VOICES[name];
     if (!v) throw new Error(`知らない名前: ${name}`);
+    if (v.provider === 'elevenlabs') {
+      await designEleven(name, v, state, pick);
+      continue;
+    }
     if (v.prebuilt) {
       state.voices[name] = { id: v.prebuilt, prebuilt: true };
       saveState(state);
@@ -303,12 +393,14 @@ async function generate(names) {
     lines = lines.filter((l, i) => lines.findIndex((x) => x.speaker === l.speaker) === i);
     for (const l of lines) console.log(`  ${l.speaker}（${l.key}）「${l.text.replace(/\n/g, '')}」`);
   }
-  const missing = [...new Set(lines.map((l) => l.speaker))].filter((n) => !state.voices[n]);
+  const providerOf = (n) => CAST_VOICES[n].provider ?? 'gemini';
+  const missing = [...new Set(lines.map((l) => l.speaker))].filter((n) => !state.voices[n] || (state.voices[n].provider ?? 'gemini') !== providerOf(n));
   if (missing.length) throw new Error(`声がまだありません: ${missing.join('、')}（先に design）`);
 
   const sigOf = (l) => {
     const v = CAST_VOICES[l.speaker];
-    return fnv([MODEL, state.voices[l.speaker].id, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l.text)].join('|'));
+    const model = providerOf(l.speaker) === 'elevenlabs' ? EL_MODEL : MODEL;
+    return fnv([model, state.voices[l.speaker].id, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l.text)].join('|'));
   };
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
   const todo = lines.filter((l) => state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l)));
@@ -316,7 +408,16 @@ async function generate(names) {
 
   let done = 0;
   let failed = 0;
-  const work = async (l) => {
+  // ElevenLabs：話し方は文頭の音声タグで付ける。16bit・24kHz の生の音で受け取る
+  const speakEleven = async (l) => {
+    const tags = [CAST_VOICES[l.speaker].style, STYLE_TAG[l.style]].filter(Boolean).join(', ');
+    const buf = await elApi('POST', `/v1/text-to-speech/${state.voices[l.speaker].id}?output_format=pcm_24000`, {
+      text: `[${tags}] ${ttsText(l.text)}`,
+      model_id: EL_MODEL,
+    });
+    return { rate: 24000, pcm: new Int16Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + (buf.length & ~1))) };
+  };
+  const speakGemini = async (l) => {
     const style = [CAST_VOICES[l.speaker].style, l.style].filter(Boolean).join('。');
     const res = await api('POST', '/interactions', {
       model: MODEL,
@@ -327,7 +428,10 @@ async function generate(names) {
     });
     const audio = res.steps?.flatMap((s) => s.content ?? []).find((c) => c.type === 'audio' && c.data);
     if (!audio) throw new Error('音声が返ってきませんでした');
-    const { rate, pcm } = readWav(Buffer.from(audio.data, 'base64'));
+    return readWav(Buffer.from(audio.data, 'base64'));
+  };
+  const work = async (l) => {
+    const { rate, pcm } = await (providerOf(l.speaker) === 'elevenlabs' ? speakEleven(l) : speakGemini(l));
     const mp3 = await toMp3(pitchShift(trimSilence(pcm, rate), rate, CAST_VOICES[l.speaker].pitch ?? 0), rate);
     fs.mkdirSync(path.dirname(fileOf(l)), { recursive: true });
     fs.writeFileSync(fileOf(l), mp3);
