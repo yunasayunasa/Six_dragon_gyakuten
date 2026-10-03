@@ -5,6 +5,8 @@ export const GAME_TITLE = '逆転六竜';
 export const GAME_SUBTITLE = '〜活劇奇譚〜';
 /** 作品名のロゴ（public/assets からの相対） */
 export const GAME_LOGO = 'ui/title_logo.webp';
+/** ホーム画面の曲（ユーザー提供のファンファーレ。音量はエンディング曲と聞こえる大きさをそろえた） */
+export const TITLE_BGM = { url: 'audio/fanfare.mp3', volume: 0.37 };
 
 export interface Episode {
   id: string;

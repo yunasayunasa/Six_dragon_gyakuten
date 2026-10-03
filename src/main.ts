@@ -3,7 +3,7 @@ import { Engine } from './engine';
 import type { EpisodeCard, PanelAction } from './engine/ui/Panels';
 import { InvestigationGame } from './genres/investigation/InvestigationGame';
 import type { InvestigationSave } from './genres/investigation/types';
-import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE } from './game/episodes';
+import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE, TITLE_BGM } from './game/episodes';
 import { TUTORIALS } from './game/tutorials';
 
 /** 端末に残す記録の名前空間（設定・既読・セーブ・説明を見たか・解決した話） */
@@ -74,6 +74,9 @@ async function play(engine: Engine, episodeId: string, save?: InvestigationSave)
 /** ホーム画面：つづきから・はじめから・話を選ぶ・設定 */
 async function home(engine: Engine): Promise<void> {
   const panels = engine.hud.panels;
+  // スマホでは最初のタップで音が出せるようになってから鳴る（Sound.unlock）
+  engine.sound.defineBgm('タイトル', engine.assets.url(TITLE_BGM.url), TITLE_BGM.volume);
+  engine.sound.setBgm('タイトル');
   for (;;) {
     const choice = await panels.home({
       title: GAME_TITLE,
