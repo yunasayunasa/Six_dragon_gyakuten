@@ -10,7 +10,7 @@ import { TestimonyPanel } from './TestimonyPanel';
 import type { AreaDef, CaseData, GameOptions, HotspotDef, InvestigationSave, SceneDef, TutorialKey } from './types';
 
 /** このジャンルが台本に追加する命令 */
-export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'solve', 'area'] as const;
+export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'challenge', 'solve', 'area'] as const;
 
 type Phase = 'loading' | 'script' | 'explore' | 'done';
 
@@ -117,6 +117,8 @@ export class InvestigationGame implements Mode {
       st.buildArea(pl?.area ?? first);
       st.addActor(a, pl?.x ?? 0, pl?.z ?? 0, pl?.facing ?? 1);
       if (pl?.hidden) a.visible = false;
+      // はじめから遺体の姿で置く（セーブから続けても同じ姿になる）
+      if (pl?.corpse) a.corpse();
     }
     this.player = st.actor(data.player);
     // 声（public/assets/voice/<話のid>/。無ければ声なし）。叫びは主人公の声
@@ -206,6 +208,7 @@ export class InvestigationGame implements Mode {
       }, Ease.outCubic, light);
     });
     d.register('confront', (args) => this.runConfrontation(args[0]));
+    d.register('challenge', (args) => this.runChallenge(args[0]));
     // @場所 名前 … その場所へ移る（舞台をたたんで組み直す）。@場所 名前 すぐ … 暗転中などに、すぐ切り替える
     d.register('area', (args) => this.goTo(args[0], { instant: args[1] === 'すぐ' || args[1] === 'now' }));
     d.register('solve', () => this.solve());
@@ -688,14 +691,94 @@ export class InvestigationGame implements Mode {
     this.refreshGoal();
   }
 
+  /** つきつけ。台本の `@つきつけ <id>` から呼ばれ、問いに答える証拠品を選ぶまで続く */
+  async runChallenge(id: string): Promise<void> {
+    const def = this.data.challenges?.[id];
+    if (!def) throw new Error(`つきつけがありません: ${id}`);
+    const hud = this.engine.hud;
+    const witness = this.findActor(def.witness)!;
+    const max = this.data.talismans;
+    /** 信が尽きたら、ここまで戻す */
+    const start = this.state.talismans;
+    let misses = 0;
+    // 尋問の成功の台本から続けて始まることもある（そのときは尋問の見た目・曲・立ち位置のまま）
+    const inConfrontation = this.confrontation !== null;
+    this.phase = 'script';
+    hud.showTouch(false);
+    hud.setGoal(null);
+    hud.bookButton.classList.add('hidden');
+    this.log.push(`challenge:${id}:start`);
+    if (!inConfrontation) {
+      const side = witness.position.x >= this.player.position.x ? 1 : -1;
+      const standX = witness.position.x - side * 2.4;
+      await this.director.play(`@移動 ${this.player.def.id} ${standX.toFixed(2)} ${witness.position.z.toFixed(2)}`);
+      await Promise.all([this.player.face(side as 1 | -1, this.engine.tweens), witness.face((-side) as 1 | -1, this.engine.tweens)]);
+      await this.engine.stage.setLook('confront', 1);
+      if (this.data.bgm?.confront) this.engine.sound.setBgm(this.data.bgm.confront);
+    }
+    hud.setTalismans(max, this.state.talismans);
+    const begin = () => this.versus(witness, def.title, 'つきつけ', '相手の問いに答える証拠品を選んで、つきつけよう');
+    await begin();
+    for (;;) {
+      twoShot(this.engine.rig, this.player, witness);
+      const chosen = await hud.openBook(this.ownedEvidence(), 'present', '証拠品', `問い：${def.question}`);
+      if (!chosen) {
+        // 選ばずに閉じたら、もう一度問われる
+        await this.runScript(`${witness.def.id}「${def.question}」`);
+        continue;
+      }
+      const ok = def.answer.includes(chosen);
+      if (!ok) this.state.talismans = Math.max(0, this.state.talismans - 1);
+      this.log.push(`present:${id}:${chosen}:${ok ? 'correct' : 'wrong'}`);
+      await Promise.all([hud.shout(this.data.shouts?.present ?? 'これを見ろ！'), this.player.attack(this.engine.tweens)]);
+      await this.throwEvidence(chosen, witness, ok);
+      if (ok) {
+        this.engine.rig.shake(0.4, 0.5);
+        const at = witness.headPosition();
+        this.engine.stage.spray.emit(at, { count: 26, color: '#1e1418', spread: 2.2, up: 1.6, gravity: 5, size: 0.12, life: 0.8 });
+        this.engine.stage.spray.emit(at, { count: 30, color: '#ffcf7a', spread: 2.4, up: 2, gravity: 3, size: 0.08, life: 1, glow: true });
+        await witness.damage(this.engine.tweens);
+        this.log.push(`challenge:${id}:solved`);
+        await this.runScript(def.success);
+        break;
+      }
+      this.engine.sound.play('wrong');
+      await witness.attack(this.engine.tweens);
+      await this.player.damage(this.engine.tweens);
+      hud.setTalismans(max, this.state.talismans);
+      await this.runScript(def.wrong);
+      misses++;
+      if (this.state.talismans <= 0) {
+        await this.runScript(def.fail);
+        this.log.push(`gameover:${id}`);
+        this.engine.sound.play('wrong');
+        await hud.card('ゲームオーバー', '信を失った', `問いからやり直す（信 ${start}）`);
+        this.state.talismans = start;
+        misses = 0;
+        hud.setTalismans(max, start);
+        await begin();
+        continue;
+      }
+      const hints = def.hints ?? [];
+      if (hints.length) await this.runScript(hints[Math.min(misses, hints.length) - 1]);
+    }
+    // 尋問の中から始まったときは、後片づけは尋問の側で行う
+    if (inConfrontation || (this.phase as Phase) === 'done') return;
+    hud.setTalismans(0, 0);
+    if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
+    await this.engine.stage.setLook(this.fieldLook, 0.8);
+    hud.bookButton.classList.remove('hidden');
+    this.refreshGoal();
+  }
+
   /** 尋問の始まり：主人公と証人が向かい合う対峙のカットイン */
-  private versus(witness: PaperActor, title: string, label = '尋問開始'): Promise<void> {
+  private versus(witness: PaperActor, title: string, label = '尋問開始', hint = '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう'): Promise<void> {
     return this.engine.hud.versus(
       { portrait: this.portraitOf(this.player), color: this.player.def.color },
       { portrait: this.portraitOf(witness), color: witness.def.color },
       title,
       label,
-      '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう',
+      hint,
     );
   }
 
@@ -809,6 +892,9 @@ export class InvestigationGame implements Mode {
     const hud = this.engine.hud;
     this.state.flags.add('solved');
     this.log.push('solved');
+    // 尋問・つきつけの中から解決したときも、信の札と証言は下げて結末を見せる
+    hud.setTalismans(0, 0);
+    this.testimony.hide();
     hud.bookButton.classList.add('hidden');
     hud.setGoal(null);
     await this.runScript(this.data.ending);

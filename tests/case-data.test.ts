@@ -7,6 +7,7 @@ import { INVESTIGATION_COMMANDS } from '../src/genres/investigation/Investigatio
 import { CaseState } from '../src/genres/investigation/CaseState';
 import { CASE01 } from '../src/game/case01/case';
 import { CASE02 } from '../src/game/case02/case';
+import { CASE03 } from '../src/game/case03/case';
 import type { Engine } from '../src/engine';
 import type { CaseData } from '../src/genres/investigation/types';
 import { LOOKS } from '../src/engine/stage/Look';
@@ -18,9 +19,10 @@ const manifest = JSON.parse(readFileSync('public/assets/cast/manifest.json', 'ut
 const NAMED: Record<string, string[]> = {
   case01: ['灯台柱', '空魚', '飛空艇', '飛空艇の着く所'],
   case02: ['台座', '水槽', '昇降籠'],
+  case03: ['霧', '墨'],
 };
 
-for (const data of [CASE01, CASE02]) checkCase(data);
+for (const data of [CASE01, CASE02, CASE03]) checkCase(data);
 
 function checkCase(data: CaseData): void {
 
@@ -35,6 +37,10 @@ const allScripts = (): Array<[string, string]> => {
   for (const [id, c] of Object.entries(data.confrontations)) {
     list.push([`${id}.intro`, c.intro], [`${id}.success`, c.success], [`${id}.wrong`, c.wrong], [`${id}.fail`, c.fail]);
     c.statements.forEach((s, i) => list.push([`${id}.press.${i}`, s.press]));
+    c.hints?.forEach((h, i) => list.push([`${id}.hint.${i}`, h]));
+  }
+  for (const [id, c] of Object.entries(data.challenges ?? {})) {
+    list.push([`${id}.success`, c.success], [`${id}.wrong`, c.wrong], [`${id}.fail`, c.fail]);
     c.hints?.forEach((h, i) => list.push([`${id}.hint.${i}`, h]));
   }
   for (const h of data.hotspots) {
@@ -92,6 +98,7 @@ describe(`${data.chapter.split('　')[0]}のデータ検査`, () => {
         if (c.name === 'cue') expect(namedObjects, `${key} 演出の対象 ${c.args[0]}`).toContain(c.args[0]);
         if (c.name === 'give') c.args.forEach((id) => expect(itemIds.has(id), `${key} 証拠 ${id}`).toBe(true));
         if (c.name === 'confront') expect(data.confrontations[c.args[0]], `${key} 尋問 ${c.args[0]}`).toBeTruthy();
+        if (c.name === 'challenge') expect(data.challenges?.[c.args[0]], `${key} つきつけ ${c.args[0]}`).toBeTruthy();
         if (c.name === 'look') expect(Object.keys(LOOKS)).toContain(c.args[0]);
         if (c.name === 'area') expect(areaIds.has(c.args[0]), `${key} 場所 ${c.args[0]}`).toBe(true);
         if (c.name === 'place' && c.args[4]) expect(areaIds.has(c.args[4]), `${key} 場所 ${c.args[4]}`).toBe(true);
@@ -118,13 +125,21 @@ describe(`${data.chapter.split('　')[0]}のデータ検査`, () => {
         if (s.hidden) expect(c.statements.some((o) => o.reveals === i), `${id} 隠れた証言 ${i}`).toBe(true);
       });
     }
+    for (const [id, c] of Object.entries(data.challenges ?? {})) {
+      expect(ids.has(c.witness), id).toBe(true);
+      expect(c.answer.length, id).toBeGreaterThan(0);
+      c.answer.forEach((e) => expect(itemIds.has(e), `${id} 答え ${e}`).toBe(true));
+    }
     for (const p of data.logic.pairs) expect(itemIds.has(p.a) && itemIds.has(p.b), `${p.a}+${p.b}`).toBe(true);
   });
 
-  it('出てくる物はどれも必ず使う（証拠品は尋問で、推理メモはまとめるで）', () => {
+  it('出てくる物はどれも必ず使う（証拠品は尋問かつきつけで、推理メモはまとめるで）', () => {
     const evidenceIds = data.evidence.map((e) => e.id);
     const clueIds = data.clues.map((c) => c.id);
-    const answers = Object.values(data.confrontations).flatMap((c) => c.statements.flatMap((x) => x.contradiction ?? []));
+    const answers = [
+      ...Object.values(data.confrontations).flatMap((c) => c.statements.flatMap((x) => x.contradiction ?? [])),
+      ...Object.values(data.challenges ?? {}).flatMap((c) => c.answer),
+    ];
     const logicIds = data.logic.pairs.flatMap((p) => [p.a, p.b]);
     for (const id of evidenceIds) expect(answers, `証拠品 ${id} を使う尋問が無い`).toContain(id);
     for (const id of clueIds) expect(logicIds, `推理メモ ${id} を使うまとめるが無い`).toContain(id);
@@ -156,6 +171,11 @@ describe(`${data.chapter.split('　')[0]}のデータ検査`, () => {
           // 尋問を始める時点で、答えになる証拠品を持っていること（持っていないと勝てずに詰む）
           const answers = def.statements.flatMap((x) => x.contradiction ?? []);
           if (!answers.some((a) => s.evidence.includes(a))) unready.push(def.title);
+          run(def.success);
+        }
+        if (c.name === 'challenge') {
+          const def = data.challenges![c.args[0]];
+          if (!def.answer.some((a) => s.evidence.includes(a))) unready.push(def.title);
           run(def.success);
         }
         if (c.name === 'solve') solved = true;

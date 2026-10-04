@@ -80,3 +80,23 @@ node tools/voices.mjs generate [名前...]   # 作っていない・変わった
 | `stage/market_town.webp` / `lift_sky.webp` | 広場・乗り場の背景（`backdrop.raw`＝色を空へ寄せず流さない） | `--plain --max 2048` |
 | `stage/market_stone.webp` / `office_floor.webp` | 広場の石畳・帳場の床 | 継ぎ目が残ったので、左右・上下に反転して2×2に並べてつなげた |
 | `ui/cover_case02.webp` | 第二話の扉絵 | `--plain --max 960` |
+
+## 第三話の専用素材（2026-10-04、Codex の画像生成で制作）
+
+依頼文と元の PNG は `コウセイ\asset-work\case03-materials\`（`PROMPT.md` / `out/` / `out/REPORT.md`）。依頼のしかたは第二話と同じ。
+決まった意匠: 灯晶は第二話と同じ。**第三話の灯晶院の紋は欠けていない円**（欠けは第二話の封蝋＝院長の印だけの特徴。検品所の紋で「欠けているのは印の方」と気づかせる）。
+霧そのものは絵に描かせず、コードで重ねる（`src/game/props/Mist.ts`）。墨の伝言の金色の文字もコードで描く（`src/game/props/InkWall.ts`、筆文字の書体）。
+
+| 出力 | 使いどころ | 変換 |
+|---|---|---|
+| `props/evidence_*.webp`（lock・night_log・order_slip・charm・report・ink_message） | 証拠品の絵 | 長辺512・白フチ |
+| `props/workbench.webp` / `test_bell.webp` / `workshop_shelf.webp` / `workshop_door.webp` / `crates_workshop.webp` | 工房の作業台・試し鐘・棚・外した戸・資材 | 白フチ |
+| `props/workshop_wall.webp` / `inspect_wall.webp` | 工房・検品所の奥の壁（中央と左右に3枚並べる。工房の壁の中央に墨の伝言） | `--plain --max 2048` |
+| `props/street_lamp.webp` / `watch_post.webp` / `fog_house.webp` | 通りの街灯・夜警の詰め所・家 | 街灯は背景がマゼンタ寄りなので `--despeckle` |
+| `props/bell_tower.webp` | 鐘楼（凍った綱・つらら） | 長辺1024 |
+| `props/crystal_cabinet.webp` / `inspect_desk.webp` / `emblem_banner.webp` | 検品所の灯晶の棚・検品台（水時計）・紋の垂れ幕 | 棚は `--despeckle` |
+| `stage/fog_town.webp` / `tower_view.webp` | 背景（霧の町・鐘楼からの眺め。`backdrop.raw`） | `--plain --max 2048` |
+| `stage/fog_cobble.webp` / `workshop_floor.webp` / `inspect_floor.webp` | 通り・鐘楼の石畳、工房の床、検品所の床 | 石畳と工房の床は継ぎ目が残ったので、反転して2×2に並べた（繰り返し回数は半分） |
+| `ui/cover_case03.webp` | 第三話の扉絵 | `--plain --max 960` |
+
+立ち絵（`tools/prepare_cast56.mjs`）: kagachi(35 ハーゼリーラ)・gen(15 ウーノ)・nio(18)・makira(2)・cagliostro(41)・clarice(42)・watchman(45 帝国兵。兜で目と口のパーツは無し)。

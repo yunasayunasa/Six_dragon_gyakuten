@@ -77,6 +77,24 @@ export interface ConfrontationDef {
   hints?: string[];
 }
 
+/**
+ * つきつけ：相手の問い（「証拠があるなら見せてみろ」など）に、証拠品を1つ選んで答える。台本から `@つきつけ <id>` で始める。
+ * 外すと信が減り、ヒントが出て選び直す。信が尽きたら、始めたときの信に戻して問いからやり直す（尋問と同じ）
+ */
+export interface ChallengeDef {
+  witness: string;
+  /** 対峙のカットインに出す見出し */
+  title: string;
+  /** 証拠品の一覧の上に出す問い */
+  question: string;
+  /** 正解の証拠品 */
+  answer: string[];
+  success: string;
+  wrong: string;
+  fail: string;
+  hints?: string[];
+}
+
 /** まとめる：2つの手がかりをつなぐと新しい推理になる */
 export interface LogicPairDef {
   a: string;
@@ -130,8 +148,8 @@ export interface CaseData {
   title: string;
   cast: ActorDef[];
   player: string;
-  /** 最初の立ち位置。area は置く場所（省略時は最初の場所）、hidden は台本の `@登場` まで隠しておく */
-  placement: Array<{ id: string; x: number; z: number; facing: 1 | -1; area?: string; hidden?: boolean }>;
+  /** 最初の立ち位置。area は置く場所（省略時は最初の場所）、hidden は台本の `@登場` まで隠しておく、corpse ははじめから遺体の姿で置く */
+  placement: Array<{ id: string; x: number; z: number; facing: 1 | -1; area?: string; hidden?: boolean; corpse?: boolean }>;
   evidence: EvidenceDef[];
   clues: ClueDef[];
   /** 舞台（場所が1つの話）。複数の場所を行き来する話は、代わりに areas を書く（最初の場所から始まる） */
@@ -150,6 +168,8 @@ export interface CaseData {
   logic: LogicDef;
   /** 尋問（id → 内容） */
   confrontations: Record<string, ConfrontationDef>;
+  /** つきつけ（id → 内容） */
+  challenges?: Record<string, ChallengeDef>;
   ending: string;
 }
 

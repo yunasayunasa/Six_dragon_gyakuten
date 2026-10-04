@@ -628,7 +628,7 @@ export class Hud {
   openBook(items: CardItem[], mode: 'view' | 'present', title = '証拠品ファイル', note = ''): Promise<string | null> {
     const wrap = el('div', 'book', this.root);
     const panel = el('div', 'panel washi', wrap);
-    const h = el('h2', '', panel, `${escapeHtml(title)}<small>${mode === 'present' ? '示す証拠を選んでください' : escapeHtml(note)}</small>`);
+    const h = el('h2', '', panel, `${escapeHtml(title)}<small>${mode === 'present' && !note ? '示す証拠を選んでください' : escapeHtml(note)}</small>`);
     void h;
     const grid = el('div', 'grid', panel);
     const desc = el('div', 'desc', panel);
