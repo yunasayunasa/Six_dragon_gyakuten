@@ -36,6 +36,8 @@ export interface ActorDef {
   color?: string;
   /** 元の絵が向いている方向（1=右 -1=左）。斜め向きの絵を正しく振り向かせるために使う。既定は 1 */
   artFacing?: 1 | -1;
+  /** 会話の立ち絵の大きさ（1＝ふつう）。元の絵の頭身が大きく、ほかの人より大きく見える人を小さくする */
+  portraitScale?: number;
   /** 動きのコマ（ポーズフォルダ名）。攻撃は溜め→ヒット→フォロースルーの3枚、被弾は1枚。どちらも右向きの絵 */
   motions?: { attack?: string[]; damage?: string };
 }

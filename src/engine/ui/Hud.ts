@@ -62,6 +62,8 @@ export class Hud {
   cps = 42;
   onSpeakTick: (() => void) | null = null;
   bookButton: HTMLElement;
+  /** 場所をリストから選んで移る話だけ出す「移動」ボタン（捜査中の右下） */
+  travelButton!: HTMLElement;
   /** メニュー（セーブ・ロード・設定など。中身はジャンルが決める） */
   menuButton: HTMLElement;
   soundButton: HTMLElement;
@@ -231,6 +233,11 @@ export class Hud {
 
     const btns = el('div', 'btns', this.touch);
     // 証拠品一覧は上の「証拠品」から開けるので、こちらは「まとめる」
+    this.travelButton = el('div', 'btn-round small hidden', btns, '移動');
+    this.travelButton.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      this.input.press('travel');
+    });
     const logic = el('div', 'btn-round small', btns, 'まとめる');
     logic.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
@@ -514,7 +521,12 @@ export class Hud {
     el('div', 'vs-seam', v);
     const t = el('div', 'vs-title', v);
     if (sub) el('div', 'sub', t, escapeHtml(sub));
-    el('div', 'title', t, escapeHtml(title));
+    const tt = el('div', 'title', t, escapeHtml(title));
+    // 長い題は、画面の幅に収まるまで文字を小さくする（左右の見切れを防ぐ）
+    for (let size = parseFloat(getComputedStyle(tt).fontSize), n = 0; tt.offsetWidth > v.clientWidth * 0.7 && n < 20; n++) {
+      size *= 0.92;
+      tt.style.fontSize = `${size}px`;
+    }
     if (hint) el('div', 'hint', v, escapeHtml(hint));
     v.addEventListener('pointerdown', () => {
       this.sound.unlock();

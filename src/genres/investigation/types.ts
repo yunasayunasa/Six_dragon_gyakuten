@@ -161,6 +161,8 @@ export interface CaseData {
   goals: Array<{ when: Condition; text: string }>;
   /** BGM（Sound.defineBgm で登録した名前）。field＝探索中、confront＝尋問中 */
   bgm?: { field?: string; confront?: string };
+  /** 場所の移り方。walk＝出入り口まで歩いて隣の場所へ（省略時）、list＝「移動」ボタンや出入り口から行き先をリストで選んで飛ぶ */
+  travel?: 'walk' | 'list';
   /** 尋問で間違えられる回数（事件全体で共通） */
   talismans: number;
   /** 尋問の叫び。press＝問いただすとき、present＝証拠を示すとき（省略時は「待った！」「これを見ろ！」） */

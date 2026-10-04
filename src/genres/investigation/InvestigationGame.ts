@@ -71,6 +71,7 @@ export class InvestigationGame implements Mode {
       engine.hud.defineTarget(name, () => this.testimony.root.querySelector(sel));
     }
     engine.hud.bookButton.classList.remove('hidden');
+    engine.hud.travelButton.classList.toggle('hidden', this.data.travel !== 'list');
     engine.hud.bookButton.addEventListener('click', () => {
       if (this.phase === 'explore' && !this.paused) void this.openBook();
     });
@@ -127,7 +128,8 @@ export class InvestigationGame implements Mode {
     for (const a of actors) a.onPose = (who) => this.syncPortrait(who);
     engine.player = this.player;
     for (const h of data.hotspots) {
-      const mat = new THREE.SpriteMaterial({ map: h.actor ? this.tagTex.talk : this.tagTex.look, depthWrite: false, transparent: true, fog: false });
+      // 奥行きを書く（書かないと被写界深度で奥の景色と一緒にぼかされ、霧に溶けて見えにくい）
+      const mat = new THREE.SpriteMaterial({ map: h.actor ? this.tagTex.talk : this.tagTex.look, alphaTest: 0.5, transparent: true, fog: false });
       const s = new THREE.Sprite(mat);
       s.scale.setScalar(0.42);
       const actor = h.actor ? st.actor(h.actor) : null;
@@ -139,7 +141,7 @@ export class InvestigationGame implements Mode {
     // 出入り口の印
     for (const a of this.areas) {
       for (const exit of a.exits) {
-        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tagTex.exit, depthWrite: false, transparent: true, fog: false }));
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tagTex.exit, alphaTest: 0.5, transparent: true, fog: false }));
         s.scale.setScalar(0.42);
         s.position.set(exit.x, exit.markHeight ?? 1.3, exit.z);
         s.renderOrder = 5;
@@ -331,6 +333,7 @@ export class InvestigationGame implements Mode {
       artFacing,
       eyes: pick({ open: part('eye_open'), half: part('eye_half'), closed: part('eye_closed') }),
       mouth: pick({ open: part('mouth_open'), half: part('mouth_half'), closed: part('mouth_closed') }),
+      scale: actor.def.portraitScale,
     };
   }
 
@@ -970,10 +973,14 @@ export class InvestigationGame implements Mode {
       void this.runLogic();
       return;
     }
+    if (inp.consume('travel') && this.listTravel) {
+      void this.chooseArea();
+      return;
+    }
     if (this.nearExit && inp.consume('confirm')) {
       const e = this.nearExit;
       this.nearExit = null;
-      void this.travel(e.to);
+      void (this.listTravel ? this.chooseArea() : this.travel(e.to));
       return;
     }
     if (this.near && inp.consume('confirm')) {
@@ -981,6 +988,24 @@ export class InvestigationGame implements Mode {
       this.near = null;
       void this.interact(h);
     }
+  }
+
+  /** 行き先をリストから選んで移る話か */
+  private get listTravel(): boolean {
+    return this.data.travel === 'list' && this.areas.length > 1;
+  }
+
+  /** 行き先をリストから選んで移る（捜査中の「移動」ボタン・出入り口から） */
+  private async chooseArea(): Promise<void> {
+    const others = this.areas.filter((a) => a.id !== this.area);
+    this.phase = 'script';
+    this.engine.hud.showTouch(false);
+    this.engine.hud.setPrompt(null);
+    this.player.setWalking(0);
+    this.engine.sound.play('select');
+    const i = await this.engine.hud.choose([...others.map((a) => a.name), 'やめる'], 'どこへ行く？');
+    if (i < others.length) await this.goTo(others[i].id);
+    this.beginExplore();
   }
 
   /** 出入り口から別の場所へ（探索中） */

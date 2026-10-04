@@ -5,6 +5,7 @@
  * 使い方:
  *   npm i --no-save sharp
  *   node tools/prepare_cast56.mjs <character_XX の入ったフォルダ> public/assets 47:siero 44:toma …
+ *   自動で切り出した目・口の四角がずれるときは、元の絵の座標で指定できる: 41:cagliostro:eye=590,312,790,400:mouth=670,404,740,452
  *
  * 1キャラ＝フォルダ1つ（base.png と9差分。すべて同じ大きさ・同じ立ち位置の全身PNG）。
  * - base.png → `<名前>_01_normal`（目・口のパーツ付き）
@@ -107,7 +108,9 @@ async function convert(pngPath, poseId, parts = {}) {
 const manifestPath = join(OUT, 'cast', 'manifest.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
 for (const pair of pairs) {
-  const [num, name] = pair.split(':');
+  const [num, name, ...opts] = pair.split(':');
+  /** 手で指定した目・口の四角（元の絵の座標） */
+  const fixed = Object.fromEntries(opts.map((o) => o.split('=')).map(([k, v]) => [k, v.split(',').map(Number)]));
   const dir = join(SRC, `character_${num.padStart(2, '0')}`);
   if (!existsSync(join(dir, 'base.png'))) throw new Error(`見つかりません: ${dir}`);
   const file = (v) => join(dir, `${v}.png`);
@@ -115,10 +118,10 @@ for (const pair of pairs) {
   const box = async (v, rx, ry, area, share) => changedBox(base, await raw(file(v)), rx, ry, area, share);
   const pad = (bx, p) => bx && [Math.max(0, bx[0] - p), Math.max(0, bx[1] - p), Math.min(base.info.width, bx[2] + p), Math.min(base.info.height, bx[3] + p)];
   // 目は両目が入るよう横に広く・薄い差まで拾う
-  const eye = pad(union([await box('blink_half', 8, 2, null, 0.2), await box('blink_closed', 8, 2, null, 0.2)]), 8);
+  const eye = fixed.eye ?? pad(union([await box('blink_half', 8, 2, null, 0.2), await box('blink_closed', 8, 2, null, 0.2)]), 8);
   // 口は目の少し下から探す
   const below = eye && [eye[0] - 48, eye[3] - CELL, eye[2] + 72, eye[3] + 120];
-  let mouth = pad(union([await box('mouth_half', 2, 1, below), await box('mouth_open', 2, 1, below), await box('mouth_closed', 2, 1, below)]), 8);
+  let mouth = fixed.mouth ?? pad(union([await box('mouth_half', 2, 1, below), await box('mouth_open', 2, 1, below), await box('mouth_closed', 2, 1, below)]), 8);
   // 口の四角が目に重なると、まばたきが口のパーツに隠れるので、目の下から始める
   // 目の四角の下を口の上端までにし、それでも重なる分は口を下げる
   if (eye && mouth && mouth[1] < eye[3]) {

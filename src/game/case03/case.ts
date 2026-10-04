@@ -191,7 +191,8 @@ export const CASE03: CaseData = {
     ...CASE01.cast,
     cast56('sandalphon', 'サンダルフォン', '#6a4a2a', 1.45),
     // カガチ・ゲン爺・夜警は役名（死ぬ役・名もない役は本名を使わない）。立ち絵はハーゼリーラ・ウーノ・帝国兵
-    cast56('kagachi', 'カガチ', '#5a3a6a', 1.35),
+    // 元の絵の頭身が大きいので、舞台でも会話の立ち絵でも少し小さくする
+    { ...cast56('kagachi', 'カガチ', '#5a3a6a', 1.15), portraitScale: 0.86 },
     cast56('gen', 'ゲン爺', '#6a5a3a', 1.0),
     cast56('watchman', '夜警', '#3a4a5a', 1.55),
     cast56('nio', 'ニオ', '#5a7aa0', 1.25),
@@ -223,13 +224,14 @@ export const CASE03: CaseData = {
     { id: 'order_slip', name: 'ゲン爺の注文控え', desc: '工房の机にあった控え。\n「恋の守り灯　一つ　フェディエル殿　宵の鐘のあと　渡し済み」。', image: 'props/evidence_order_slip.webp' },
     { id: 'charm', name: '恋の守り灯', desc: 'ゲン爺がフェディエルに渡した小さな守り灯。中の灯晶はゲン爺の手作りの本物。\n札に「良き恋を」と添え書き。', image: 'props/evidence_charm.webp' },
     { id: 'report', name: 'マキラの届け出の控え', desc: '「宵　鐘楼の綱が霧氷で固まり、今夜の鐘は鳴らせません」。\n受け取りの欄に、検品所の印と流れるような署名。', image: 'props/evidence_report.webp' },
+    { id: 'perfume', name: 'カガチの香水', desc: 'カガチが持っていた香水の小瓶。甘くない、苦い花の香り。\nガレヲンによれば、工房の戸口と試し鐘の紐に残っていた香りと同じ。', image: 'props/evidence_perfume.webp' },
     { id: 'ink_message', name: '墨の伝言', desc: '工房の壁に、本物の灯晶の光でだけ浮かぶ墨で書かれていた。\n「カガチ　偽の灯晶を求む　星祭り」。続きは古い墨で読めない。', image: 'props/evidence_ink_message.webp' },
   ],
   clues: [
     { id: 'frozen', name: '凍った鐘楼', desc: '鐘楼の綱と打ち子は、宵のうちに霧氷で固まっていた。\nゆうべ、鐘楼の鐘は一度も鳴っていない。' },
     { id: 'nio_sound', name: 'ニオの聞いた鐘', desc: 'ゆうべの「夜の鐘」は、いつもより高くて小さく、\n少し早かった。' },
     { id: 'test_bell', name: '工房の試し鐘', desc: '一面に霜が降りた工房で、試し鐘だけ霜が落ちていた。\nゆうべ、霜が降りたあとに鳴らされた跡。' },
-    { id: 'scents', name: '二つの香り', desc: '工房には、古くかすかな甘い香り（フェディエル）と、\n戸口と試し鐘のそばに新しい苦い花の香り（トマの手紙と同じ）。' },
+    { id: 'scents', name: '二つの香り', desc: '工房には、古くかすかな甘い香り（フェディエル）と、\n戸口と試し鐘の紐に新しい苦い花の香り（トマの手紙と同じ）。' },
     { id: 'fediel_time', name: 'フェディエルが帰った刻', desc: 'フェディエルは宵の鐘のあと守り灯を受け取り、すぐ宿へ帰った。\nニオも、夜の鐘よりずっと前に通るのを聞いている。' },
     { id: 'not_tower', name: '鐘楼の鐘ではない', desc: '町が聞いた「夜の鐘」は、鐘楼の鐘ではなかった。' },
     { id: 'rung_inside', name: '鐘は工房で鳴らされた', desc: '町が聞いた鐘は工房の試し鐘。\n中にいた者が鳴らして、夜の鐘が鳴ったと思わせた。' },
@@ -345,6 +347,8 @@ export const CASE03: CaseData = {
     { when: {}, text: '霧の町を調べて、皆の話を聞く' },
   ],
   bgm: { field: '霧の町', confront: '尋問' },
+  // 第三話からは、行き先をリストから選んで移る（ユーザー希望 2026-10-04）
+  travel: 'list',
   talismans: 5,
   shouts: { present: '刮目せよ！' },
   logic: {
@@ -425,13 +429,31 @@ export const CASE03: CaseData = {
       intro: S.C5_INTRO,
       statements: [
         { text: 'その墨の文字、あなた方が\n今朝こしらえたのでしょう。', press: S.C5_PRESS_1 },
-        { text: '本物の灯晶は、すべてこの棚の中。\n鍵はわたくしが預かっております。', press: S.C5_PRESS_2 },
-        { text: '棚の外の灯りで浮かぶ文字など、\nこの町のどこにもございませんわ。', press: S.C5_PRESS_3, contradiction: ['charm'] },
+        { text: '光で読む墨など、職人の作り話。\nわたくしは信じませんわ。', press: S.C5_PRESS_2 },
+        { text: '仮に本物でも、わたくしの名を\n騙った誰かの仕業ですわ。', press: S.C5_PRESS_3 },
+        { text: '本物の灯晶は、すべてこの棚の中。\n鍵はわたくしが預かっております。', press: S.C5_PRESS_4, reveals: 4 },
+        { text: '棚の外の灯りで浮かぶ文字など、\nこの町のどこにもございませんわ。', press: S.C5_PRESS_5, contradiction: ['charm'], hidden: true },
       ],
       success: S.C5_SUCCESS,
       wrong: S.C5_WRONG,
       fail: S.C5_FAIL,
       hints: [S.C5_HINT_1, S.C5_HINT_2],
+    },
+    kagachi_bell: {
+      witness: 'kagachi',
+      title: '工房には近づいていない',
+      bgm: '追及',
+      intro: S.C6_INTRO,
+      statements: [
+        { text: '断られたあとは、二度と\n工房を訪ねておりません。', press: S.C6_PRESS_1 },
+        { text: 'ゆうべは宵から、ずっと\n検品所で書き物をしておりました。', press: S.C6_PRESS_2 },
+        { text: '戸口に残る香りなど、\n風が運んだものでしょう。', press: S.C6_PRESS_3, reveals: 3 },
+        { text: 'あの老人の試し鐘になど、\n指一本触れておりませんわ。', press: S.C6_PRESS_4, contradiction: ['perfume'], hidden: true },
+      ],
+      success: S.C6_SUCCESS,
+      wrong: S.C5_WRONG,
+      fail: S.C5_FAIL,
+      hints: [S.C6_HINT_1, S.C6_HINT_2],
     },
   },
   challenges: {

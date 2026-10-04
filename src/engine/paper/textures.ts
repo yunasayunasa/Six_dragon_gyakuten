@@ -57,6 +57,12 @@ export function tagTexture(symbol: string, ink = '#b8322a'): THREE.Texture {
   g.arc(64, 64, 48, 0, Math.PI * 2);
   g.fill();
   g.stroke();
+  // 霧や白い壁の前でも見分けられるよう、外側に濃い縁
+  g.strokeStyle = '#2b1d17';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(64, 64, 54, 0, Math.PI * 2);
+  g.stroke();
   g.strokeStyle = ink;
   g.lineWidth = 5;
   g.beginPath();

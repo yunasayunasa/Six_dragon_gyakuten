@@ -22,6 +22,8 @@ export interface PortraitData {
   artFacing: 1 | -1;
   eyes: Partial<Record<'open' | 'half' | 'closed', PortraitPart>>;
   mouth: Partial<Record<'open' | 'half' | 'closed', PortraitPart>>;
+  /** 大きさ（1＝ふつう） */
+  scale?: number;
 }
 
 const BLINK = ['half', 'closed', 'half', 'open'] as const;
@@ -56,6 +58,7 @@ export class PortraitSlot {
     const fig = document.createElement('div');
     fig.className = 'fig';
     fig.style.aspectRatio = `${data.width} / ${data.height}`;
+    if (data.scale && data.scale !== 1) fig.style.height = `${96 * data.scale}%`;
     // 左の枠は右向き、右の枠は左向きにそろえる
     if (data.artFacing !== (this.side === 'left' ? 1 : -1)) fig.style.transform = 'scaleX(-1)';
     const img = (url: string, p?: PortraitPart) => {

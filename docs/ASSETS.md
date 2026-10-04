@@ -100,3 +100,5 @@ node tools/voices.mjs generate [名前...]   # 作っていない・変わった
 | `ui/cover_case03.webp` | 第三話の扉絵 | `--plain --max 960` |
 
 立ち絵（`tools/prepare_cast56.mjs`）: kagachi(35 ハーゼリーラ)・gen(15 ウーノ)・nio(18)・makira(2)・cagliostro(41)・clarice(42)・watchman(45 帝国兵。兜で目と口のパーツは無し)。
+追加（公開後の所見）: `props/evidence_perfume.webp`（カガチの香水。`case03-materials/add1/`）。カリオストロの目・口は自動の切り出しが髪まで含んでずれたので、
+`node tools/prepare_cast56.mjs <フォルダ> public/assets 41:cagliostro:eye=596,332,784,398:mouth=672,406,738,450` と手で四角を指定して作り直した。

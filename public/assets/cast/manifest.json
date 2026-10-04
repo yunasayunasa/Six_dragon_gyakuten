@@ -1914,45 +1914,45 @@
   "parts": {
    "eye_open": {
     "file": "eye_open.webp",
-    "x": 111,
-    "y": 167,
-    "w": 305,
-    "h": 115
+    "x": 269,
+    "y": 239,
+    "w": 135,
+    "h": 48
    },
    "eye_half": {
     "file": "eye_half.webp",
-    "x": 111,
-    "y": 167,
-    "w": 305,
-    "h": 115
+    "x": 269,
+    "y": 239,
+    "w": 135,
+    "h": 48
    },
    "eye_closed": {
     "file": "eye_closed.webp",
-    "x": 111,
-    "y": 167,
-    "w": 305,
-    "h": 115
+    "x": 269,
+    "y": 239,
+    "w": 135,
+    "h": 48
    },
    "mouth_closed": {
     "file": "mouth_closed.webp",
-    "x": 336,
-    "y": 288,
-    "w": 132,
-    "h": 98
+    "x": 324,
+    "y": 292,
+    "w": 48,
+    "h": 32
    },
    "mouth_half": {
     "file": "mouth_half.webp",
-    "x": 336,
-    "y": 288,
-    "w": 132,
-    "h": 98
+    "x": 324,
+    "y": 292,
+    "w": 48,
+    "h": 32
    },
    "mouth_open": {
     "file": "mouth_open.webp",
-    "x": 336,
-    "y": 288,
-    "w": 132,
-    "h": 98
+    "x": 324,
+    "y": 292,
+    "w": 48,
+    "h": 32
    }
   }
  },

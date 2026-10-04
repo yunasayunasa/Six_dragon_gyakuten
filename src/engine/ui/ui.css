@@ -444,7 +444,7 @@ html.rotated #hud {
 }
 .versus.hit .vs-seam { animation: vs-seam .25s ease-out forwards; }
 @keyframes vs-seam { to { transform: translateX(-50%) rotate(13deg) scaleY(1); } }
-.vs-title { position: absolute; left: 50%; top: 70%; text-align: center; white-space: nowrap; opacity: 0; transform: translate(-50%, -50%) rotate(-5deg); }
+.vs-title { position: absolute; left: 50%; top: 63%; text-align: center; white-space: nowrap; opacity: 0; transform: translate(-50%, -50%) rotate(-5deg); }
 .versus.hit .vs-title { animation: vs-title .4s cubic-bezier(.2, 1.6, .4, 1) forwards; }
 @keyframes vs-title { from { opacity: 0; transform: translate(-50%, -50%) rotate(-5deg) scale(2.4); } to { opacity: 1; transform: translate(-50%, -50%) rotate(-5deg) scale(1); } }
 .vs-title .sub {
