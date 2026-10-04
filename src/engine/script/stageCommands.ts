@@ -154,11 +154,8 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     if (dir === '左' || dir === 'left') a.faceInstant(-1);
     a.visible = true;
   });
-  // @遺体 トマ … 死体の絵の代わりに、やられの絵を黒く染めて紙を裂き、床に倒れたままにする
-  d.register('corpse', (args) => {
-    engine.hud.hideDialogue();
-    return need(args[0]).corpse(engine.tweens, () => engine.sound.play('tear'));
-  });
+  // @遺体 トマ … 死体の絵の代わりに、黒く染めて裂けた紙を床に倒して置く（すぐにその姿になる。暗転中に置く）
+  d.register('corpse', (args) => need(args[0]).corpse());
   d.register('hide', async (args) => {
     engine.sound.play('paper');
     await need(args[0]).popOut(engine.tweens);

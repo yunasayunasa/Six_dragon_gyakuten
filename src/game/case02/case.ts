@@ -48,10 +48,11 @@ function mark(engine: Engine, name: string, x: number, y: number, z: number): vo
 /** 広場：市場灯の台座・空魚の水槽・わたあめ屋台 */
 async function buildPlaza(engine: Engine): Promise<void> {
   const st = engine.stage;
-  railing(engine, 12);
+  railing(engine, 15);
   // 曲（この話で使うもの）と開幕の紙の音
   engine.sound.useFile('rise', engine.assets.url('audio/se_paper_rise.mp3'));
-  engine.sound.defineBgm('市場', engine.assets.url('audio/bgm_harbor.mp3'), 0.35);
+  // 探索の曲（ユーザー提供、2026-10-04）。カフェの曲より 0.5dB 大きいので少し下げてそろえた（350Hz 以下を除いた大きさで比べた）
+  engine.sound.defineBgm('市場', engine.assets.url('audio/bgm_market.mp3'), 0.33);
   engine.sound.defineBgm('尋問', technoBgm(0.8));
   engine.sound.defineBgm('追及', tenseBgm());
   engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'), 0.37);
@@ -81,7 +82,7 @@ async function buildPlaza(engine: Engine): Promise<void> {
   st.named.set('台座', lantern);
   // 空魚の水槽
   const tank = new FishTank(envMap(engine));
-  tank.position.set(-5.4, 0, -2.0);
+  tank.position.set(-9.0, 0, -2.0);
   st.add(tank);
   st.named.set('水槽', tank);
   engine.onFrame.add((dt) => tank.update(dt));
@@ -89,9 +90,9 @@ async function buildPlaza(engine: Engine): Promise<void> {
   st.addRaiser({ x: tank.position.x, set: (k) => (tank.scale.y = Math.max(0.001, k)) });
   tank.userData.camY = 1.0;
   // わたあめ屋台（台と屋根）
-  st.addBlock([2.2, 0.9, 0.7], [5.6, 0.45, -2.3], '#c9a27a');
-  for (const x of [4.6, 6.6]) st.addBlock([0.1, 2.0, 0.1], [x, 1.0, -2.6], '#6b4027');
-  st.addBlock([2.5, 0.08, 1.0], [5.6, 2.04, -2.4], '#d0503c', { cast: false });
+  st.addBlock([2.2, 0.9, 0.7], [8.4, 0.45, -2.3], '#c9a27a');
+  for (const x of [7.4, 9.4]) st.addBlock([0.1, 2.0, 0.1], [x, 1.0, -2.6], '#6b4027');
+  st.addBlock([2.5, 0.08, 1.0], [8.4, 2.04, -2.4], '#d0503c', { cast: false });
 }
 
 /** 帳場：商会の中。奥は壁 */
@@ -129,38 +130,38 @@ const DAY_SKY = { image: 'stage/cloudsea.webp', width: 150, height: 62, z: -46, 
 const PLAZA: SceneDef = {
   floor: { image: 'stage/pier_planks.webp', width: 44, depth: 10, z: 0.45, repeat: [11, 2.5], color: '#e9ddd0' },
   backdrop: DAY_SKY,
-  walk: { minX: -10.6, maxX: 10.6, minZ: -2.2, maxZ: 2.5 },
-  cameraBounds: { minX: -7.5, maxX: 7.5 },
+  walk: { minX: -13.8, maxX: 13.8, minZ: -2.2, maxZ: 2.5 },
+  cameraBounds: { minX: -10.5, maxX: 10.5 },
   obstacles: [
     { x: 0, z: -1.8, r: 0.5 },
-    { x: -5.4, z: -2.0, r: 0.85 },
-    { x: 5.0, z: -2.3, r: 0.6 },
-    { x: 6.2, z: -2.3, r: 0.6 },
-    { x: 1.6, z: -1.6, r: 0.3 },
+    { x: -9.0, z: -2.0, r: 0.85 },
+    { x: 7.8, z: -2.3, r: 0.6 },
+    { x: 9.0, z: -2.3, r: 0.6 },
+    { x: 1.4, z: -1.7, r: 0.3 },
   ],
   set: buildPlaza,
   props: [
     // 左の木立と旗
-    { image: 'tree_medium_A', x: -11.2, z: -2.5, height: 3.4, cross: true, castShadow: true, sway: 0.015 },
-    { image: 'bush_large_A', x: -9.6, z: -2.7, height: 1.2, sway: 0.02 },
-    { image: 'banner_small_red', x: -3.6, z: -2.9, height: 1.35, sway: 0.02 },
-    { image: 'banner_small_blue', x: 3.0, z: -2.9, height: 1.35, sway: 0.02 },
-    { image: 'lamp_small', x: -7.2, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
-    { image: 'lamp_small', x: 8.4, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
+    { image: 'tree_medium_A', x: -14.6, z: -2.5, height: 3.4, cross: true, castShadow: true, sway: 0.015 },
+    { image: 'bush_large_A', x: -13.0, z: -2.7, height: 1.2, sway: 0.02 },
+    { image: 'banner_small_red', x: -4.8, z: -2.9, height: 1.35, sway: 0.02 },
+    { image: 'banner_small_blue', x: 4.6, z: -2.9, height: 1.35, sway: 0.02 },
+    { image: 'lamp_small', x: -9.6, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
+    { image: 'lamp_small', x: 12.0, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
     // 屋台の品と看板
-    { image: 'food_bundle_shop', x: 5.3, z: -2.25, y: 0.9, height: 0.5, blob: false },
-    { image: 'shop_goods_bundle_A', x: 6.1, z: -2.25, y: 0.9, height: 0.45, blob: false },
-    { image: 'sign_hanging_shop', x: 4.4, z: -2.0, height: 1.5, sway: 0.02 },
+    { image: 'food_bundle_shop', x: 8.1, z: -2.25, y: 0.9, height: 0.5, blob: false },
+    { image: 'shop_goods_bundle_A', x: 8.9, z: -2.25, y: 0.9, height: 0.45, blob: false },
+    { image: 'sign_hanging_shop', x: 7.0, z: -2.0, height: 1.5, sway: 0.02 },
     // 市場の荷
-    { image: 'sack_small', x: -8.4, z: -2.4, height: 0.6, castShadow: true },
-    { image: 'small_box_goods', x: -7.8, z: -2.5, height: 0.75, castShadow: true },
-    { image: 'shop_goods_bundle_B', x: 9.4, z: -2.4, height: 0.6, castShadow: true },
+    { image: 'sack_small', x: -12.2, z: -2.4, height: 0.6, castShadow: true },
+    { image: 'small_box_goods', x: -11.6, z: -2.5, height: 0.75, castShadow: true },
+    { image: 'shop_goods_bundle_B', x: 13.0, z: -2.4, height: 0.6, castShadow: true },
     // パレタの画材箱（台座のすぐ脇）
-    { image: 'small_box_goods', x: 1.6, z: -1.6, height: 0.5, castShadow: true, id: 'paintbox' },
+    { image: 'small_box_goods', x: 1.4, z: -1.7, height: 0.5, castShadow: true, id: 'paintbox' },
     // 手前の前景
-    { image: 'grass_tall_A', x: -6.4, z: 3.5, height: 1.1, sway: 0.05, occluder: true, blob: false },
-    { image: 'sack_small', x: 2.2, z: 3.8, height: 0.75, occluder: true, blob: false },
-    { image: 'flower_patch_small', x: 8.0, z: 3.35, height: 0.55, sway: 0.04, occluder: true, blob: false },
+    { image: 'grass_tall_A', x: -8.4, z: 3.5, height: 1.1, sway: 0.05, occluder: true, blob: false },
+    { image: 'sack_small', x: 2.6, z: 3.8, height: 0.75, occluder: true, blob: false },
+    { image: 'flower_patch_small', x: 10.4, z: 3.35, height: 0.55, sway: 0.04, occluder: true, blob: false },
   ],
 };
 
@@ -233,17 +234,18 @@ export const CASE02: CaseData = {
     cast56('sandalphon', 'サンダルフォン', '#6a4a2a', 1.45),
   ],
   placement: [
-    { id: 'wilnas', x: -3.4, z: 0.6, facing: 1, area: '広場' },
-    { id: 'wamdus', x: -6.8, z: -1.1, facing: 1, area: '広場' },
-    { id: 'galleon', x: -2.4, z: -2.0, facing: 1, area: '広場' },
-    { id: 'toma', x: -0.9, z: -0.5, facing: 1, area: '広場' },
-    { id: 'paleta', x: 2.6, z: -0.9, facing: -1, area: '広場' },
-    { id: 'fediel', x: 3.6, z: -1.6, facing: -1, area: '広場' },
-    { id: 'lyria', x: 7.0, z: -1.3, facing: -1, area: '広場' },
-    { id: 'santhira', x: 8.4, z: -1.2, facing: -1, area: '広場' },
-    { id: 'sandalphon', x: -1.6, z: -1.0, facing: 1, area: '広場', hidden: true },
-    { id: 'siero', x: 3.6, z: -1.2, facing: -1, area: '帳場' },
-    { id: 'luwoh', x: -0.6, z: -1.4, facing: 1, area: '帳場' },
+    // 導入では皆が広場にいる。ルオーとシェロカルテは導入の終わりに帳場へ移る
+    { id: 'wilnas', x: -4.4, z: 0.8, facing: 1, area: '広場' },
+    { id: 'wamdus', x: -10.6, z: -1.0, facing: 1, area: '広場' },
+    { id: 'galleon', x: -6.2, z: -1.9, facing: 1, area: '広場' },
+    { id: 'luwoh', x: -2.8, z: -2.0, facing: 1, area: '広場' },
+    { id: 'sandalphon', x: -3.4, z: -1.0, facing: 1, area: '広場', hidden: true },
+    { id: 'toma', x: -1.2, z: -0.4, facing: 1, area: '広場' },
+    { id: 'siero', x: 2.4, z: 0.2, facing: -1, area: '広場' },
+    { id: 'paleta', x: 3.2, z: -0.8, facing: -1, area: '広場' },
+    { id: 'fediel', x: 6.0, z: -1.7, facing: -1, area: '広場' },
+    { id: 'lyria', x: 10.2, z: -1.0, facing: -1, area: '広場' },
+    { id: 'santhira', x: 11.8, z: -1.6, facing: -1, area: '広場' },
   ],
   // 証拠品＝尋問でつきつける物。推理メモ（clues）＝まとめるで使う物。どれも必ずどこかで使う（tests/case-data.test.ts で確認）
   // 絵は仮（灯晶は小物の流用）。素材の発注表で差し替える
@@ -266,7 +268,7 @@ export const CASE02: CaseData = {
     { id: 'to_toma', name: '手紙はトマ宛て', desc: '符丁の手紙は、鐘ふたつに荷車を借りた\nトマ宛ての取引。' },
   ],
   areas: [
-    { id: '広場', name: '市場の広場', scene: PLAZA, entry: { x: -3.4, z: 0.6, facing: 1 }, exits: [{ to: '帳場', x: -10.2, z: -0.2, radius: 0.9 }, { to: '乗り場', x: 10.2, z: -0.2, radius: 0.9 }] },
+    { id: '広場', name: '市場の広場', scene: PLAZA, entry: { x: -4.4, z: 0.8, facing: 1 }, exits: [{ to: '帳場', x: -13.4, z: -0.2, radius: 0.9 }, { to: '乗り場', x: 13.4, z: -0.2, radius: 0.9 }] },
     { id: '帳場', name: '商会の帳場', scene: OFFICE, entry: { x: 5.0, z: 0.4, facing: -1 }, exits: [{ to: '広場', x: 6.2, z: -0.2, radius: 0.9 }] },
     { id: '乗り場', name: '昇降籠の乗り場', scene: LIFT, entry: { x: -5.0, z: 0.4, facing: 1 }, exits: [{ to: '広場', x: -6.2, z: -0.2, radius: 0.9 }] },
   ],
@@ -277,7 +279,7 @@ export const CASE02: CaseData = {
     {
       id: 'tank',
       label: '空魚の水槽',
-      x: -5.4,
+      x: -9.0,
       z: -1.2,
       radius: 1.0,
       script: S.TANK,
@@ -287,13 +289,19 @@ export const CASE02: CaseData = {
       // 尋問①のあと、二つの灯晶を近づけてみる
       variants: [{ when: { flags: ['c1_done'] }, script: S.TANK_TEST, again: S.TANK_TEST_AGAIN }],
     },
-    { id: 'cotton', label: 'わたあめ屋台', x: 5.6, z: -1.6, radius: 0.85, script: S.COTTON, again: S.COTTON_AGAIN, markHeight: 2.35, area: '広場' },
-    { id: 'paintbox', label: 'パレタの画材箱', x: 1.6, z: -1.05, radius: 0.6, script: S.PAINTBOX, again: S.PAINTBOX_AGAIN, markHeight: 0.95, area: '広場' },
-    { ...talk('paleta', 'パレタに話しかける', 2.6, -0.9, '広場'), script: S.PALETA, again: S.PALETA_AGAIN },
-    { ...talk('lyria', 'ルリアに話しかける', 7.0, -1.3, '広場'), script: S.LYRIA, again: S.LYRIA_AGAIN },
-    { ...talk('fediel', 'フェディエルに話しかける', 3.6, -1.6, '広場'), script: S.FEDIEL, again: S.FEDIEL_AGAIN },
+    { id: 'cotton', label: 'わたあめ屋台', x: 8.4, z: -1.6, radius: 0.85, script: S.COTTON, again: S.COTTON_AGAIN, markHeight: 2.35, area: '広場' },
+    { id: 'paintbox', label: 'パレタの画材箱', x: 1.4, z: -1.15, radius: 0.6, script: S.PAINTBOX, again: S.PAINTBOX_AGAIN, markHeight: 0.95, area: '広場' },
+    { ...talk('paleta', 'パレタに話しかける', 3.2, -0.8, '広場'), script: S.PALETA, again: S.PALETA_AGAIN },
+    { ...talk('lyria', 'ルリアに話しかける', 10.2, -1.0, '広場'), script: S.LYRIA, again: S.LYRIA_AGAIN },
+    { ...talk('fediel', 'フェディエルに話しかける', 6.0, -1.7, '広場'), script: S.FEDIEL, again: S.FEDIEL_AGAIN },
     {
-      ...talk('santhira', 'サンチラに話しかける', 8.4, -1.2, '広場'),
+      ...talk('sandalphon', 'サンダルフォンに話しかける', -3.4, -1.0, '広場'),
+      script: S.SANDALPHON,
+      again: S.SANDALPHON_AGAIN,
+      variants: [{ when: { flags: ['c3_done'] }, script: S.SANDALPHON_AFTER, again: S.SANDALPHON_AFTER_AGAIN }],
+    },
+    {
+      ...talk('santhira', 'サンチラに話しかける', 11.8, -1.6, '広場'),
       script: S.SANTHIRA,
       again: S.SANTHIRA_AGAIN,
       // 尋問②は、答えの証拠品（荷車の貸し出し帳）を持つまで始めない
@@ -302,10 +310,10 @@ export const CASE02: CaseData = {
         { when: { evidence: ['cart_ledger'] }, script: S.SANTHIRA_CONFRONT },
       ],
     },
-    { ...talk('wamdus', 'ワムデュスに話しかける', -6.8, -1.1, '広場'), script: S.WAMDUS },
-    { ...talk('galleon', 'ガレヲンに話しかける', -2.4, -2.0, '広場'), script: S.GALLEON, again: S.GALLEON_AGAIN },
+    { ...talk('wamdus', 'ワムデュスに話しかける', -10.6, -1.0, '広場'), script: S.WAMDUS },
+    { ...talk('galleon', 'ガレヲンに話しかける', -6.2, -1.9, '広場'), script: S.GALLEON, again: S.GALLEON_AGAIN },
     {
-      ...talk('toma', 'トマに話しかける', -0.9, -0.5, '広場'),
+      ...talk('toma', 'トマに話しかける', -1.2, -0.4, '広場'),
       id: 'toma_plaza',
       script: S.TOMA_PLAZA,
       // 尋問①のあと、トマは乗り場へ移る
