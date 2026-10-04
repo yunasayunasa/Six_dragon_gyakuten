@@ -64,3 +64,19 @@ node tools/voices.mjs generate [名前...]   # 作っていない・変わった
 - 出力は `public/assets/voice/<話のid>/`（MP3 と、声のあるセリフの一覧 `index.json`）
 - 台本のセリフを直したら `generate` を実行する（直した行だけ作り直す。消えた行の声は片付ける）
 - 声の説明・行ごとの話し方・読み方の辞書はツールの冒頭（`CAST_VOICES` / `STYLE` / `READINGS`）
+
+## 第二話の専用素材（2026-10-04、Codex の画像生成で制作）
+
+依頼文と元の PNG は `コウセイ\asset-work\case02-materials\`（`PROMPT.md` / `out/` / `out/REPORT.md`）。Codex CLI に `codex exec --skip-git-repo-check -s workspace-write -C <フォルダ> - < PROMPT.md` で依頼した。
+決まった意匠（どの絵でも同じにする）: 灯晶＝縦長の六角柱の琥珀色の結晶／商会の前掛け＝深緑に金の天秤／**灯晶院の紋＝円の中に結晶と3本の光、円の右下が欠けている**（第五話で院長の印と照らし合わせる）。
+
+| 出力 | 使いどころ | 変換 |
+|---|---|---|
+| `props/evidence_*.webp`（box_crystal・floor_crystal・painting・letter・cart_ledger・seal） | 証拠品の絵 | 長辺512・白フチ |
+| `props/market_pedestal.webp` | 市場灯の台座（高さ2.5。灯籠の箱の中心＝高さの8割に結晶を置く） | 長辺1024 |
+| `props/stall_cotton.webp` / `stall_fruit.webp` / `paintbox.webp` / `shop_sign.webp` / `crates_market.webp` / `bunting.webp` | 広場の屋台・画材箱・商会の看板・荷・旗飾り | 白フチ |
+| `props/office_desk.webp` / `key_rack.webp` / `office_wall.webp` | 帳場の机・鍵掛け・奥の壁（壁は `--plain` で2枚並べる） | 机は背景がマゼンタ寄りなので `--despeckle` |
+| `props/lift_cage.webp` / `handcart.webp` | 昇降籠・トマの荷車 | 白フチ |
+| `stage/market_town.webp` / `lift_sky.webp` | 広場・乗り場の背景（`backdrop.raw`＝色を空へ寄せず流さない） | `--plain --max 2048` |
+| `stage/market_stone.webp` / `office_floor.webp` | 広場の石畳・帳場の床 | 継ぎ目が残ったので、左右・上下に反転して2×2に並べてつなげた |
+| `ui/cover_case02.webp` | 第二話の扉絵 | `--plain --max 960` |

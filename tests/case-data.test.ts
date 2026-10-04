@@ -9,6 +9,7 @@ import { CASE01 } from '../src/game/case01/case';
 import { CASE02 } from '../src/game/case02/case';
 import type { Engine } from '../src/engine';
 import type { CaseData } from '../src/genres/investigation/types';
+import { LOOKS } from '../src/engine/stage/Look';
 
 /** 事件データの書き間違い（知らない命令・いない役者・無い表情・無い証拠・無い場所）と、最後まで遊べるかを実行前に確かめる */
 const manifest = JSON.parse(readFileSync('public/assets/cast/manifest.json', 'utf-8')) as Record<string, unknown>;
@@ -91,7 +92,7 @@ describe(`${data.chapter.split('　')[0]}のデータ検査`, () => {
         if (c.name === 'cue') expect(namedObjects, `${key} 演出の対象 ${c.args[0]}`).toContain(c.args[0]);
         if (c.name === 'give') c.args.forEach((id) => expect(itemIds.has(id), `${key} 証拠 ${id}`).toBe(true));
         if (c.name === 'confront') expect(data.confrontations[c.args[0]], `${key} 尋問 ${c.args[0]}`).toBeTruthy();
-        if (c.name === 'look') expect(['sunset', 'confront', 'dusk']).toContain(c.args[0]);
+        if (c.name === 'look') expect(Object.keys(LOOKS)).toContain(c.args[0]);
         if (c.name === 'area') expect(areaIds.has(c.args[0]), `${key} 場所 ${c.args[0]}`).toBe(true);
         if (c.name === 'place' && c.args[4]) expect(areaIds.has(c.args[4]), `${key} 場所 ${c.args[4]}`).toBe(true);
       }

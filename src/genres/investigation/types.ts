@@ -98,7 +98,8 @@ export interface LogicDef {
 
 export interface SceneDef {
   floor: { image: string; width: number; depth: number; z: number; repeat: [number, number]; color?: string };
-  backdrop: { image: string; width: number; height: number; z: number; y: number };
+  /** raw: 町並みなど、色を空へ寄せずにそのまま見せる絵（雲の流れもしない） */
+  backdrop: { image: string; width: number; height: number; z: number; y: number; raw?: boolean };
   walk: { minX: number; maxX: number; minZ: number; maxZ: number };
   obstacles: Array<{ x: number; z: number; r: number }>;
   props: PropDef[];

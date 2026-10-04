@@ -26,11 +26,15 @@ uniform vec3 uGlow;
 uniform vec2 uSun;
 uniform float uScroll;
 uniform float uHasMap;
+uniform float uRaw;
 varying vec2 vUv;
 void main() {
   vec3 sky = mix(uHorizon, uTop, smoothstep(0.25, 1.0, vUv.y));
   vec3 col = sky;
-  if (uHasMap > 0.5) {
+  if (uHasMap > 0.5 && uRaw > 0.5) {
+    // 町並みなどの絵は、色を空へ寄せず・流さずにそのまま見せる（色合いだけ Look に合わせる）
+    col = texture2D(tMap, vUv).rgb * uTint;
+  } else if (uHasMap > 0.5) {
     vec2 uv = vec2(fract(vUv.x * 1.0 + uScroll), clamp((vUv.y - 0.04) * 1.12, 0.0, 1.0));
     vec3 tex = texture2D(tMap, uv).rgb;
     // 絵の青空部分を夕焼けの空色へ寄せ、雲は色付きの光を受ける
@@ -120,6 +124,7 @@ export class Stage {
       uniforms: {
         tMap: { value: null },
         uHasMap: { value: 0 },
+        uRaw: { value: 0 },
         uTop: { value: new THREE.Color() },
         uHorizon: { value: new THREE.Color() },
         uTint: { value: new THREE.Color() },
@@ -205,13 +210,14 @@ export class Stage {
   }
 
   /** 遠景の一枚絵（空）を張る。場所ごとに別の絵を張れる（色合いは共通の Look に従う） */
-  async setBackdrop(image: string | null, opts: { width: number; height: number; z: number; y: number }): Promise<void> {
+  async setBackdrop(image: string | null, opts: { width: number; height: number; z: number; y: number; raw?: boolean }): Promise<void> {
     const geo = new THREE.PlaneGeometry(opts.width, opts.height);
     // 空の色などは全員で共有し、絵だけ場所ごとに持つ
     const mat = this.backdrops.length === 0 ? this.backdropMat : this.backdropMat.clone();
     if (mat !== this.backdropMat) {
-      mat.uniforms = { ...this.backdropMat.uniforms, tMap: { value: null }, uHasMap: { value: 0 } };
+      mat.uniforms = { ...this.backdropMat.uniforms, tMap: { value: null }, uHasMap: { value: 0 }, uRaw: { value: 0 } };
     }
+    mat.uniforms.uRaw.value = opts.raw ? 1 : 0;
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(0, opts.y, opts.z);
     mesh.renderOrder = -10;

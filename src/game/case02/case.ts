@@ -12,7 +12,7 @@ import * as S from './scripts';
 
 /**
  * 第二話「雲市場と二つの灯晶」。場所は3つ（広場・帳場・乗り場）を出入り口で行き来する。
- * 舞台は仮の作り（手持ちの小物＋単色の立体）。素材の発注表で絵が届いたら差し替える。
+ * 舞台の絵は Codex の画像生成で作った専用素材（docs/ASSETS.md）。水槽だけはコードの立体。
  */
 
 const RAIL_Z = -3.05;
@@ -56,24 +56,20 @@ async function buildPlaza(engine: Engine): Promise<void> {
   engine.sound.defineBgm('尋問', technoBgm(0.8));
   engine.sound.defineBgm('追及', tenseBgm());
   engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'), 0.37);
-  // 市場灯の台座（石の柱）
-  st.addBlock([0.9, 0.3, 0.9], [0, 0.15, -1.8], '#8c8378');
-  st.addBlock([0.46, 1.4, 0.46], [0, 1.0, -1.8], '#a39a8c');
-  st.addBlock([0.8, 0.14, 0.8], [0, 1.77, -1.8], '#8c8378');
-  // 市場灯（最初は消えている。結末で灯る）
+  // 市場灯（最初は消えている。結末で灯る）。台座の絵（props の market_pedestal）の、灯籠の箱の中に収まる高さ
   const lantern = new THREE.Group();
-  lantern.position.set(0, 1.84, -1.8);
+  lantern.position.set(0, PEDESTAL_LAMP_Y, -1.72);
   lantern.visible = false;
-  const crystal = new Crystal({ height: 0.6, envMap: envMap(engine) });
+  const crystal = new Crystal({ height: 0.3, envMap: envMap(engine) });
   lantern.add(crystal);
   engine.onFrame.add((dt) => crystal.update(dt));
   const light = new THREE.PointLight('#ffd49a', 0, 10, 1.6);
-  light.position.y = 1.5;
+  light.position.y = 0.7;
   light.userData.on = 10;
   lantern.add(light);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#ffdca8', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
   glow.name = 'glow';
-  glow.position.y = 0.3;
+  glow.position.y = 0.05;
   glow.material.opacity = 0.55;
   glow.userData.size = 1.0;
   glow.scale.setScalar(0.001);
@@ -89,47 +85,34 @@ async function buildPlaza(engine: Engine): Promise<void> {
   // 組み立て・場所の移動で、ほかの装置と一緒に床から伸びる
   st.addRaiser({ x: tank.position.x, set: (k) => (tank.scale.y = Math.max(0.001, k)) });
   tank.userData.camY = 1.0;
-  // わたあめ屋台（台と屋根）
-  st.addBlock([2.2, 0.9, 0.7], [8.4, 0.45, -2.3], '#c9a27a');
-  for (const x of [7.4, 9.4]) st.addBlock([0.1, 2.0, 0.1], [x, 1.0, -2.6], '#6b4027');
-  st.addBlock([2.5, 0.08, 1.0], [8.4, 2.04, -2.4], '#d0503c', { cast: false });
 }
 
-/** 帳場：商会の中。奥は壁 */
+/** 帳場：商会の中。奥は壁（壁の絵の外側は同じ色の板でふさぐ） */
 async function buildOffice(engine: Engine): Promise<void> {
   const st = engine.stage;
-  st.addBlock([36, 7, 0.2], [0, 3.5, -2.95], '#8a6a4a', { cast: false });
-  st.addBlock([36, 0.25, 0.22], [0, 0.12, -2.8], '#5a3421', { cast: false });
-  // 帳場の机
-  st.addBlock([2.0, 0.8, 0.8], [1.4, 0.4, -2.1], '#6b4027');
-  st.addBlock([0.5, 0.12, 0.35], [1.0, 0.86, -2.1], '#e8dcc0');
-  st.addBlock([0.45, 0.2, 0.32], [1.7, 0.9, -2.05], '#d8c8a0');
-  // 鍵掛け（壁の板）
-  st.addBlock([0.7, 0.5, 0.06], [-2.2, 1.5, -2.82], '#4a3020');
+  st.addBlock([40, 7, 0.2], [0, 3.5, -3.1], '#6e4a2c', { cast: false });
+  st.addBlock([40, 0.22, 0.22], [0, 0.11, -2.8], '#4a2e1a', { cast: false });
 }
 
-/** 乗り場：昇降籠と荷車 */
+/** 乗り場：昇降籠の綱は絵の上端より上も、雲の上まで伸ばす */
 async function buildLift(engine: Engine): Promise<void> {
   const st = engine.stage;
   railing(engine, 8);
-  // 昇降籠（枠・床・屋根と、雲の上まで伸びる綱）
-  const cx = 3.4;
-  const cz = -2.0;
-  for (const dx of [-0.6, 0.6]) for (const dz of [-0.5, 0.5]) st.addBlock([0.1, 2.3, 0.1], [cx + dx, 1.15, cz + dz], '#4a3020');
-  st.addBlock([1.4, 0.1, 1.2], [cx, 0.05, cz], '#6b4027');
-  st.addBlock([1.5, 0.12, 1.3], [cx, 2.35, cz], '#5a3421');
-  st.addCylinder(0.04, 6, [cx, 2.4, cz], '#c8b896', false);
-  mark(engine, '昇降籠', cx, 1.0, cz + 0.6);
-  // トマの荷車
-  st.addBlock([1.4, 0.3, 0.8], [-2.0, 0.55, -2.0], '#7a4b2e');
-  for (const dx of [-0.45, 0.45]) st.addBlock([0.4, 0.4, 0.08], [-2.0 + dx, 0.25, -1.58], '#3f2a1c');
+  st.addCylinder(0.035, 10, [3.0, 2.95, -2.05], '#a8875a', false);
+  mark(engine, '昇降籠', 3.0, 1.0, -1.4);
 }
 
-const DAY_SKY = { image: 'stage/cloudsea.webp', width: 150, height: 62, z: -46, y: 2 };
+/** 台座の絵の高さと、灯籠の箱の中心の高さ（絵の上から約2割の所） */
+const PEDESTAL_H = 2.5;
+const PEDESTAL_LAMP_Y = PEDESTAL_H * 0.8;
+
+/** 背景の町並み・空（色を空へ寄せず、そのまま見せる） */
+const MARKET_SKY = { image: 'stage/market_town.webp', width: 105, height: 42, z: -42, y: 9, raw: true };
+const LIFT_SKY = { image: 'stage/lift_sky.webp', width: 130, height: 52, z: -42, y: 6, raw: true };
 
 const PLAZA: SceneDef = {
-  floor: { image: 'stage/pier_planks.webp', width: 44, depth: 10, z: 0.45, repeat: [11, 2.5], color: '#e9ddd0' },
-  backdrop: DAY_SKY,
+  floor: { image: 'stage/market_stone.webp', width: 44, depth: 10, z: 0.45, repeat: [11, 2.5], color: '#f2ece4' },
+  backdrop: MARKET_SKY,
   walk: { minX: -13.8, maxX: 13.8, minZ: -2.2, maxZ: 2.5 },
   cameraBounds: { minX: -10.5, maxX: 10.5 },
   obstacles: [
@@ -138,26 +121,31 @@ const PLAZA: SceneDef = {
     { x: 7.8, z: -2.3, r: 0.6 },
     { x: 9.0, z: -2.3, r: 0.6 },
     { x: 1.4, z: -1.7, r: 0.3 },
+    { x: 12.6, z: -2.5, r: 0.8 },
+    { x: -12.4, z: -2.5, r: 0.7 },
   ],
   set: buildPlaza,
   props: [
-    // 左の木立と旗
-    { image: 'tree_medium_A', x: -14.6, z: -2.5, height: 3.4, cross: true, castShadow: true, sway: 0.015 },
-    { image: 'bush_large_A', x: -13.0, z: -2.7, height: 1.2, sway: 0.02 },
+    // 市場灯の台座（灯籠の箱は空。結末で中に灯晶が灯る）
+    { image: 'market_pedestal', x: 0, z: -1.8, height: PEDESTAL_H, castShadow: true },
+    // 屋台と商会の看板（帳場は西＝左の端）
+    { image: 'stall_cotton', x: 8.4, z: -2.3, height: 2.2, castShadow: true },
+    { image: 'stall_fruit', x: 12.6, z: -2.5, height: 1.6, castShadow: true },
+    { image: 'shop_sign', x: -12.9, z: -1.4, height: 1.4, sway: 0.02, blob: false, y: 1.2 },
+    { image: 'crates_market', x: -12.0, z: -2.5, height: 1.1, castShadow: true },
+    // 旗飾り（手すりの上）
+    { image: 'bunting', x: -8.0, z: -3.0, y: 2.2, height: 0.45, blob: false, sway: 0.02 },
+    { image: 'bunting', x: -2.6, z: -3.0, y: 2.3, height: 0.45, blob: false, sway: 0.02 },
+    { image: 'bunting', x: 3.0, z: -3.0, y: 2.2, height: 0.45, blob: false, sway: 0.02 },
+    { image: 'bunting', x: 10.2, z: -3.0, y: 2.6, height: 0.45, blob: false, sway: 0.02 },
+    // 左の木立と旗・灯り
+    { image: 'tree_medium_A', x: -14.8, z: -2.6, height: 3.4, cross: true, castShadow: true, sway: 0.015 },
     { image: 'banner_small_red', x: -4.8, z: -2.9, height: 1.35, sway: 0.02 },
     { image: 'banner_small_blue', x: 4.6, z: -2.9, height: 1.35, sway: 0.02 },
     { image: 'lamp_small', x: -9.6, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
-    { image: 'lamp_small', x: 12.0, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
-    // 屋台の品と看板
-    { image: 'food_bundle_shop', x: 8.1, z: -2.25, y: 0.9, height: 0.5, blob: false },
-    { image: 'shop_goods_bundle_A', x: 8.9, z: -2.25, y: 0.9, height: 0.45, blob: false },
-    { image: 'sign_hanging_shop', x: 7.0, z: -2.0, height: 1.5, sway: 0.02 },
-    // 市場の荷
-    { image: 'sack_small', x: -12.2, z: -2.4, height: 0.6, castShadow: true },
-    { image: 'small_box_goods', x: -11.6, z: -2.5, height: 0.75, castShadow: true },
-    { image: 'shop_goods_bundle_B', x: 13.0, z: -2.4, height: 0.6, castShadow: true },
+    { image: 'lamp_small', x: 6.4, z: RAIL_Z + 0.05, y: 1.05, height: 0.5, blob: false },
     // パレタの画材箱（台座のすぐ脇）
-    { image: 'small_box_goods', x: 1.4, z: -1.7, height: 0.5, castShadow: true, id: 'paintbox' },
+    { image: 'paintbox', x: 1.4, z: -1.7, height: 0.55, castShadow: true, id: 'paintbox' },
     // 手前の前景
     { image: 'grass_tall_A', x: -8.4, z: 3.5, height: 1.1, sway: 0.05, occluder: true, blob: false },
     { image: 'sack_small', x: 2.6, z: 3.8, height: 0.75, occluder: true, blob: false },
@@ -166,35 +154,39 @@ const PLAZA: SceneDef = {
 };
 
 const OFFICE: SceneDef = {
-  floor: { image: 'stage/wood.webp', width: 30, depth: 8, z: 0.3, repeat: [8, 2], color: '#d8c4ac' },
-  backdrop: DAY_SKY,
+  floor: { image: 'stage/office_floor.webp', width: 30, depth: 8, z: 0.3, repeat: [7, 2], color: '#f0e6dc' },
+  backdrop: LIFT_SKY,
   walk: { minX: -6.6, maxX: 6.6, minZ: -2.0, maxZ: 2.2 },
   cameraBounds: { minX: -3.5, maxX: 3.5 },
   obstacles: [{ x: 1.4, z: -2.1, r: 0.9 }],
   set: buildOffice,
   props: [
-    { image: 'notice_board', x: -4.4, z: -2.6, height: 1.3, castShadow: true },
-    { image: 'shop_goods_bundle_A', x: 4.8, z: -2.5, height: 0.6, castShadow: true },
-    { image: 'small_box_goods', x: 5.6, z: -2.5, height: 0.8, castShadow: true },
-    { image: 'sign_hanging_small', x: -2.2, z: -2.75, y: 1.0, height: 0.4, blob: false },
-    { image: 'lamp_small', x: 0, z: -2.8, y: 2.0, height: 0.5, blob: false },
+    // 奥の壁（棚と窓の絵）を2枚並べる
+    { image: 'office_wall', x: -6.3, z: -2.95, height: 4.2, blob: false },
+    { image: 'office_wall', x: 6.3, z: -2.95, height: 4.2, blob: false },
+    // 帳場の机と鍵掛け
+    { image: 'office_desk', x: 1.4, z: -2.1, height: 1.15, castShadow: true },
+    { image: 'key_rack', x: -2.2, z: -2.85, y: 1.25, height: 0.36, blob: false },
+    { image: 'crates_market', x: 5.4, z: -2.4, height: 0.9, castShadow: true },
     { image: 'sack_small', x: -5.6, z: 3.4, height: 0.8, occluder: true, blob: false },
   ],
 };
 
 const LIFT: SceneDef = {
-  floor: { image: 'stage/pier_planks.webp', width: 30, depth: 10, z: 0.45, repeat: [8, 2.5], color: '#e0d2c4' },
-  backdrop: DAY_SKY,
+  floor: { image: 'stage/pier_planks.webp', width: 30, depth: 10, z: 0.45, repeat: [8, 2.5], color: '#e8dcd0' },
+  backdrop: LIFT_SKY,
   walk: { minX: -6.6, maxX: 6.6, minZ: -2.2, maxZ: 2.5 },
-  cameraBounds: { minX: -3, maxX: 3 },
+  cameraBounds: { minX: -3.5, maxX: 3.5 },
   obstacles: [
-    { x: 3.4, z: -2.0, r: 0.75 },
+    { x: 3.0, z: -2.0, r: 0.75 },
     { x: -2.0, z: -2.0, r: 0.75 },
   ],
   set: buildLift,
   props: [
+    // 昇降籠と、トマの荷車（荷台に空の木箱）
+    { image: 'lift_cage', x: 3.0, z: -2.05, height: 3.0, castShadow: true },
+    { image: 'handcart', x: -2.0, z: -2.0, height: 1.1, castShadow: true },
     { image: 'rope_bundle_large', x: 5.4, z: -2.5, height: 0.7, castShadow: true },
-    { image: 'small_box_goods', x: -2.0, z: -2.0, y: 0.7, height: 0.45, blob: false },
     { image: 'sack_small', x: -4.6, z: -2.5, height: 0.6, castShadow: true },
     { image: 'grass_small', x: -6.4, z: -1.2, height: 0.5, sway: 0.05 },
     { image: 'grass_tall_A', x: 4.6, z: 3.5, height: 1.0, sway: 0.05, occluder: true, blob: false },
@@ -248,14 +240,13 @@ export const CASE02: CaseData = {
     { id: 'santhira', x: 11.8, z: -1.6, facing: -1, area: '広場' },
   ],
   // 証拠品＝尋問でつきつける物。推理メモ（clues）＝まとめるで使う物。どれも必ずどこかで使う（tests/case-data.test.ts で確認）
-  // 絵は仮（灯晶は小物の流用）。素材の発注表で差し替える
   evidence: [
-    { id: 'box_crystal', name: '画材箱の灯晶', desc: 'パレタの画材箱から出てきた灯晶。\n商会の前掛けに包まれていた。', image: 'props/crystal_small_cluster.webp' },
-    { id: 'floor_crystal', name: '台の下の灯晶', desc: 'トマが「台の下で拾った」と持ってきた灯晶。\nガラスの中に光を宿す芯がある。芯は灯晶院の職人の型でしか作れない（ルオー談）。', image: 'props/crystal_small_cluster.webp' },
-    { id: 'painting', name: 'パレタの絵', desc: '鐘ひとつの雲市場を、帳場の露台から描いた絵。\n鐘楼が鳴り、市場灯はまだ灯っている。', image: 'props/notice_board.webp' },
-    { id: 'letter', name: '恋文', desc: 'フェディエルとサンチラが拾った、差出人の無い手紙。\n『次の荷は鐘ふたつ　昇降籠の下にて』。苦い花の香りがする。', image: 'props/sign_hanging_small.webp' },
-    { id: 'cart_ledger', name: '荷車の貸し出し帳', desc: '商会の荷車の貸し出し帳。\nトマが「鐘ふたつ」に一台借りている。', image: 'props/small_box_goods.webp' },
-    { id: 'seal', name: '封蝋のかけら', desc: '恋文の封に使われていた封蝋。紋は灯晶院のもの。\n紋の端が少し欠けている。', image: 'props/evidence_ribbon.webp' },
+    { id: 'box_crystal', name: '画材箱の灯晶', desc: 'パレタの画材箱から出てきた灯晶。\n商会の前掛けに包まれていた。', image: 'props/evidence_box_crystal.webp' },
+    { id: 'floor_crystal', name: '台の下の灯晶', desc: 'トマが「台の下で拾った」と持ってきた灯晶。\nガラスの中に光を宿す芯がある。芯は灯晶院の職人の型でしか作れない（ルオー談）。', image: 'props/evidence_floor_crystal.webp' },
+    { id: 'painting', name: 'パレタの絵', desc: '鐘ひとつの雲市場を、帳場の露台から描いた絵。\n鐘楼が鳴り、市場灯はまだ灯っている。', image: 'props/evidence_painting.webp' },
+    { id: 'letter', name: '恋文', desc: 'フェディエルとサンチラが拾った、差出人の無い手紙。\n『次の荷は鐘ふたつ　昇降籠の下にて』。苦い花の香りがする。', image: 'props/evidence_letter.webp' },
+    { id: 'cart_ledger', name: '荷車の貸し出し帳', desc: '商会の荷車の貸し出し帳。\nトマが「鐘ふたつ」に一台借りている。', image: 'props/evidence_cart_ledger.webp' },
+    { id: 'seal', name: '封蝋のかけら', desc: '恋文の封に使われていた封蝋。紋は灯晶院のもの。\n紋の端が少し欠けている。', image: 'props/evidence_seal.webp' },
   ],
   clues: [
     { id: 'two_crystals', name: '二つの灯晶', desc: '消えた市場灯は一つ。なのに、灯晶が二つ出てきた。' },
@@ -268,14 +259,14 @@ export const CASE02: CaseData = {
     { id: 'to_toma', name: '手紙はトマ宛て', desc: '符丁の手紙は、鐘ふたつに荷車を借りた\nトマ宛ての取引。' },
   ],
   areas: [
-    { id: '広場', name: '市場の広場', scene: PLAZA, entry: { x: -4.4, z: 0.8, facing: 1 }, exits: [{ to: '帳場', x: -13.4, z: -0.2, radius: 0.9 }, { to: '乗り場', x: 13.4, z: -0.2, radius: 0.9 }] },
-    { id: '帳場', name: '商会の帳場', scene: OFFICE, entry: { x: 5.0, z: 0.4, facing: -1 }, exits: [{ to: '広場', x: 6.2, z: -0.2, radius: 0.9 }] },
-    { id: '乗り場', name: '昇降籠の乗り場', scene: LIFT, entry: { x: -5.0, z: 0.4, facing: 1 }, exits: [{ to: '広場', x: -6.2, z: -0.2, radius: 0.9 }] },
+    { id: '広場', name: '市場の広場', scene: PLAZA, look: 'day', entry: { x: -4.4, z: 0.8, facing: 1 }, exits: [{ to: '帳場', x: -13.4, z: -0.2, radius: 0.9 }, { to: '乗り場', x: 13.4, z: -0.2, radius: 0.9 }] },
+    { id: '帳場', name: '商会の帳場', scene: OFFICE, look: 'day', entry: { x: 5.0, z: 0.4, facing: -1 }, exits: [{ to: '広場', x: 6.2, z: -0.2, radius: 0.9 }] },
+    { id: '乗り場', name: '昇降籠の乗り場', scene: LIFT, look: 'day', entry: { x: -5.0, z: 0.4, facing: 1 }, exits: [{ to: '広場', x: -6.2, z: -0.2, radius: 0.9 }] },
   ],
   intro: S.INTRO,
   hotspots: [
     // 広場
-    { id: 'pedestal', label: '市場灯の台座', x: 0, z: -1.1, radius: 0.85, script: S.PEDESTAL, again: S.PEDESTAL_AGAIN, markHeight: 2.35, area: '広場' },
+    { id: 'pedestal', label: '市場灯の台座', x: 0, z: -1.1, radius: 0.85, script: S.PEDESTAL, again: S.PEDESTAL_AGAIN, markHeight: 2.85, area: '広場' },
     {
       id: 'tank',
       label: '空魚の水槽',
@@ -322,7 +313,7 @@ export const CASE02: CaseData = {
     },
     // 帳場
     { ...talk('siero', 'シェロカルテに話しかける', 3.6, -1.2, '帳場'), script: S.SIERO, again: S.SIERO_AGAIN },
-    { id: 'keyrack', label: '鍵掛け', x: -2.2, z: -2.0, radius: 0.85, script: S.KEYRACK, again: S.KEYRACK_AGAIN, markHeight: 2.0, area: '帳場' },
+    { id: 'keyrack', label: '鍵掛け', x: -2.2, z: -2.0, radius: 0.85, script: S.KEYRACK, again: S.KEYRACK_AGAIN, markHeight: 1.8, area: '帳場' },
     { id: 'desk', label: '帳場の机', x: 1.4, z: -1.3, radius: 0.9, script: S.DESK, again: S.DESK_AGAIN, markHeight: 1.3, area: '帳場' },
     {
       ...talk('luwoh', 'ルオーに話しかける', -0.6, -1.4, '帳場'),
@@ -330,7 +321,7 @@ export const CASE02: CaseData = {
       variants: [{ when: { flags: ['c2_done'] }, script: S.LUWOH_SEAL, again: S.LUWOH_SEAL_AGAIN }],
     },
     // 乗り場
-    { id: 'lift', label: '昇降籠', x: 3.4, z: -1.3, radius: 0.95, script: S.LIFT, again: S.LIFT_AGAIN, markHeight: 2.75, area: '乗り場' },
+    { id: 'lift', label: '昇降籠', x: 3.0, z: -1.3, radius: 0.95, script: S.LIFT, again: S.LIFT_AGAIN, markHeight: 3.3, area: '乗り場' },
     { id: 'cart', label: 'トマの荷車', x: -2.0, z: -1.3, radius: 0.9, script: S.CART, again: S.CART_AGAIN, markHeight: 1.3, area: '乗り場' },
     {
       ...talk('toma', 'トマに話しかける', 0.4, -1.4, '乗り場'),

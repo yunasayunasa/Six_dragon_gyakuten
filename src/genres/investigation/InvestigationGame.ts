@@ -82,6 +82,11 @@ export class InvestigationGame implements Mode {
     return this.area === null ? this.data.scene! : this.areaDef(this.area).scene;
   }
 
+  /** 捜査中の見た目（場所ごとに決められる。省略時は夕景） */
+  private get fieldLook(): string {
+    return (this.area !== null ? this.areaDef(this.area).look : undefined) ?? 'sunset';
+  }
+
   private areaDef(idOrName: string): AreaDef {
     const a = this.areas.find((x) => x.id === idOrName || x.name === idOrName);
     if (!a) throw new Error(`場所がありません: ${idOrName}`);
@@ -247,7 +252,7 @@ export class InvestigationGame implements Mode {
     }
     this.player.visible = true;
     this.showArea(to.id);
-    void st.setLook(to.look ?? 'sunset', 0.01);
+    void st.setLook(this.fieldLook, 0.01);
     this.followCamera();
     this.engine.rig.snap();
     this.log.push(`area:${to.id}`);
@@ -347,6 +352,7 @@ export class InvestigationGame implements Mode {
   /** はじめから（導入の台本から）。save を渡すと、そのセーブの捜査の場面から続ける */
   async start(save?: InvestigationSave): Promise<void> {
     if (save) this.restore(save);
+    void this.engine.stage.setLook(this.fieldLook, 0.01);
     this.followCamera();
     this.engine.rig.snap();
     if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
@@ -554,7 +560,7 @@ export class InvestigationGame implements Mode {
         this.log.push(`logic:${hit.flag}`);
         this.state.flags.add(hit.flag);
         this.engine.sound.play('reveal');
-        await this.engine.stage.setLook('sunset', 0.8);
+        await this.engine.stage.setLook(this.fieldLook, 0.8);
         await this.runScript(hit.script);
         break;
       }
@@ -562,7 +568,7 @@ export class InvestigationGame implements Mode {
       await this.runScript(L.miss);
       this.phase = 'script';
     }
-    await this.engine.stage.setLook('sunset', 0.6);
+    await this.engine.stage.setLook(this.fieldLook, 0.6);
     this.refreshGoal();
     // まとめた台本の中で尋問が始まり、事件が解決していることもある
     if (this.phase === 'script') this.beginExplore();
@@ -677,7 +683,7 @@ export class InvestigationGame implements Mode {
     // 成功の台本の中で事件が解決していれば、ここで終わり（台本の実行中に phase が変わる）
     if ((this.phase as Phase) === 'done') return;
     if (this.data.bgm?.field) this.engine.sound.setBgm(this.data.bgm.field);
-    await this.engine.stage.setLook('sunset', 0.8);
+    await this.engine.stage.setLook(this.fieldLook, 0.8);
     hud.bookButton.classList.remove('hidden');
     this.refreshGoal();
   }
