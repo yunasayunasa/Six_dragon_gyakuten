@@ -11,6 +11,12 @@
  *   node tools/voices.mjs design 名前 --pick N  ElevenLabs のキャラ：候補 N を保存してゲームで使う声にする
  *   node tools/voices.mjs generate [名前...]    セリフの声を作る。作っていない・文章や声が変わったセリフだけ作り直す
  *   node tools/voices.mjs generate --first      各キャラの最初のセリフだけ作る（声の確かめ用）
+ *   node tools/voices.mjs check [名前...] [--fix]  書き起こしで読み間違いを探す（--fix で作り直す）
+ *   node tools/voices.mjs release [名前...]     声を ElevenLabs から消して枠を空ける（名前を省くと KEEP_VOICES 以外ぜんぶ）
+ *
+ * ElevenLabs の契約（Starter）は声を10個までしか保存できない。全話に出る KEEP_VOICES だけ残し、ほかは話の声を作り終えたら release で消す
+ * （ユーザー決定 2026-10-04）。2026-10-04 以降に作った声はシード値と試し文を記録しているので、消しても generate のときに同じ声を作り直す
+ * （完全に同じではないが、ユーザーが聞いて「同じでよい」と判断）。それより前に作った声は作り直せない。
  *
  * 声のIDとセリフごとの印は tools/voices.json に残る（コミットする）。
  * 音声は public/assets/voice/<話のid>/<印>.mp3、どのセリフに声があるかは同じフォルダの index.json。
@@ -77,7 +83,56 @@ const CAST_VOICES = {
       'Intellectual, with a slightly arrogant, self-assured tone.',
     style: 'calm, firm, self-assured',
   },
+  // ---------- 第二話から（2026-10-04） ----------
+  シェロカルテ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her twenties, native Japanese speaker, a cheerful and friendly merchant. Light, airy, sweet voice. ' +
+      'Speaks in a leisurely, drawn-out, relaxed way, stretching the ends of her sentences. Playful and good-natured.',
+    style: 'cheerful, leisurely, drawn-out',
+  },
+  // 役名（立ち絵はモブおじ）。調子がよく口が達者な商会の手代
+  トマ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his forties, native Japanese speaker, a glib, fast-talking shop clerk. Slightly raspy, ingratiating, street-smart tone, ' +
+      'a little shifty. Quick, chatty delivery.',
+    style: 'glib, chatty, ingratiating',
+  },
+  // 絵描きの少年。子供の声は作れないので、ワムと同じく少年役を演じる大人の女性（アニメの少年声）として作る
+  パレタ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her twenties, native Japanese speaker, who voices young boys in anime. Boyish, bright, earnest and innocent tone, ' +
+      'slightly husky, sincere and gentle.',
+    style: 'boyish, earnest, innocent',
+  },
+  サンチラ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker. Earnest, polite and naive, with a bright, clear voice. ' +
+      'Romantic and dreamy, gets excited easily. Speaks politely.',
+    style: 'earnest, polite, excited',
+  },
+  ルリア: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker, with a soft, sweet, gentle and kind youthful voice. ' +
+      'Bright and cheerful, speaks politely.',
+    style: 'gentle, bright, polite',
+  },
+  // ライバル（雲上議会の天司長）
+  サンダルフォン: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his twenties, native Japanese speaker. Serious, calm and reserved, a man of few words. ' +
+      'Low, cool, steady voice with quiet intensity and dignity.',
+    style: 'calm, serious, reserved',
+  },
 };
+
+/** 消さずに残す声（全話に出る六竜とライバル）。ほかの声は話の声を作り終えたら release で消す */
+const KEEP_VOICES = new Set(['ウィルナス', 'ワムデュス', 'フェディエル', 'ガレヲン', 'ルオー', 'サンダルフォン']);
 
 /** 表情 → その行の話し方 */
 const STYLE = {
@@ -140,6 +195,29 @@ const READINGS = [
   // 何度作り直しても冒頭を2回読んだ行（読点・短い熟語のあとで繰り返しやすい）
   ['光と、甘いもの……か。', 'ひかりと、あまいもの……か。'],
   ['否定。いいえ', '否定……いいえ'],
+  // 第二話（2026-10-04）
+  ['昇降籠', 'しょうこうかご'],
+  ['雲市場', 'くもいちば'],
+  ['雲上議会', 'うんじょうぎかい'],
+  ['天司長', 'てんしちょう'],
+  ['手代', 'てだい'],
+  ['符丁', 'ふちょう'],
+  ['封蝋', 'ふうろう'],
+  ['帳場', 'ちょうば'],
+  ['露台', 'ろだい'],
+  ['真贋', 'しんがん'],
+  ['画材箱', 'がざいばこ'],
+  ['鍵掛け', 'かぎかけ'],
+  ['詰め所', 'つめしょ'],
+  ['前掛け', 'まえかけ'],
+  ['逢い引き', 'あいびき'],
+  ['上の段', 'うえのだん'],
+  ['下の段', 'したのだん'],
+  // 第二話の書き起こしで、何度作っても繰り返し・読み間違いがあった行（2026-10-04）
+  ['苦い花の香り……か。ふむ', 'にがい、はなのかおり……か。ふむ'],
+  ['……いや、この2つは', 'いや……このふたつは'],
+  ['語るに落ちて', 'かたるにおちて'],
+  ['市場灯', 'いちばとう'],
 ];
 
 /** 声を作り終えた話（読み方の決まりを後から変えても作り直さない。トークン節約のためユーザー指示 2026-10-03） */
@@ -350,8 +428,10 @@ async function designEleven(name, v, state, pick) {
     if (!generated) throw new Error(`${name} の候補${pick}がありません（先に design ${name}）`);
     const old = state.voices[name]?.provider === 'elevenlabs' ? state.voices[name].id : null;
     const res = await elApi('POST', '/v1/text-to-voice', { voice_name: `six-dragon ${name}`, voice_description: v.description, generated_voice_id: generated });
-    state.voices[name] = { provider: 'elevenlabs', id: res.voice_id, description: v.description };
+    const recipe = state.candidateSeeds?.[name];
+    state.voices[name] = { provider: 'elevenlabs', id: res.voice_id, description: v.description, ...(recipe ? { seed: recipe.seed, text: recipe.text, pick } : {}) };
     delete state.candidates[name];
+    if (state.candidateSeeds) delete state.candidateSeeds[name];
     saveState(state);
     if (old && old !== res.voice_id) await elApi('DELETE', `/v1/voices/${old}`).catch((e) => console.warn(`古い声を消せませんでした（${e.message}）`));
     console.log(`${name}: 候補${pick}を保存 → ${res.voice_id}`);
@@ -363,11 +443,45 @@ async function designEleven(name, v, state, pick) {
     if (text.length >= 150) break;
     text += ttsText(l);
   }
-  const res = await elApi('POST', '/v1/text-to-voice/design?output_format=mp3_44100_128', { voice_description: v.description, model_id: EL_DESIGN_MODEL, text });
+  // シード値を残しておくと、同じ説明・同じ試し文で同じ声を作り直せる（声を消して枠を空けるため）
+  const seed = Math.floor(Math.random() * 2147483647);
+  const res = await elApi('POST', '/v1/text-to-voice/design?output_format=mp3_44100_128', { voice_description: v.description, model_id: EL_DESIGN_MODEL, text, seed });
   state.candidates = { ...state.candidates, [name]: res.previews.map((p) => p.generated_voice_id) };
+  state.candidateSeeds = { ...state.candidateSeeds, [name]: { seed, text } };
   saveState(state);
   res.previews.forEach((p, i) => fs.writeFileSync(path.join(SAMPLE_DIR, `${name}_候補${i + 1}.mp3`), Buffer.from(p.audio_base_64, 'base64')));
   console.log(`${name}: 候補 ${res.previews.length} つ（試聴: voice-samples/${name}_候補N.mp3、決めたら design ${name} --pick N）`);
+}
+
+/** 消した声（released）を、記録したシード値で作り直して保存する。作り直せない声はエラー */
+async function ensureVoice(name, state) {
+  const v = state.voices[name];
+  if (!v?.released) return;
+  if (v.seed === undefined) throw new Error(`${name} の声は消してあり、シード値の記録が無いので作り直せません（design ${name} からやり直す）`);
+  const res = await elApi('POST', '/v1/text-to-voice/design?output_format=mp3_44100_128', { voice_description: v.description, model_id: EL_DESIGN_MODEL, text: v.text, seed: v.seed });
+  const generated = res.previews[(v.pick ?? 1) - 1]?.generated_voice_id;
+  const saved = await elApi('POST', '/v1/text-to-voice', { voice_name: `six-dragon ${name}`, voice_description: v.description, generated_voice_id: generated });
+  state.voices[name] = { ...v, id: saved.voice_id, released: false };
+  saveState(state);
+  console.log(`${name}: 消してあった声をシード値から作り直した → ${saved.voice_id}`);
+}
+
+/** 声を ElevenLabs から消して枠を空ける（記録は残す）。名前を省くと KEEP_VOICES 以外ぜんぶ */
+async function release(args) {
+  const state = loadState();
+  const names = args.length ? args : Object.keys(state.voices).filter((n) => !KEEP_VOICES.has(n));
+  for (const name of names) {
+    const v = state.voices[name];
+    if (!v || v.released || v.provider !== 'elevenlabs') continue;
+    if (KEEP_VOICES.has(name) && !args.length) continue;
+    // すでに消えている声（前の実行の途中で止まったなど）も、消したことにする
+    await elApi('DELETE', `/v1/voices/${v.id}`).catch((e) => {
+      if (!/voice_not_found|voice_does_not_exist/.test(e.message)) throw e;
+    });
+    state.voices[name] = { ...v, released: true };
+    saveState(state);
+    console.log(`${name}: 消した${v.seed === undefined ? '（シード値の記録が無いので、もう作り直せない）' : '（シード値から作り直せる）'}`);
+  }
 }
 
 async function design(args) {
@@ -422,11 +536,19 @@ async function generate(names, retake = null) {
   const sigOf = (l) => {
     const v = CAST_VOICES[l.speaker];
     const model = providerOf(l.speaker) === 'elevenlabs' ? EL_MODEL : MODEL;
-    return fnv([model, state.voices[l.speaker].id, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l)].join('|'));
+    const sv = state.voices[l.speaker];
+    const voiceKey = sv.seed !== undefined ? `seed:${sv.seed}:${sv.pick ?? 1}` : sv.id;
+    return fnv([model, voiceKey, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l)].join('|'));
   };
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
-  const todo = lines.filter((l) => retake || state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l)));
+  // 消してあって作り直せない声（シード値の記録が無い）のセリフは、音声があれば読み方の辞書などが変わっても作り直さない
+  const lost = (l) => state.voices[l.speaker]?.released && state.voices[l.speaker].seed === undefined && fs.existsSync(fileOf(l));
+  // 声を作り終えた話（FROZEN_EPISODES）は、音声があれば作り直さない（同じ文のセリフが別の話にあって作り直すときも）
+  const frozen = (l) => FROZEN_EPISODES.has(l.episode) && fs.existsSync(fileOf(l));
+  const todo = lines.filter((l) => !lost(l) && !frozen(l) && (retake || state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l))));
   console.log(`作る: ${todo.length} 行 / ${lines.length} 行`);
+  // 消してあった声が要るなら、作り直してから
+  for (const n of new Set(todo.map((l) => l.speaker))) if (providerOf(n) === 'elevenlabs') await ensureVoice(n, state);
 
   let done = 0;
   let failed = 0;
@@ -510,7 +632,8 @@ async function check(args) {
   const only = textAt >= 0 ? args[textAt + 1] : null;
   const names = textAt >= 0 ? args.filter((a, i) => i !== textAt && i !== textAt + 1) : args;
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
-  let lines = (await collect()).filter((l) => (!names.length || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
+  // 声を作り終えた話（FROZEN_EPISODES）は確かめない（作り直さないため）
+  let lines = (await collect()).filter((l) => !FROZEN_EPISODES.has(l.episode) && (!names.length || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
   // --fix … 問題のあった行を作り直して確かめ直す（3回まで。声の作り直しは毎回少し違う読み方になる）
   for (let round = 0; ; round++) {
     console.log(`確かめる: ${lines.length} 行`);
@@ -556,9 +679,9 @@ async function checkLines(lines, fileOf) {
 }
 
 const [cmd, ...args] = process.argv.slice(2);
-const run = { list, design, generate, check }[cmd];
+const run = { list, design, generate, check, release }[cmd];
 if (!run) {
-  console.log('使い方: node tools/voices.mjs list | design [名前...] | generate [名前...] | check [名前...] [--text 文字列]');
+  console.log('使い方: node tools/voices.mjs list | design [名前...] | generate [名前...] | check [名前...] [--text 文字列] [--fix] | release [名前...]');
   process.exit(1);
 }
 await run(args);
