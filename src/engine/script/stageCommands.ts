@@ -153,6 +153,8 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     if (dir === '右' || dir === 'right') a.faceInstant(1);
     if (dir === '左' || dir === 'left') a.faceInstant(-1);
     a.visible = true;
+    // 見えている場所へ置くときは起こしておく（ほかの場所にいた人は、その場所をたたんだときに床へ倒れたままになっている）
+    if (!where || where === engine.stage.activeArea) a.paper.rotation.x = 0;
   });
   // @遺体 トマ … 死体の絵の代わりに、黒く染めて裂けた紙を床に倒して置く（すぐにその姿になる。暗転中に置く）
   d.register('corpse', (args) => need(args[0]).corpse());
