@@ -267,9 +267,10 @@ export class Hud {
     for (let i = 0; i < total; i++) el('div', `talisman${i >= left ? ' lost' : ''}`, this.talismanEl, '信');
   }
 
-  setPrompt(text: string | null): void {
+  /** 近くで決定するとできることの案内。badge は頭の一文字（調べる＝調、別の場所へ移る＝移） */
+  setPrompt(text: string | null, badge = '調'): void {
     this.promptEl.classList.toggle('hidden', !text);
-    if (text) this.promptEl.innerHTML = `<b>調</b>${escapeHtml(text)}`;
+    if (text) this.promptEl.innerHTML = `<b>${escapeHtml(badge)}</b>${escapeHtml(text)}`;
   }
 
   /** 決定入力を待つ（画面タップ・キー） */

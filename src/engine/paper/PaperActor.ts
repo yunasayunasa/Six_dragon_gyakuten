@@ -176,7 +176,7 @@ export class PaperActor extends THREE.Group {
    * 紙が破れる（論破の決め）：今の絵（やられの絵など）がギザギザに縦に裂け、左右へ倒れて床に落ちる。
    * そのあと元の表情の絵で、床からパタンと起き上がる（台本の続きで、この役者がまた話せるように）。onRise は起き上がる瞬間に呼ぶ
    */
-  async tear(tweens: Tweens, onRise?: () => void): Promise<void> {
+  async tear(tweens: Tweens, onRise?: () => void, stay = false): Promise<void> {
     const base = this.baseMesh;
     // 裂け目：上から下へ、少し斜めにギザギザ
     const n = 10;
@@ -227,6 +227,8 @@ export class PaperActor extends THREE.Group {
     await tweens.wait(0.25);
     // 床へぱたりと落ちる
     await tweens.run(0.3, (k) => halves.forEach((h) => (h.rotation.x = (-Math.PI / 2) * k)), Ease.inQuad, halves[1]);
+    // 倒れたまま残す（遺体の代わり）
+    if (stay) return;
     halves.forEach((h) => {
       this.paper.remove(h);
       const m = h.children[0] as THREE.Mesh;
@@ -242,6 +244,35 @@ export class PaperActor extends THREE.Group {
     await tweens.wait(0.3);
     onRise?.();
     await this.popIn(tweens);
+  }
+
+  /**
+   * 遺体の代わりの演出（死体の絵は用意しない方針）：やられの絵が墨を流したように黒く染まり、
+   * 紙が縦に裂けて床に倒れ、そのまま残る。onTear は裂ける瞬間に呼ぶ（効果音など）
+   */
+  async corpse(tweens: Tweens, onTear?: () => void): Promise<void> {
+    const pid = this.def.motions?.damage;
+    if (pid) this.showPose(pid);
+    this.visible = true;
+    this.paper.rotation.x = 0;
+    const mat = this.baseMesh.material as THREE.MeshLambertMaterial;
+    const c0 = mat.color.clone();
+    const e0 = mat.emissive.clone();
+    const ink = new THREE.Color('#1c1517');
+    const black = new THREE.Color(0, 0, 0);
+    await tweens.run(
+      0.9,
+      (k) => {
+        mat.color.lerpColors(c0, ink, k);
+        mat.emissive.lerpColors(e0, black, k);
+      },
+      Ease.inOutSine,
+      mat.color,
+    );
+    this.eyeMesh.visible = this.mouthMesh.visible = false;
+    await tweens.wait(0.35);
+    onTear?.();
+    await this.tear(tweens, undefined, true);
   }
 
   /** ポーズの絵を差し替える。変わったら true */

@@ -7,10 +7,10 @@ import type { PortraitData } from '../../engine/ui/Portrait';
 import type { CardItem } from '../../engine/ui/Hud';
 import { CaseState, Confrontation, evaluateLogic } from './CaseState';
 import { TestimonyPanel } from './TestimonyPanel';
-import type { CaseData, GameOptions, HotspotDef, InvestigationSave, TutorialKey } from './types';
+import type { AreaDef, CaseData, GameOptions, HotspotDef, InvestigationSave, SceneDef, TutorialKey } from './types';
 
 /** このジャンルが台本に追加する命令 */
-export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'solve'] as const;
+export const INVESTIGATION_COMMANDS = ['give', 'flag', 'light', 'confront', 'solve', 'area'] as const;
 
 type Phase = 'loading' | 'script' | 'explore' | 'done';
 
@@ -30,6 +30,13 @@ export class InvestigationGame implements Mode {
   private engine!: Engine;
   private markers = new Map<string, THREE.Sprite>();
   private near: HotspotDef | null = null;
+  /** 近くの出入り口（行き先の場所の id） */
+  private nearExit: AreaDef['exits'][number] | null = null;
+  private exitMarkers: Array<{ sprite: THREE.Sprite; exit: AreaDef['exits'][number] }> = [];
+  /** 場所（場所が1つの話では空） */
+  private areas: AreaDef[] = [];
+  /** いまいる場所の id（場所が1つの話では null） */
+  area: string | null = null;
   private autoCamera = true;
   private stepClock = 0;
   private testimony!: TestimonyPanel;
@@ -38,7 +45,7 @@ export class InvestigationGame implements Mode {
   /** 対決中の状態（自動確認用に公開） */
   confrontation: Confrontation | null = null;
   /** 頭上の印：まだ見ていない内容がある（！・話）／今の段階では調べ済み（赤い✓） */
-  private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), done: tagTexture('✓', '#b8322a') };
+  private tagTex = { look: tagTexture('！'), talk: tagTexture('話', '#3a2c6b'), done: tagTexture('✓', '#b8322a'), exit: tagTexture('移', '#2f6b4f') };
   /** テストや自動確認から進行を観察するためのログ */
   readonly log: string[] = [];
   /** この場で説明を聞き終えた場面（端末に残せない環境でも、同じ遊びの中では二度聞かない） */
@@ -70,21 +77,41 @@ export class InvestigationGame implements Mode {
     engine.hud.menuButton.addEventListener('click', () => void this.openMenu());
   }
 
+  /** いまいる場所の舞台 */
+  private get sceneDef(): SceneDef {
+    return this.area === null ? this.data.scene! : this.areaDef(this.area).scene;
+  }
+
+  private areaDef(idOrName: string): AreaDef {
+    const a = this.areas.find((x) => x.id === idOrName || x.name === idOrName);
+    if (!a) throw new Error(`場所がありません: ${idOrName}`);
+    return a;
+  }
+
   private async build(): Promise<void> {
     const { engine, data } = this;
     const st = engine.stage;
-    const sc = data.scene;
+    this.areas = data.areas ?? [];
+    const first = this.areas[0]?.id ?? null;
     const manifest = await engine.assets.getJSON<CastManifest>('cast/manifest.json');
-    await Promise.all([
-      st.setBackdrop(sc.backdrop.image, sc.backdrop),
-      st.addFloor(sc.floor.image, sc.floor),
-      ...sc.props.map((p) => st.addProp(p)),
-    ]);
-    await sc.set?.(engine);
+    // 場所ごとに舞台を組む（場所が1つの話は scene にそのまま）
+    const builds: Array<{ id: string | null; sc: SceneDef }> = this.areas.length ? this.areas.map((a) => ({ id: a.id, sc: a.scene })) : [{ id: null, sc: data.scene! }];
+    for (const { id, sc } of builds) {
+      st.buildArea(id);
+      await Promise.all([
+        st.setBackdrop(sc.backdrop.image, sc.backdrop),
+        st.addFloor(sc.floor.image, sc.floor),
+        ...sc.props.map((p) => st.addProp(p)),
+      ]);
+      await sc.set?.(engine);
+      st.addMotes(new THREE.Box3(new THREE.Vector3(-14, 0.2, -3), new THREE.Vector3(14, 4.5, 4)));
+    }
     const actors = await Promise.all(data.cast.map((def) => PaperActor.load(def, manifest, engine.assets)));
     for (const a of actors) {
       const pl = data.placement.find((p) => p.id === a.def.id);
+      st.buildArea(pl?.area ?? first);
       st.addActor(a, pl?.x ?? 0, pl?.z ?? 0, pl?.facing ?? 1);
+      if (pl?.hidden) a.visible = false;
     }
     this.player = st.actor(data.player);
     // 声（public/assets/voice/<話のid>/。無ければ声なし）。叫びは主人公の声
@@ -92,7 +119,6 @@ export class InvestigationGame implements Mode {
     engine.hud.shoutSpeaker = this.player.def.name;
     for (const a of actors) a.onPose = (who) => this.syncPortrait(who);
     engine.player = this.player;
-    engine.rig.bounds = sc.cameraBounds;
     for (const h of data.hotspots) {
       const mat = new THREE.SpriteMaterial({ map: h.actor ? this.tagTex.talk : this.tagTex.look, depthWrite: false, transparent: true, fog: false });
       const s = new THREE.Sprite(mat);
@@ -100,10 +126,24 @@ export class InvestigationGame implements Mode {
       const actor = h.actor ? st.actor(h.actor) : null;
       s.position.set(h.x, h.markHeight ?? (actor ? actor.def.height + 0.35 : 1.3), h.z);
       s.renderOrder = 5;
-      st.scene.add(s);
+      (first === null ? st.scene : st.area(h.area ?? first)).add(s);
       this.markers.set(h.id, s);
     }
-    st.addMotes(new THREE.Box3(new THREE.Vector3(-14, 0.2, -3), new THREE.Vector3(14, 4.5, 4)));
+    // 出入り口の印
+    for (const a of this.areas) {
+      for (const exit of a.exits) {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tagTex.exit, depthWrite: false, transparent: true, fog: false }));
+        s.scale.setScalar(0.42);
+        s.position.set(exit.x, exit.markHeight ?? 1.3, exit.z);
+        s.renderOrder = 5;
+        st.area(a.id).add(s);
+        this.exitMarkers.push({ sprite: s, exit });
+      }
+    }
+    if (first === null) {
+      st.buildArea(null);
+      engine.rig.bounds = data.scene!.cameraBounds;
+    } else this.showArea(first);
     engine.onFrame.add((dt) => this.animateMarkers(dt));
   }
 
@@ -161,8 +201,68 @@ export class InvestigationGame implements Mode {
       }, Ease.outCubic, light);
     });
     d.register('confront', (args) => this.runConfrontation(args[0]));
+    // @場所 名前 … その場所へ移る（舞台をたたんで組み直す）。@場所 名前 すぐ … 暗転中などに、すぐ切り替える
+    d.register('area', (args) => this.goTo(args[0], { instant: args[1] === 'すぐ' || args[1] === 'now' }));
     d.register('solve', () => this.solve());
     for (const c of INVESTIGATION_COMMANDS) if (!d.has(c)) throw new Error(`命令の登録漏れ: ${c}`);
+  }
+
+  // ---------- 場所 ----------
+  /** 見える場所をすぐに切り替える（カメラの範囲・見た目も合わせる） */
+  private showArea(id: string): void {
+    const a = this.areaDef(id);
+    this.area = a.id;
+    this.engine.stage.showArea(a.id);
+    this.engine.rig.bounds = a.scene.cameraBounds;
+    this.near = null;
+    this.nearExit = null;
+  }
+
+  /**
+   * 別の場所へ移る。紙の舞台を右からたたみ、行き先の舞台を左から組み立てる。
+   * 着く所は、行き先にある「元の場所へ戻る出入り口」の少し内側（無ければ行き先の entry）
+   */
+  async goTo(idOrName: string, opts: { instant?: boolean } = {}): Promise<void> {
+    const to = this.areaDef(idOrName);
+    const st = this.engine.stage;
+    const from = this.area;
+    // もうその場所にいれば何もしない（まとめるの台本などで「この場所で行う」と書くため）
+    if (from === to.id && !opts.instant) return;
+    this.engine.hud.setPrompt(null);
+    this.player.setWalking(0);
+    if (!opts.instant) {
+      this.engine.sound.play('paper');
+      await st.fold();
+    }
+    st.moveToArea(this.player, to.id);
+    const back = to.exits.find((e) => e.to === from);
+    if (back) {
+      // 出入り口から舞台の中ほどへ1歩入った所に立ち、中を向く
+      const inward = back.x > 0 ? -1 : 1;
+      this.player.position.set(back.x + inward * 1.1, 0, back.z);
+      this.player.faceInstant(inward);
+    } else {
+      this.player.position.set(to.entry.x, 0, to.entry.z);
+      this.player.faceInstant(to.entry.facing);
+    }
+    this.player.visible = true;
+    this.showArea(to.id);
+    void st.setLook(to.look ?? 'sunset', 0.01);
+    this.followCamera();
+    this.engine.rig.snap();
+    this.log.push(`area:${to.id}`);
+    if (!opts.instant) {
+      st.flattenAll();
+      this.engine.sound.play('rise');
+      await st.assemble();
+      this.engine.hud.toast(to.name);
+    }
+  }
+
+  /** 今いる場所にあって、条件を満たしている調べる所か */
+  private available(h: HotspotDef): boolean {
+    if (this.area !== null && (h.area ?? this.areas[0].id) !== this.area) return false;
+    return !h.when || this.state.check(h.when);
   }
 
   private findActor(name: string): PaperActor | null {
@@ -181,7 +281,8 @@ export class InvestigationGame implements Mode {
   private async say(speaker: string | null, expr: string | null, text: string): Promise<void> {
     const actor = speaker ? this.findActor(speaker) : null;
     if (actor && expr) actor.setExpression(expr, false, this.engine.tweens);
-    if (actor && this.autoCamera) {
+    // 別の場所にいる人の台詞（声だけ届く）は、カメラを動かさない
+    if (actor && this.autoCamera && this.engine.stage.isHere(actor)) {
       // 話し手と主人公が離れていなければ2人を収める
       if (actor !== this.player && actor.position.distanceTo(this.player.position) < 3.6) twoShot(this.engine.rig, this.player, actor);
       else actorShot(this.engine.rig, actor);
@@ -267,7 +368,8 @@ export class InvestigationGame implements Mode {
       flags: [...s.flags],
       seen: [...s.seen],
       talismans: s.talismans,
-      actors: [...this.engine.stage.actors.values()].map((a) => ({ id: a.def.id, x: a.position.x, z: a.position.z, facing: a.facing, visible: a.visible })),
+      actors: [...this.engine.stage.actors.values()].map((a) => ({ id: a.def.id, x: a.position.x, z: a.position.z, facing: a.facing, visible: a.visible, area: this.engine.stage.areaOf(a) ?? undefined })),
+      area: this.area ?? undefined,
     };
   }
 
@@ -284,7 +386,9 @@ export class InvestigationGame implements Mode {
       actor.position.set(a.x, 0, a.z);
       actor.faceInstant(a.facing);
       actor.visible = a.visible;
+      if (a.area && this.areas.some((x) => x.id === a.area)) this.engine.stage.moveToArea(actor, a.area);
     }
+    if (save.area && this.areas.some((x) => x.id === save.area)) this.showArea(save.area);
     this.log.push('restore');
   }
 
@@ -489,7 +593,7 @@ export class InvestigationGame implements Mode {
     if (bgm) this.engine.sound.setBgm(bgm);
     hud.setTalismans(max, c.talismans);
     await this.runScript(def.intro);
-    await this.versus(witness, def.title);
+    await this.versus(witness, def.title, def.label);
     for (;;) {
       // 証言パネルが画面下半分を使うので、証人は上寄りに映す
       this.engine.rig.shot(witness.position.clone().add(new THREE.Vector3(0, -0.15, 0)), new THREE.Vector3(0.3 * witness.facing, 1.15, 5.6), 30);
@@ -559,7 +663,7 @@ export class InvestigationGame implements Mode {
         this.state.talismans = c.talismans;
         hud.setTalismans(max, c.talismans);
         await this.runScript(def.intro);
-        await this.versus(witness, def.title);
+        await this.versus(witness, def.title, def.label);
         continue;
       }
       // 間違えるたびに、少しずつはっきりしたヒントを出す
@@ -579,12 +683,12 @@ export class InvestigationGame implements Mode {
   }
 
   /** 尋問の始まり：主人公と証人が向かい合う対峙のカットイン */
-  private versus(witness: PaperActor, title: string): Promise<void> {
+  private versus(witness: PaperActor, title: string, label = '尋問開始'): Promise<void> {
     return this.engine.hud.versus(
       { portrait: this.portraitOf(this.player), color: this.player.def.color },
       { portrait: this.portraitOf(witness), color: witness.def.color },
       title,
-      '尋問開始',
+      label,
       '◀▶で証言を切り替え、揺さぶるか、矛盾に証拠品をつきつけよう',
     );
   }
@@ -738,19 +842,33 @@ export class InvestigationGame implements Mode {
     p.setWalking(moving ? Math.min(1, Math.hypot(mv.x, mv.y) * 1.2) : 0);
     engine.stage.centerShadow(p.position.x);
 
-    // 近くの調べられる所
+    // 近くの調べられる所・出入り口
     let best: HotspotDef | null = null;
     let bestD = Infinity;
     for (const h of this.data.hotspots) {
+      if (!this.available(h)) continue;
       const d = Math.hypot(h.x - p.position.x, h.z - p.position.z);
       if (d < h.radius && d < bestD) {
         best = h;
         bestD = d;
       }
     }
-    if (best !== this.near) {
+    let exit: AreaDef['exits'][number] | null = null;
+    if (this.area !== null) {
+      for (const e of this.areaDef(this.area).exits) {
+        const d = Math.hypot(e.x - p.position.x, e.z - p.position.z);
+        if (d < e.radius && d < bestD) {
+          exit = e;
+          bestD = d;
+        }
+      }
+    }
+    if (exit) best = null;
+    if (best !== this.near || exit !== this.nearExit) {
       this.near = best;
-      engine.hud.setPrompt(best ? best.label : null);
+      this.nearExit = exit;
+      if (exit) engine.hud.setPrompt(`${this.areaDef(exit.to).name}へ`, '移');
+      else engine.hud.setPrompt(best ? best.label : null);
     }
     if (inp.consume('menu')) {
       void this.openBook();
@@ -760,6 +878,12 @@ export class InvestigationGame implements Mode {
       void this.runLogic();
       return;
     }
+    if (this.nearExit && inp.consume('confirm')) {
+      const e = this.nearExit;
+      this.nearExit = null;
+      void this.travel(e.to);
+      return;
+    }
     if (this.near && inp.consume('confirm')) {
       const h = this.near;
       this.near = null;
@@ -767,17 +891,26 @@ export class InvestigationGame implements Mode {
     }
   }
 
+  /** 出入り口から別の場所へ（探索中） */
+  private async travel(to: string): Promise<void> {
+    this.phase = 'script';
+    this.engine.hud.showTouch(false);
+    this.engine.sound.play('select');
+    await this.goTo(to);
+    this.beginExplore();
+  }
+
   /** 足音に合わせて足元が反応する：ふだんは小さな土ぼこり、水たまりでは水しぶき */
   private footstep(engine: Engine): void {
     const p = this.player.position;
     const at = new THREE.Vector3(p.x, 0.05, p.z);
-    const wet = this.data.scene.wet?.some((w) => Math.hypot(w.x - p.x, w.z - p.z) < w.r);
+    const wet = this.sceneDef.wet?.some((w) => Math.hypot(w.x - p.x, w.z - p.z) < w.r);
     if (wet) engine.stage.spray.emit(at, { count: 16, color: '#eef8ff', spread: 1.1, up: 2, gravity: 7, size: 0.1, life: 0.6 });
     else engine.stage.spray.emit(at, { count: 3, color: '#c9a582', spread: 0.35, up: 0.35, gravity: 0.6, size: 0.1, life: 0.6 });
   }
 
   private resolveCollision(x: number, z: number): THREE.Vector2 {
-    const w = this.data.scene.walk;
+    const w = this.sceneDef.walk;
     const v = new THREE.Vector2(THREE.MathUtils.clamp(x, w.minX, w.maxX), THREE.MathUtils.clamp(z, w.minZ, w.maxZ));
     const push = (cx: number, cz: number, r: number) => {
       const dx = v.x - cx;
@@ -789,8 +922,9 @@ export class InvestigationGame implements Mode {
         v.y = cz + (dz / d) * min;
       }
     };
-    for (const o of this.data.scene.obstacles) push(o.x, o.z, o.r);
-    for (const a of this.engine.stage.actors.values()) if (a !== this.player && a.visible) push(a.position.x, a.position.z, 0.32);
+    for (const o of this.sceneDef.obstacles) push(o.x, o.z, o.r);
+    const st = this.engine.stage;
+    for (const a of st.actors.values()) if (a !== this.player && a.visible && st.isHere(a)) push(a.position.x, a.position.z, 0.32);
     return v;
   }
 
@@ -812,7 +946,12 @@ export class InvestigationGame implements Mode {
       m.position.y = base + (done ? 0 : Math.abs(Math.sin(this.markerTime * 3 + h.x)) * 0.1);
       const isNear = this.near === h && this.phase === 'explore';
       m.scale.setScalar(isNear ? 0.52 : done ? 0.3 : 0.44);
-      m.visible = this.phase === 'explore';
+      m.visible = this.phase === 'explore' && this.available(h);
+    }
+    for (const { sprite, exit } of this.exitMarkers) {
+      sprite.position.y = (exit.markHeight ?? 1.3) + Math.sin(this.markerTime * 2 + exit.x) * 0.05;
+      sprite.scale.setScalar(this.nearExit === exit && this.phase === 'explore' ? 0.52 : 0.4);
+      sprite.visible = this.phase === 'explore';
     }
   }
 }

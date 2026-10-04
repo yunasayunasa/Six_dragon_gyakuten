@@ -34,6 +34,10 @@ export interface HotspotDef {
   variants?: Array<{ when: Condition; script: string; again?: string }>;
   /** マークを出す高さ */
   markHeight?: number;
+  /** 置く場所（AreaDef の id。場所を使わない話では書かない） */
+  area?: string;
+  /** この条件のときだけ調べられる（人が別の場所へ移ったあとなど） */
+  when?: Condition;
 }
 
 /** 「証拠を持っている」「記録がある」などの条件 */
@@ -58,6 +62,8 @@ export interface StatementDef {
 export interface ConfrontationDef {
   witness: string;
   title: string;
+  /** 対峙のカットインの見出し（省略時「尋問開始」。ライバルと推理をぶつけ合うときは「推理対決」） */
+  label?: string;
   /** この尋問だけ曲を変える（Sound.defineBgm で登録した名前）。犯人を追い詰める最後の尋問など */
   bgm?: string;
   intro: string;
@@ -103,16 +109,33 @@ export interface SceneDef {
   set?: (engine: Engine) => Promise<void> | void;
 }
 
+/** 場所（複数の場所を行き来する話で使う）。場所ごとに舞台と出入り口を持つ */
+export interface AreaDef {
+  id: string;
+  /** 表示名（移動の案内に出る） */
+  name: string;
+  scene: SceneDef;
+  /** 台本の `@場所` で来たときに主人公が立つ所 */
+  entry: { x: number; z: number; facing: 1 | -1 };
+  /** 出入り口：近づいて決定すると、別の場所へ移る。着くのは行き先の、ここへ戻る出入り口の前 */
+  exits: Array<{ to: string; x: number; z: number; radius: number; markHeight?: number }>;
+  /** この場所に来たときの見た目（Look の名前。省略時は sunset） */
+  look?: string;
+}
+
 export interface CaseData {
   id: string;
   chapter: string;
   title: string;
   cast: ActorDef[];
   player: string;
-  placement: Array<{ id: string; x: number; z: number; facing: 1 | -1 }>;
+  /** 最初の立ち位置。area は置く場所（省略時は最初の場所）、hidden は台本の `@登場` まで隠しておく */
+  placement: Array<{ id: string; x: number; z: number; facing: 1 | -1; area?: string; hidden?: boolean }>;
   evidence: EvidenceDef[];
   clues: ClueDef[];
-  scene: SceneDef;
+  /** 舞台（場所が1つの話）。複数の場所を行き来する話は、代わりに areas を書く（最初の場所から始まる） */
+  scene?: SceneDef;
+  areas?: AreaDef[];
   intro: string;
   hotspots: HotspotDef[];
   /** 目的表示（条件を満たす最初のものを表示） */
@@ -160,5 +183,7 @@ export interface InvestigationSave {
   flags: string[];
   seen: string[];
   talismans: number;
-  actors: Array<{ id: string; x: number; z: number; facing: 1 | -1; visible: boolean }>;
+  actors: Array<{ id: string; x: number; z: number; facing: 1 | -1; visible: boolean; area?: string }>;
+  /** 主人公がいた場所 */
+  area?: string;
 }

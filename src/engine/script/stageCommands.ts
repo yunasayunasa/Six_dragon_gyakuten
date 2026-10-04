@@ -96,7 +96,8 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
       // 役者でなければ舞台の名前付きの物を映す
       const obj = engine.stage.named.get(target);
       if (!obj) throw new Error(`カメラの対象が見つかりません: ${target}`);
-      const p = obj.getWorldPosition(new THREE.Vector3());
+      // 足元に原点がある物（水槽など）は userData.camY の高さを映す
+      const p = obj.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, Number(obj.userData.camY ?? 0), 0));
       engine.rig.shot(p, new THREE.Vector3(0, 0.6, 6), 30);
       return;
     }
@@ -136,8 +137,27 @@ export function registerStageCommands(d: Director, ctx: StageCommandContext): vo
     a.setWalking(0);
   });
   d.register('pop', async (args) => {
+    const a = need(args[0]);
+    // 場所を行き来する話では、今見えている場所に出てくる
+    if (engine.stage.activeArea) engine.stage.moveToArea(a, engine.stage.activeArea);
     engine.sound.play('paper');
-    await need(args[0]).popIn(engine.tweens);
+    await a.popIn(engine.tweens);
+  });
+  // @配置 トマ 3 -1 左 乗り場 … 役者をその位置へすぐに置く（向き・場所は省略可。場所を省くと今見えている場所）
+  d.register('place', (args) => {
+    const a = need(args[0]);
+    const [, x, z, dir, area] = args;
+    const where = area ?? engine.stage.activeArea;
+    if (where) engine.stage.moveToArea(a, where);
+    a.position.set(Number(x), 0, Number(z ?? a.position.z));
+    if (dir === '右' || dir === 'right') a.faceInstant(1);
+    if (dir === '左' || dir === 'left') a.faceInstant(-1);
+    a.visible = true;
+  });
+  // @遺体 トマ … 死体の絵の代わりに、やられの絵を黒く染めて紙を裂き、床に倒れたままにする
+  d.register('corpse', (args) => {
+    engine.hud.hideDialogue();
+    return need(args[0]).corpse(engine.tweens, () => engine.sound.play('tear'));
   });
   d.register('hide', async (args) => {
     engine.sound.play('paper');

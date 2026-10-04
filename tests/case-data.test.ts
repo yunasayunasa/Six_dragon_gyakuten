@@ -6,13 +6,24 @@ import { registerStageCommands } from '../src/engine/script/stageCommands';
 import { INVESTIGATION_COMMANDS } from '../src/genres/investigation/InvestigationGame';
 import { CaseState } from '../src/genres/investigation/CaseState';
 import { CASE01 } from '../src/game/case01/case';
+import { CASE02 } from '../src/game/case02/case';
 import type { Engine } from '../src/engine';
+import type { CaseData } from '../src/genres/investigation/types';
 
-/** 事件データの書き間違い（知らない命令・いない役者・無い表情・無い証拠）と、最後まで遊べるかを実行前に確かめる */
-const data = CASE01;
+/** 事件データの書き間違い（知らない命令・いない役者・無い表情・無い証拠・無い場所）と、最後まで遊べるかを実行前に確かめる */
 const manifest = JSON.parse(readFileSync('public/assets/cast/manifest.json', 'utf-8')) as Record<string, unknown>;
 
-function allScripts(): Array<[string, string]> {
+/** 舞台の名前付きの物（case.ts の舞台装置で st.named に登録しているもの） */
+const NAMED: Record<string, string[]> = {
+  case01: ['灯台柱', '空魚', '飛空艇', '飛空艇の着く所'],
+  case02: ['台座', '水槽', '昇降籠'],
+};
+
+for (const data of [CASE01, CASE02]) checkCase(data);
+
+function checkCase(data: CaseData): void {
+
+const allScripts = (): Array<[string, string]> => {
   const list: Array<[string, string]> = [
     ['intro', data.intro],
     ['logic.miss', data.logic.miss],
@@ -34,16 +45,16 @@ function allScripts(): Array<[string, string]> {
     });
   }
   return list;
-}
+};
 
 const names = new Map(data.cast.map((c) => [c.name, c]));
 const ids = new Map(data.cast.map((c) => [c.id, c]));
 const actorOf = (n: string) => names.get(n) ?? ids.get(n);
-/** 舞台の名前付きの物（case.ts の buildSet で st.named に登録しているもの） */
-const namedObjects = ['灯台柱', '空魚', '飛空艇', '飛空艇の着く所'];
+const namedObjects = NAMED[data.id];
+const areaIds = new Set((data.areas ?? []).flatMap((a) => [a.id, a.name]));
 const itemIds = new Set([...data.evidence.map((e) => e.id), ...data.clues.map((c) => c.id)]);
 
-describe('第一話のデータ検査', () => {
+describe(`${data.chapter.split('　')[0]}のデータ検査`, () => {
   const d = new Director({ say: async () => {} });
   registerStageCommands(d, { engine: {} as Engine, actor: () => null, resetCamera: () => {} });
   INVESTIGATION_COMMANDS.forEach((c) => d.register(c, () => {}));
@@ -67,7 +78,7 @@ describe('第一話のデータ検査', () => {
           }
           continue;
         }
-        if (['face', 'hop', 'pop', 'hide', 'move', 'attack', 'damage'].includes(c.name)) {
+        if (['face', 'hop', 'pop', 'hide', 'move', 'attack', 'damage', 'place', 'corpse', 'break'].includes(c.name)) {
           const a = actorOf(c.args[0]);
           expect(a, `${key} ${c.line}行目 役者 ${c.args[0]}`).toBeTruthy();
           if (c.name === 'face' && c.args[1]) expect(Object.keys(a!.expressions)).toContain(c.args[1]);
@@ -81,12 +92,20 @@ describe('第一話のデータ検査', () => {
         if (c.name === 'give') c.args.forEach((id) => expect(itemIds.has(id), `${key} 証拠 ${id}`).toBe(true));
         if (c.name === 'confront') expect(data.confrontations[c.args[0]], `${key} 尋問 ${c.args[0]}`).toBeTruthy();
         if (c.name === 'look') expect(['sunset', 'confront', 'dusk']).toContain(c.args[0]);
+        if (c.name === 'area') expect(areaIds.has(c.args[0]), `${key} 場所 ${c.args[0]}`).toBe(true);
+        if (c.name === 'place' && c.args[4]) expect(areaIds.has(c.args[4]), `${key} 場所 ${c.args[4]}`).toBe(true);
       }
     });
   }
 
   it('調べる場所の相手・尋問の証人・矛盾の証拠・揺さぶりの行き先が存在する', () => {
     for (const h of data.hotspots) if (h.actor) expect(ids.has(h.actor)).toBe(true);
+    // 場所を使う話では、調べる所・出入り口・最初の立ち位置の場所が存在する
+    if (data.areas) {
+      for (const h of data.hotspots) expect(h.area && areaIds.has(h.area), `調べる所 ${h.id} の場所`).toBe(true);
+      for (const a of data.areas) for (const e of a.exits) expect(areaIds.has(e.to), `${a.id} の出入り口 ${e.to}`).toBe(true);
+      for (const p of data.placement) if (p.area) expect(areaIds.has(p.area), `${p.id} の場所`).toBe(true);
+    }
     for (const [id, c] of Object.entries(data.confrontations)) {
       expect(ids.has(c.witness), id).toBe(true);
       const contradictions = c.statements.flatMap((s) => s.contradiction ?? []);
@@ -159,9 +178,11 @@ describe('第一話のデータ検査', () => {
         run(p.script);
         progressed = true;
       }
-      for (const h of data.hotspots) if (h.id !== avoid && visit(h)) progressed = true;
+      // 場所は出入り口でいつでも行き来できるので、場所は問わない。条件付きの所は条件を満たすときだけ
+      for (const h of data.hotspots) if (h.id !== avoid && (!h.when || s.check(h.when)) && visit(h)) progressed = true;
       // ほかに何もできないときだけ、後回しにした場所を調べる
-      if (!progressed && avoid) progressed = visit(data.hotspots.find((h) => h.id === avoid)!);
+      const later = data.hotspots.find((h) => h.id === avoid);
+      if (!progressed && later && (!later.when || s.check(later.when))) progressed = visit(later);
       if (!progressed) break;
     }
     return { solved, unready, s };
@@ -181,3 +202,4 @@ describe('第一話のデータ検査', () => {
     });
   }
 });
+}

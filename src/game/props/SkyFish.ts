@@ -156,10 +156,11 @@ void main() {
 const sparkVert = /* glsl */ `
 attribute float aSize;
 attribute float aAlpha;
+uniform float uScale;
 varying float vAlpha;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aSize * (300.0 / -mv.z);
+  gl_PointSize = aSize * uScale * (300.0 / -mv.z);
   vAlpha = aAlpha;
   gl_Position = projectionMatrix * mv;
 }`;
@@ -214,11 +215,17 @@ export class SkyFish extends THREE.Group {
   private time = 0;
   /** 寄ってきてからの時間（負なら、まだ呼ばれていない） */
   private elapsed = -1;
+  /** 群れの広がり（1＝ふつう。小さいほど中心に集まる） */
+  spread = 1;
+  /** 集まる先（gather で指定。毎フレーム少しずつ近づく） */
+  private goal: { center: THREE.Vector3; spread: number } | null = null;
 
   constructor(
     /** 群れが回る中心（灯晶の位置） */
     readonly center: THREE.Vector3,
     count = 18,
+    /** 光の粒の大きさの倍率（小さく縮めた群れ＝水槽の中などで使う） */
+    private pointScale = 1,
   ) {
     super();
     this.name = '空魚';
@@ -282,7 +289,7 @@ export class SkyFish extends THREE.Group {
       const p = new THREE.Points(
         g,
         new THREE.ShaderMaterial({
-          uniforms: { uColor: { value: new THREE.Color(color) } },
+          uniforms: { uColor: { value: new THREE.Color(color) }, uScale: { value: this.pointScale } },
           vertexShader: sparkVert,
           fragmentShader: sparkFrag,
           transparent: true,
@@ -308,11 +315,23 @@ export class SkyFish extends THREE.Group {
     }
   }
 
+  /** 昇ってくる途中を飛ばして、はじめから回る輪の上で泳がせる（水槽の中の群れなど） */
+  swimNow(): void {
+    this.visible = true;
+    this.elapsed = 100;
+  }
+
+  /** 群れの中心を to へ移し、広がりを spread にする（毎フレーム少しずつ近づく） */
+  gather(to: THREE.Vector3, spread: number): void {
+    this.goal = { center: to.clone(), spread };
+  }
+
   /** 灯晶のまわりを回る位置（t 秒の時点） */
   private orbitAt(f: Fish, t: number, out: THREE.Vector3): THREE.Vector3 {
     const a = f.angle + t * f.speed;
-    const r = f.radius * (1 + 0.12 * Math.sin(t * 0.7 + f.phase));
-    return out.set(this.center.x + Math.cos(a) * r, this.center.y + f.height + Math.sin(t * 1.3 + f.phase) * f.bob, this.center.z + Math.sin(a) * r * 0.8);
+    const r = f.radius * (1 + 0.12 * Math.sin(t * 0.7 + f.phase)) * this.spread;
+    const y = (f.height + Math.sin(t * 1.3 + f.phase) * f.bob) * this.spread;
+    return out.set(this.center.x + Math.cos(a) * r, this.center.y + y, this.center.z + Math.sin(a) * r * 0.8);
   }
 
   update(dt: number): void {
@@ -320,6 +339,11 @@ export class SkyFish extends THREE.Group {
     this.time += dt;
     this.elapsed += dt;
     this.uniforms.uTime.value = this.time;
+    if (this.goal) {
+      const k = 1 - Math.exp(-dt * 1.6);
+      this.center.lerp(this.goal.center, k);
+      this.spread += (this.goal.spread - this.spread) * k;
+    }
     const glowPos = this.glows.geometry.getAttribute('position') as THREE.BufferAttribute;
     const glowSize = this.glows.geometry.getAttribute('aSize') as THREE.BufferAttribute;
     const glowAlpha = this.glows.geometry.getAttribute('aAlpha') as THREE.BufferAttribute;

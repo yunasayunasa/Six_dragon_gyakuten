@@ -44,6 +44,11 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+export interface Raiser {
+  x: number;
+  set: (k: number) => void;
+}
+
 export interface PropDef extends PaperOptions {
   image: string;
   x: number;
@@ -67,8 +72,14 @@ export class Stage {
   readonly actors = new Map<string, PaperActor>();
   readonly occluders: PaperSprite[] = [];
   readonly named = new Map<string, THREE.Object3D>();
-  private backdrop: THREE.Mesh | null = null;
+  private backdrops: THREE.Mesh[] = [];
   private backdropMat: THREE.ShaderMaterial;
+  /** 場所ごとの舞台（複数の場所を行き来する話では、場所ごとに組み立てて、見える場所だけ出す） */
+  private areas = new Map<string, THREE.Group>();
+  /** いま組み立てている所（add 系はここへ足す）。場所を使わない話では scene そのもの */
+  private root: THREE.Object3D = this.scene;
+  /** いま見えている場所（場所を使わない話では null） */
+  activeArea: string | null = null;
   private motes: Motes[] = [];
   readonly burst: Burst;
   /** 飛び散る粒（土ぼこり・水しぶき・墨・火花） */
@@ -78,8 +89,8 @@ export class Stage {
   private look: LookState;
   wind = 0.3;
   private time = 0;
-  /** 開幕に床から起き上がる物（k: 0=倒れている 1=立っている） */
-  private raisers: Array<{ x: number; set: (k: number) => void }> = [];
+  /** 開幕に床から起き上がる物（k: 0=倒れている 1=立っている）。置いた所（場所 or scene）ごと。役者は今いる所で数える */
+  private raisers = new Map<THREE.Object3D, Raiser[]>();
 
   constructor(
     private assets: Assets,
@@ -129,21 +140,90 @@ export class Stage {
     this.applyLook();
   }
 
-  /** 遠景の一枚絵（空）を張る */
+  // ---------- 場所 ----------
+  /** 場所の入れ物（無ければ作る）。場所ごとに別の舞台を組み、見える場所だけ出す */
+  area(id: string): THREE.Group {
+    let g = this.areas.get(id);
+    if (!g) {
+      g = new THREE.Group();
+      g.name = `area:${id}`;
+      g.visible = false;
+      this.areas.set(id, g);
+      this.scene.add(g);
+    }
+    return g;
+  }
+
+  /** この場所を組み立てる（以降の add 系はこの場所に足す）。null で scene へ戻す */
+  buildArea(id: string | null): void {
+    this.root = id === null ? this.scene : this.area(id);
+  }
+
+  /** 見える場所を切り替える（すぐに。たたむ・組み立ての演出は呼ぶ側で） */
+  showArea(id: string): void {
+    this.activeArea = id;
+    for (const [k, g] of this.areas) g.visible = k === id;
+    this.root = this.area(id);
+  }
+
+  /** その物（役者など）が今いる場所の id。場所を使わない話では null */
+  areaOf(obj: THREE.Object3D): string | null {
+    for (const [k, g] of this.areas) if (obj.parent === g) return k;
+    return null;
+  }
+
+  /** 物（役者など）を別の場所へ移す */
+  moveToArea(obj: THREE.Object3D, id: string): void {
+    this.area(id).add(obj);
+  }
+
+  /** いま見えている所に置かれているか（場所を使わない話では常に true） */
+  isHere(obj: THREE.Object3D): boolean {
+    return this.activeArea === null || obj.parent === this.areas.get(this.activeArea);
+  }
+
+  /** 開幕の組み立て・場所を移るときに、床から起き上がる物を足す（いま組み立てている所に）。k: 0=倒れている 1=立っている */
+  addRaiser(r: Raiser): void {
+    let list = this.raisers.get(this.root);
+    if (!list) this.raisers.set(this.root, (list = []));
+    list.push(r);
+  }
+
+  /** いま見えている所の起き上がる物（置いた物＋そこにいる役者） */
+  private currentRaisers(): Raiser[] {
+    const here = this.activeArea === null ? this.scene : this.area(this.activeArea);
+    const list = [...(this.raisers.get(here) ?? [])];
+    for (const a of this.actors.values()) {
+      if (a.parent === here) list.push({ x: a.position.x, set: (k) => (a.paper.rotation.x = (-Math.PI / 2) * (1 - k)) });
+    }
+    return list;
+  }
+
+  /** いま組み立てている所（場所 or scene）へ物を足す。舞台装置を自作するときに使う */
+  add(...objs: THREE.Object3D[]): void {
+    this.root.add(...objs);
+  }
+
+  /** 遠景の一枚絵（空）を張る。場所ごとに別の絵を張れる（色合いは共通の Look に従う） */
   async setBackdrop(image: string | null, opts: { width: number; height: number; z: number; y: number }): Promise<void> {
     const geo = new THREE.PlaneGeometry(opts.width, opts.height);
-    const mesh = new THREE.Mesh(geo, this.backdropMat);
+    // 空の色などは全員で共有し、絵だけ場所ごとに持つ
+    const mat = this.backdrops.length === 0 ? this.backdropMat : this.backdropMat.clone();
+    if (mat !== this.backdropMat) {
+      mat.uniforms = { ...this.backdropMat.uniforms, tMap: { value: null }, uHasMap: { value: 0 } };
+    }
+    const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(0, opts.y, opts.z);
     mesh.renderOrder = -10;
     if (image) {
       const t = await this.assets.texture(image);
       t.wrapS = THREE.RepeatWrapping;
       t.needsUpdate = true;
-      this.backdropMat.uniforms.tMap.value = t;
-      this.backdropMat.uniforms.uHasMap.value = 1;
+      mat.uniforms.tMap.value = t;
+      mat.uniforms.uHasMap.value = 1;
     }
-    this.backdrop = mesh;
-    this.scene.add(mesh);
+    this.backdrops.push(mesh);
+    this.root.add(mesh);
   }
 
   /** 繰り返しテクスチャの床 */
@@ -158,7 +238,7 @@ export class Stage {
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(0, 0, opts.z);
     mesh.receiveShadow = true;
-    this.scene.add(mesh);
+    this.root.add(mesh);
     return mesh;
   }
 
@@ -169,7 +249,7 @@ export class Stage {
     mesh.castShadow = opts.cast ?? true;
     mesh.receiveShadow = true;
     if (opts.name) this.named.set(opts.name, mesh);
-    this.scene.add(mesh);
+    this.root.add(mesh);
     this.addGrower(mesh, pos[0], pos[1] - size[1] / 2, size[1]);
     return mesh;
   }
@@ -179,14 +259,14 @@ export class Stage {
     mesh.position.set(pos[0], pos[1] + height / 2, pos[2]);
     mesh.castShadow = cast;
     mesh.receiveShadow = true;
-    this.scene.add(mesh);
+    this.root.add(mesh);
     this.addGrower(mesh, pos[0], pos[1], height);
     return mesh;
   }
 
   /** 立体は床から伸びるように起き上がる */
   private addGrower(mesh: THREE.Mesh, x: number, bottom: number, height: number): void {
-    this.raisers.push({
+    this.addRaiser({
       x,
       set: (k) => {
         const s = Math.max(0.001, k);
@@ -201,11 +281,11 @@ export class Stage {
     const s = new PaperSprite(tex, def);
     s.position.set(def.x, def.y ?? 0, def.z);
     if (def.rotY) s.rotation.y = def.rotY;
-    this.scene.add(s);
+    this.root.add(s);
     this.sprites.push(s);
     if (def.occluder) this.occluders.push(s);
     if (def.id) this.named.set(def.id, s);
-    if (!def.flat) this.raisers.push({ x: def.x, set: (k) => (s.body.rotation.x = (-Math.PI / 2) * (1 - k)) });
+    if (!def.flat) this.addRaiser({ x: def.x, set: (k) => (s.body.rotation.x = (-Math.PI / 2) * (1 - k)) });
     // 影は主要な物だけ受ける（床・台座）。紙同士は受けない＝軽い
     return s;
   }
@@ -213,9 +293,8 @@ export class Stage {
   addActor(actor: PaperActor, x: number, z: number, facing: 1 | -1 = 1): PaperActor {
     actor.position.set(x, 0, z);
     actor.faceInstant(facing);
-    this.scene.add(actor);
+    this.root.add(actor);
     this.actors.set(actor.def.id, actor);
-    this.raisers.push({ x, set: (k) => (actor.paper.rotation.x = (-Math.PI / 2) * (1 - k)) });
     return actor;
   }
 
@@ -227,12 +306,12 @@ export class Stage {
 
   /** 舞台の紙・装置をすべて床に倒す（開幕の組み立て演出の準備） */
   flattenAll(): void {
-    for (const r of this.raisers) r.set(0);
+    for (const r of this.currentRaisers()) r.set(0);
   }
 
   /** 倒した物を左から順にパタパタと起こす（ペーパークラフトの舞台が組み上がる演出） */
   async assemble(onRaise?: (index: number) => void): Promise<void> {
-    const list = [...this.raisers].sort((a, b) => a.x - b.x);
+    const list = this.currentRaisers().sort((a, b) => a.x - b.x);
     await Promise.all(
       list.map(async (r, i) => {
         await this.tweens.wait(i * 0.035);
@@ -242,10 +321,21 @@ export class Stage {
     );
   }
 
+  /** 組み立ての逆：見えている所の紙・装置を右から順にパタパタと床へ倒す（場所を移るときの幕） */
+  async fold(): Promise<void> {
+    const list = this.currentRaisers().sort((a, b) => b.x - a.x);
+    await Promise.all(
+      list.map(async (r, i) => {
+        await this.tweens.wait(i * 0.02);
+        await this.tweens.run(0.3, (k) => r.set(1 - k), Ease.inQuad, r);
+      }),
+    );
+  }
+
   addMotes(box: THREE.Box3, color?: string): void {
     const m = new Motes(this.quality.particles, box, color);
     this.motes.push(m);
-    this.scene.add(m);
+    this.root.add(m);
   }
 
   /** Lookを切り替える（seconds秒かけて補間） */
@@ -314,7 +404,7 @@ export class Stage {
     this.spray.update(dt);
     this.confetti.update(dt);
     if (player) this.updateOcclusion(camera, player);
-    if (this.backdrop) this.backdrop.position.x = camera.position.x * 0.85; // 遠景はほぼ動かない＝奥行き感
+    for (const b of this.backdrops) b.position.x = camera.position.x * 0.85; // 遠景はほぼ動かない＝奥行き感
   }
 
   /** 主人公の手前にある前景物を透かす */
