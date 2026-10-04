@@ -3,7 +3,7 @@ import { Engine } from './engine';
 import type { EpisodeCard, PanelAction } from './engine/ui/Panels';
 import { InvestigationGame } from './genres/investigation/InvestigationGame';
 import type { InvestigationSave } from './genres/investigation/types';
-import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE, TITLE_BGM } from './game/episodes';
+import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE, TITLE_BGM, TITLE_CALL } from './game/episodes';
 import { TUTORIALS } from './game/tutorials';
 
 /** 端末に残す記録の名前空間（設定・既読・セーブ・説明を見たか・解決した話） */
@@ -71,12 +71,35 @@ async function play(engine: Engine, episodeId: string, save?: InvestigationSave)
   await game.start(save);
 }
 
+/** タイトルコールを1回だけ流す。音が出せるようになる前（スマホの最初のタップ前）なら、出せるようになった時に流す */
+let titleCalled = false;
+function titleCall(engine: Engine): void {
+  const play = () => {
+    if (titleCalled || !engine.sound.ready) return false;
+    titleCalled = true;
+    engine.sound.playVoice(engine.assets.url(TITLE_CALL));
+    return true;
+  };
+  if (play()) return;
+  const later = () => {
+    // 音を有効にする処理（boot の unlock）のあとで鳴らす
+    setTimeout(() => {
+      if (!play()) return;
+      removeEventListener('pointerdown', later);
+      removeEventListener('keydown', later);
+    }, 0);
+  };
+  addEventListener('pointerdown', later);
+  addEventListener('keydown', later);
+}
+
 /** ホーム画面：つづきから・はじめから・話を選ぶ・設定 */
 async function home(engine: Engine): Promise<void> {
   const panels = engine.hud.panels;
   // スマホでは最初のタップで音が出せるようになってから鳴る（Sound.unlock）
   engine.sound.defineBgm('タイトル', engine.assets.url(TITLE_BGM.url), TITLE_BGM.volume);
   engine.sound.setBgm('タイトル');
+  titleCall(engine);
   for (;;) {
     const choice = await panels.home({
       title: GAME_TITLE,

@@ -179,6 +179,11 @@ export class Sound {
     if (this.voices.size > 24) this.voices.delete(this.voices.keys().next().value!);
   }
 
+  /** 音が出せるようになったか（スマホでは最初のタップのあと） */
+  get ready(): boolean {
+    return !!this.ctx;
+  }
+
   /** 声を鳴らす（前の声は止める） */
   playVoice(url: string): void {
     this.stopVoice();

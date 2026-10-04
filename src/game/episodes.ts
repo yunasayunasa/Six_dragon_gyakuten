@@ -7,6 +7,8 @@ export const GAME_SUBTITLE = '〜活劇奇譚〜';
 export const GAME_LOGO = 'ui/title_logo.webp';
 /** ホーム画面の曲（ユーザー提供のファンファーレ。音量はエンディング曲と聞こえる大きさをそろえた） */
 export const TITLE_BGM = { url: 'audio/fanfare.mp3', volume: 0.37 };
+/** ホーム画面のタイトルコール（PV のナレーター「活劇奇譚、逆転六竜！」。ユーザー希望 2026-10-04） */
+export const TITLE_CALL = 'audio/title_call.mp3';
 
 export interface Episode {
   id: string;
