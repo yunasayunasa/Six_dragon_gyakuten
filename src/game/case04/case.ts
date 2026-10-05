@@ -50,6 +50,17 @@ async function buildInside(engine: Engine): Promise<void> {
   backWall(engine, '#3a2a20');
 }
 
+/** ルオーを入れた独房の鉄格子（手前に立てて、中のルオーが格子越しに見えるようにする） */
+const LUWOH_CELL_X = 0;
+async function buildCorridor(engine: Engine): Promise<void> {
+  await buildInside(engine);
+  const st = engine.stage;
+  const z = -1.3;
+  for (let x = LUWOH_CELL_X - 0.9; x <= LUWOH_CELL_X + 0.91; x += 0.225) st.addCylinder(0.025, 2.1, [x, 0, z], '#2e2a28', false);
+  st.addBlock([1.95, 0.08, 0.08], [LUWOH_CELL_X, 2.1, z], '#2e2a28', { cast: false });
+  st.addBlock([1.95, 0.06, 0.06], [LUWOH_CELL_X, 1.05, z], '#2e2a28', { cast: false });
+}
+
 /** 綱が結ばれている手すりの位置 */
 const ROPE_X = 6.0;
 
@@ -87,14 +98,18 @@ const CORRIDOR: SceneDef = {
   obstacles: [
     { x: 2.0, z: -2.3, r: 0.7 },
     { x: 4.4, z: -2.6, r: 0.4 },
+    // ルオーの独房の鉄格子
+    { x: LUWOH_CELL_X - 0.6, z: -1.5, r: 0.45 },
+    { x: LUWOH_CELL_X + 0.6, z: -1.5, r: 0.45 },
   ],
-  set: buildInside,
+  set: buildCorridor,
   props: [
     ...wall('corridor_wall'),
     { image: 'cell_bars', x: -2.8, z: -2.75, height: 2.6, blob: false },
+    { image: 'cell_bars', x: LUWOH_CELL_X, z: -2.75, height: 2.6, blob: false },
     { image: 'guard_desk', x: 2.0, z: -2.3, height: 1.1, castShadow: true },
     { image: 'key_cabinet', x: 4.4, z: -2.8, y: 0.9, height: 1.1, blob: false },
-    { image: 'hanging_lantern', x: 0.4, z: -2.8, y: 2.0, height: 0.6, blob: false, sway: 0.03 },
+    { image: 'hanging_lantern', x: 1.2, z: -2.8, y: 2.0, height: 0.6, blob: false, sway: 0.03 },
   ],
 };
 
@@ -185,7 +200,7 @@ export const CASE04: CaseData = {
   evidence: [
     { id: 'patrol_log', name: '見回りの記録', desc: '看守の夜の見回りの記録。\n「夜の鐘のあと　独房のカガチ、歌を口ずさむ　ゼタ」。', image: 'props/evidence_patrol_log.webp' },
     { id: 'key_record', name: '独房の鍵の記録', desc: '独房の鍵の貸し出し記録。「面会のあと、鍵の持ち出しなし」。\n鍵は看守長の目の前でしか持ち出せない。', image: 'props/evidence_key_record.webp' },
-    { id: 'rope', name: '換気窓の綱', desc: '甲板の手すりに結ばれ、船べりを越えて独房の外まで垂れていた綱。\n独房の換気窓は格子が外れ、人ひとりが通れる。', image: 'props/evidence_rope.webp' },
+    { id: 'rope', name: '換気窓の綱', desc: '甲板の手すりに結ばれ、船べりを越えて独房の換気窓の外まで\n垂れていた綱。太い綱の撚り目が、ねじれて残っている。', image: 'props/evidence_rope.webp' },
     { id: 'fur', name: '紫の毛', desc: '甲板の綱のささくれに絡んでいた、ふわふわとした紫の毛皮の毛。', image: 'props/evidence_fur.webp' },
     { id: 'cargo_ledger', name: '積荷の帳面', desc: '監獄船の積荷の帳面。最終便で「降りる者　ミオ」、\n「積む荷　灯晶院の荷　一箱」「乗る者　院の使い　一名」。', image: 'props/evidence_cargo_ledger.webp' },
     { id: 'visit_record', name: '面会の記録', desc: 'ゆうべの面会の記録。面会したのはルオーとミオ。\nルオーの欄の外に、ルオーの字で「子どもに試させた」。', image: 'props/evidence_visit_record.webp' },
@@ -194,13 +209,13 @@ export const CASE04: CaseData = {
   ],
   clues: [
     { id: 'storm', name: '嵐の夜', desc: '最終便のあとすぐ嵐になり、朝まで船に近づけた者も、\n降りられた者もいない。' },
-    { id: 'window', name: '換気窓', desc: '独房の換気窓は格子が外れ、人ひとりが通れる。\n窓の外は甲板の真下。' },
+    { id: 'window', name: '換気窓', desc: '独房の換気窓。格子に、濡れた綱でこすれた新しい跡。\n窓の真下に寝台が寄せられていた。窓の外は甲板の真下。' },
     { id: 'last_boat', name: '最終便', desc: '最終便でミオが降り、院の荷と院の使いが乗ってきた。\n院の使いは嵐で帰れず、ひと晩船にいた。' },
     { id: 'envoy_look', name: '院の使いの身なり', desc: '院の使いは、紫のふわふわの毛皮の襟をした男。' },
     { id: 'wam_memory', name: '旅の人の思い出', desc: 'ワムデュスに灯晶の外し方と古い釣りの結びを教えた旅の人は、\n首に紫のふわふわをつけていた。' },
     { id: 'kagachi_words', name: '「子どもに試させた」', desc: 'ルオーが面会でカガチから聞き、記録の欄外に書き残した言葉。\nルオーはそのことを話そうとしない。' },
-    { id: 'inside_rope', name: '綱で窓から入った', desc: '犯人はゆうべ船の中にいた者。\n甲板から綱を伝って、換気窓から独房へ入った。' },
-    { id: 'envoy', name: '犯人は院の使い', desc: '綱を伝えたのは、最終便で乗り、\n嵐で帰れなくなった院の使い。' },
+    { id: 'inside_rope', name: '窓の外から絞めた', desc: '犯人はゆうべ船の中にいた者。甲板から綱を下ろし、\n窓に寄ってきたカガチを、格子越しに綱の輪で絞めた。' },
+    { id: 'envoy', name: '犯人は院の使い', desc: '綱を下ろしたのは、最終便で乗り、\n嵐で帰れなくなった院の使い。' },
     { id: 'traveler', name: '院の使い＝旅の人', desc: '院の使いは、凪ノ桟橋でワムデュスに\n灯晶の外し方を教えた旅の人。' },
   ],
   areas: [
@@ -252,7 +267,7 @@ export const CASE04: CaseData = {
     // 面会室
     { id: 'visit_desk', label: '面会の記録', x: 0.2, z: -1.5, radius: 0.8, script: S.VISIT_DESK, again: S.VISIT_DESK_AGAIN, markHeight: 1.7, area: '面会室' },
     {
-      ...talk('luwoh', 'ルオーに話しかける', -1.6, -1.2, '面会室'),
+      ...talk('luwoh', '独房のルオーに話しかける', LUWOH_CELL_X, -0.9, '通路'),
       script: S.LUWOH,
       // 尋問③は、イルザの話を崩して、答えの証拠品（面会の記録）を持つまで始めない
       variants: [
@@ -287,9 +302,9 @@ export const CASE04: CaseData = {
       ...talk('belial', 'ベリアルに話しかける', 4.6, -1.2, '船倉'),
       script: S.BELIAL,
       again: S.BELIAL_AGAIN,
-      // 最後の尋問（④→⑤→つきつけ）は、答えの証拠品（紫の毛・古い結び目・ワムの浮き）を持つまで始めない
+      // 最後の尋問（④→つきつけ→⑤→つきつけ）は、答えの証拠品（紫の毛・積荷の帳面・古い結び目・ワムの浮き）を持つまで始めない
       variants: [
-        { when: { flags: ['l4', 'l5'], evidence: ['fur', 'old_knot', 'float'] }, script: S.BELIAL_CONFRONT },
+        { when: { flags: ['l4', 'l5'], evidence: ['fur', 'cargo_ledger', 'old_knot', 'float'] }, script: S.BELIAL_CONFRONT },
         { when: { flags: ['l4'] }, script: S.BELIAL_NOT_READY },
       ],
     },
@@ -302,8 +317,8 @@ export const CASE04: CaseData = {
     { when: { flags: ['l4'] }, text: '甲板の綱を、ワムデュスと見直す' },
     { when: { evidence: ['traveler', 'kagachi_words'] }, text: '「まとめる」で、ルオーが黙る理由を考える' },
     { when: { evidence: ['wam_memory', 'envoy_look'], notFlags: ['l3'] }, text: '「まとめる」で、院の使いの正体を考える' },
-    { when: { evidence: ['inside_rope', 'last_boat'], notFlags: ['l2'] }, text: '「まとめる」で、綱を伝えた者を考える' },
-    { when: { evidence: ['storm', 'window'], notFlags: ['l1'] }, text: '「まとめる」で、犯人の通り道を考える' },
+    { when: { evidence: ['inside_rope', 'last_boat'], notFlags: ['l2'] }, text: '「まとめる」で、綱を下ろした者を考える' },
+    { when: { evidence: ['storm', 'window'], notFlags: ['l1'] }, text: '「まとめる」で、犯人の手口を考える' },
     { when: { flags: ['c1_done'], evidence: ['key_record', 'rope'], notFlags: ['c3_done'] }, text: '面会室のサンダルフォンと、推理を戦わせる' },
     { when: { evidence: ['patrol_log'], notFlags: ['c1_done'] }, text: '独房の通路のイルザを問いただす' },
     { when: {}, text: '監獄船を調べて、皆の話を聞く' },
@@ -404,8 +419,9 @@ export const CASE04: CaseData = {
       intro: S.C6_INTRO,
       statements: [
         { text: 'あの綱を結んだのは、\n船乗りの誰かだろう。', press: S.C6_PRESS_1 },
-        { text: '船乗りなら、どんな結びでも\nお手のものさ。', press: S.C6_PRESS_2, reveals: 3 },
+        { text: '船乗りなら、どんな結びでも\nお手のものさ。', press: S.C6_PRESS_2, reveals: 4 },
         { text: '俺は書類を運ぶだけの、\nしがない使いだよ。', press: S.C6_PRESS_3 },
+        { text: 'だいいち、同じ院のカガチを\n俺が殺す理由がないだろう？', press: S.C6_PRESS_5 },
         { text: 'あの結びだって、船乗りの\nよく使うありふれた結びさ。', press: S.C6_PRESS_4, contradiction: ['old_knot'], hidden: true },
       ],
       success: S.C6_SUCCESS,
@@ -417,13 +433,23 @@ export const CASE04: CaseData = {
   challenges: {
     sandalphon_rope: {
       witness: 'sandalphon',
-      title: '鍵を使わずに入れた道',
-      question: '違うと言うなら……鍵を使わずに独房へ入れた道があるという証拠を出せ',
+      title: '鍵を使わずに届いた道',
+      question: '違うと言うなら……独房に入らずに、カガチに手が届いた道があるという証拠を出せ',
       answer: ['rope'],
       success: S.K1_SUCCESS,
       wrong: S.K1_WRONG,
       fail: S.C3_FAIL,
       hints: [S.K1_HINT_1, S.K1_HINT_2],
+    },
+    belial_ledger: {
+      witness: 'belial',
+      title: 'その毛が俺のだという証拠',
+      question: '紫の毛皮の襟は、院の使いの決まりの身なりさ。その毛が俺のだって、どうして言い切れる？',
+      answer: ['cargo_ledger'],
+      success: S.K3_SUCCESS,
+      wrong: S.K3_WRONG,
+      fail: S.C5_FAIL,
+      hints: [S.K3_HINT_1, S.K3_HINT_2],
     },
     belial_float: {
       witness: 'belial',

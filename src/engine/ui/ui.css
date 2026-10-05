@@ -433,7 +433,7 @@ html.rotated #hud {
 .vs-side.right { clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%); animation: vs-in-r .32s cubic-bezier(.2, .9, .3, 1) both; }
 @keyframes vs-in-l { from { transform: translateX(-70%); } }
 @keyframes vs-in-r { from { transform: translateX(70%); } }
-.vs-side .fig { position: absolute; bottom: -62%; height: 158%; filter: drop-shadow(0 0 calc(var(--u) * 0.5) #fffaf0) drop-shadow(calc(var(--u) * 1) calc(var(--u) * 1) 0 rgba(20, 8, 20, .5)); }
+.vs-side .fig { position: absolute; top: 5%; height: 158%; filter: drop-shadow(0 0 calc(var(--u) * 0.5) #fffaf0) drop-shadow(calc(var(--u) * 1) calc(var(--u) * 1) 0 rgba(20, 8, 20, .5)); }
 .vs-side.left .fig { left: calc(4% + var(--safe-l)); }
 .vs-side.right .fig { right: calc(4% + var(--safe-r)); }
 .vs-side .fig img { position: absolute; display: block; }

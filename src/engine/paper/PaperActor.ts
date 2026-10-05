@@ -356,6 +356,8 @@ export class PaperActor extends THREE.Group {
   /** 移動中の量(0..1)。紙の歩き揺れに使う */
   setWalking(amount: number): void {
     this.walkAmount = amount;
+    // 歩くときは基本の絵に戻す（指差し・驚きなどの絵のまま歩かせない）
+    if (amount > 0 && this.expression !== this.def.defaultExpression) this.setExpression(this.def.defaultExpression, true);
   }
 
   /** 頭のあたりのワールド座標（カメラの寄り・吹き出し用） */

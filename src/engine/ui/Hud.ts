@@ -499,6 +499,10 @@ export class Hud {
       const data = d.portrait;
       const fig = el('div', 'fig', p);
       fig.style.aspectRatio = `${data.width} / ${data.height}`;
+      // 横に広い絵は斜めの割れ目で切れないよう、画面の幅の4割に収まるまで縮める（頭の位置は上端からそろえる）
+      const fit = (v.clientWidth * 0.4) / (v.clientHeight * 1.58 * (data.width / data.height));
+      const size = Math.min(data.scale ?? 1, fit);
+      if (size < 1) fig.style.height = `${158 * size}%`;
       // 左は右向き、右は左向きにそろえて、向かい合わせる
       if (data.artFacing !== (s === 'left' ? 1 : -1)) fig.style.transform = 'scaleX(-1)';
       const img = (url: string, part?: { x: number; y: number; w: number; h: number }) => {
