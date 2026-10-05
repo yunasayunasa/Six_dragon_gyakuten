@@ -32,8 +32,8 @@ function backWall(engine: Engine, color: string): void {
 /** 甲板：嵐。曲もここで登録する */
 async function buildDeck(engine: Engine): Promise<void> {
   engine.sound.useFile('rise', engine.assets.url('audio/se_paper_rise.mp3'));
-  // 探索の曲は第二話・第三話と同じ
-  engine.sound.defineBgm('探索', engine.assets.url('audio/bgm_market.mp3'), 0.33);
+  // 探索の曲は第四話・第五話で共通の嵐の曲（ユーザー提供「Rain and Thunder」）
+  engine.sound.defineBgm('探索', engine.assets.url('audio/bgm_storm.mp3'), 0.35);
   engine.sound.defineBgm('尋問', technoBgm(0.8));
   engine.sound.defineBgm('追及', tenseBgm());
   engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'), 0.37);

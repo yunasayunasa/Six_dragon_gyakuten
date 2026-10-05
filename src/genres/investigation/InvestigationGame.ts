@@ -573,6 +573,8 @@ export class InvestigationGame implements Mode {
       const pick = await opened;
       if (!pick) break;
       const hit = evaluateLogic(this.data, pick[0], pick[1]);
+      const nameOf = (id: string) => clues.find((c) => c.id === id)?.name ?? '';
+      if (!hit || !this.state.flags.has(hit.flag)) await hud.logicLink(nameOf(pick[0]), nameOf(pick[1]), !!hit);
       if (hit && this.state.flags.has(hit.flag)) {
         await this.runScript(L.done);
         this.phase = 'script';
@@ -581,12 +583,10 @@ export class InvestigationGame implements Mode {
       if (hit) {
         this.log.push(`logic:${hit.flag}`);
         this.state.flags.add(hit.flag);
-        this.engine.sound.play('reveal');
         await this.engine.stage.setLook(this.fieldLook, 0.8);
         await this.runScript(hit.script);
         break;
       }
-      this.engine.sound.play('wrong');
       await this.runScript(L.miss);
       this.phase = 'script';
     }

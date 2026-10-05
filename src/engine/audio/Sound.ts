@@ -2,7 +2,7 @@
  * 効果音と音楽。効果音は素材が無くても鳴るように WebAudio で合成する。
  * スマホでは最初のタップまで音が出せないため unlock() を入力時に呼ぶ。
  */
-export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'shine' | 'reveal' | 'step' | 'impact' | 'crack' | 'glass' | 'tear';
+export type SE = 'blip' | 'select' | 'confirm' | 'cancel' | 'item' | 'shout' | 'wrong' | 'paper' | 'rise' | 'shine' | 'reveal' | 'step' | 'impact' | 'crack' | 'glass' | 'tear' | 'whoosh';
 
 /** コードで鳴らす BGM（テクノなど）。ゲームの AudioContext の、BGM 用の音量ノードへ出す */
 export interface BgmTrack {

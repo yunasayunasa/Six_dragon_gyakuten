@@ -36,8 +36,9 @@ function envMap(engine: Engine): THREE.Texture {
 async function buildCouncil(engine: Engine): Promise<void> {
   const st = engine.stage;
   engine.sound.useFile('rise', engine.assets.url('audio/se_paper_rise.mp3'));
-  // 探索の曲は第二話〜第四話と同じ
-  engine.sound.defineBgm('探索', engine.assets.url('audio/bgm_market.mp3'), 0.33);
+  // 探索の曲は第四話と同じ嵐の曲。院長との総決算はラスボスの曲（どちらもユーザー提供「Rain and Thunder」「The Final Stand」）
+  engine.sound.defineBgm('探索', engine.assets.url('audio/bgm_storm.mp3'), 0.35);
+  engine.sound.defineBgm('ラスボス', engine.assets.url('audio/bgm_final.mp3'), 0.42);
   engine.sound.defineBgm('尋問', technoBgm(0.8));
   engine.sound.defineBgm('追及', tenseBgm());
   engine.sound.defineBgm('エンディング', engine.assets.url('audio/ending.mp3'), 0.37);
@@ -338,6 +339,7 @@ export const CASE05: CaseData = {
     chief_fake: {
       witness: 'beelzebub',
       title: '偽灯晶など知らぬ',
+      bgm: 'ラスボス',
       intro: S.F1_INTRO,
       statements: [
         { text: '院は二十年このかた、\n本物の灯晶だけを配ってきた。', press: S.F1_PRESS_1 },
@@ -353,6 +355,7 @@ export const CASE05: CaseData = {
     chief_order: {
       witness: 'beelzebub',
       title: '職人殺しは部下の独断',
+      bgm: 'ラスボス',
       intro: S.F2_INTRO,
       statements: [
         { text: 'カガチもベリアルも、\n私の知らぬところで勝手に動いた。', press: S.F2_PRESS_1 },
@@ -368,7 +371,7 @@ export const CASE05: CaseData = {
     chief_past: {
       witness: 'beelzebub',
       title: '二十年前の罪はオロロジャイア',
-      bgm: '追及',
+      bgm: 'ラスボス',
       intro: S.F3_INTRO,
       statements: [
         { text: '二十年前、オロロジャイアは師を殺め、\n灯晶の作り方を盗まんとした。', press: S.F3_PRESS_1, reveals: 3 },
@@ -384,7 +387,7 @@ export const CASE05: CaseData = {
     chief_dark: {
       witness: 'beelzebub',
       title: '灯りという灯りが消えた',
-      bgm: '追及',
+      bgm: 'ラスボス',
       intro: S.F4_INTRO,
       statements: [
         { text: '空じゅうの灯りが消えたのは、\n二十年前と同じ災厄だ。', press: S.F4_PRESS_1 },

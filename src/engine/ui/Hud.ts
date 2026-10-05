@@ -730,6 +730,7 @@ export class Hud {
         nodes.forEach((node, id) => node.classList.toggle('sel', chosen.includes(id)));
         ok.toggleAttribute('disabled', chosen.length !== 2);
         this.sound.play('select');
+        this.sound.play('paper');
       });
       nodes.set(c.id, n);
     });
@@ -742,10 +743,46 @@ export class Hud {
       });
       ok.addEventListener('click', () => {
         if (chosen.length !== 2) return;
+        this.sound.play('confirm');
         wrap.remove();
         resolve([chosen[0], chosen[1]]);
       });
     });
+  }
+
+  /**
+   * まとめるで2つの手がかりをつなぐ演出。左右から2枚のメモが飛んできてぶつかり、
+   * つながれば光って「閃いた！」、つながらなければ弾かれる
+   */
+  async logicLink(a: string, b: string, ok: boolean): Promise<void> {
+    const w = el('div', `link ${ok ? 'ok' : 'ng'}`, this.root);
+    el('div', 'memo l washi', w, escapeHtml(a));
+    el('div', 'memo r washi', w, escapeHtml(b));
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, this.skip ? ms * 0.4 : ms));
+    this.sound.play('whoosh');
+    await wait(420);
+    this.sound.play('impact');
+    if (ok) {
+      el('div', 'flash', w);
+      el('div', 'rays', w);
+      // 火花（毎回ちがう向きに）
+      for (let i = 0; i < 18; i++) {
+        const p = el('i', 'spark', w);
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 18 + Math.random() * 26;
+        p.style.setProperty('--x', `${Math.cos(ang) * dist}vw`);
+        p.style.setProperty('--y', `${Math.sin(ang) * dist * 0.8}vh`);
+        p.style.animationDelay = `${Math.random() * 0.12}s`;
+      }
+      el('div', 'word', w, '閃いた！');
+      this.sound.play('shine');
+      await wait(1500);
+    } else {
+      el('div', 'word', w, '……つながらない');
+      this.sound.play('wrong');
+      await wait(900);
+    }
+    w.remove();
   }
 
   /** 毎フレーム呼ぶ。文字送りと決定入力を処理する。 */

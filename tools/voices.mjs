@@ -399,6 +399,9 @@ const READINGS = [
 // 第二話は、声を消したシェロカルテ・サンチラを第五話のために作り直す（2026-10-05 ユーザー決定）ので、第二話の声が変わらないよう凍結する
 const FROZEN_EPISODES = new Set(['case01', 'case02']);
 
+/** 第一話の声を写して使うセリフ（作り直さない・確かめない）。「刮目せよ！」はアクセントが変なので第一話の声を流用（2026-10-06 ユーザー指示） */
+const BORROWED_FROM_CASE01 = new Set(['刮目せよ！']);
+
 /** 画面の文章 → 読み上げる文章。l はセリフ（episode・speaker・text） */
 let directionCache;
 const directionOf = (l) => (directionCache ??= loadDirection())[l.key];
@@ -726,7 +729,7 @@ async function generate(names, retake = null) {
   // 消してあって作り直せない声（シード値の記録が無い）のセリフは、音声があれば読み方の辞書などが変わっても作り直さない
   const lost = (l) => state.voices[l.voice]?.released && state.voices[l.voice].seed === undefined && fs.existsSync(fileOf(l));
   // 声を作り終えた話（FROZEN_EPISODES）は、音声があれば作り直さない（同じ文のセリフが別の話にあって作り直すときも）
-  const frozen = (l) => FROZEN_EPISODES.has(l.episode) && fs.existsSync(fileOf(l));
+  const frozen = (l) => (FROZEN_EPISODES.has(l.episode) || BORROWED_FROM_CASE01.has(l.text)) && fs.existsSync(fileOf(l));
   const todo = lines.filter((l) => !lost(l) && !frozen(l) && (retake || state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l))));
   console.log(`作る: ${todo.length} 行 / ${lines.length} 行`);
   // 消してあった声が要るなら、作り直してから
@@ -815,7 +818,7 @@ async function check(args) {
   const names = textAt >= 0 ? args.filter((a, i) => i !== textAt && i !== textAt + 1) : args;
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
   // 声を作り終えた話（FROZEN_EPISODES）は確かめない（作り直さないため）
-  let lines = (await collect()).filter((l) => !FROZEN_EPISODES.has(l.episode) && (!names.length || names.includes(l.voice) || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
+  let lines = (await collect()).filter((l) => !FROZEN_EPISODES.has(l.episode) && !BORROWED_FROM_CASE01.has(l.text) && (!names.length || names.includes(l.voice) || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
   // --fix … 問題のあった行を作り直して確かめ直す（3回まで。声の作り直しは毎回少し違う読み方になる）
   for (let round = 0; ; round++) {
     console.log(`確かめる: ${lines.length} 行`);
