@@ -499,10 +499,12 @@ export class Hud {
       const data = d.portrait;
       const fig = el('div', 'fig', p);
       fig.style.aspectRatio = `${data.width} / ${data.height}`;
-      // 横に広い絵は斜めの割れ目で切れないよう、画面の幅の4割に収まるまで縮める（頭の位置は上端からそろえる）
-      const fit = (v.clientWidth * 0.4) / (v.clientHeight * 1.58 * (data.width / data.height));
-      const size = Math.min(data.scale ?? 1, fit);
-      if (size < 1) fig.style.height = `${158 * size}%`;
+      // 大きさは主人公とそろえる（portraitScale だけ効かせる）。横に広い絵は縮めずに画面の外側へずらし、
+      // 頭が斜めの割れ目で切れないようにする（はみ出したマントなどは画面の端で切れてよい）
+      const size = data.scale ?? 1;
+      if (size !== 1) fig.style.height = `${158 * size}%`;
+      const over = (v.clientHeight * 1.58 * size * (data.width / data.height)) / v.clientWidth - 0.46;
+      if (over > 0) fig.style.setProperty(s, `calc(${4 - over * 100}% + var(--safe-${s === 'left' ? 'l' : 'r'}))`);
       // 左は右向き、右は左向きにそろえて、向かい合わせる
       if (data.artFacing !== (s === 'left' ? 1 : -1)) fig.style.transform = 'scaleX(-1)';
       const img = (url: string, part?: { x: number; y: number; w: number; h: number }) => {
