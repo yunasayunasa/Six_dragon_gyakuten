@@ -26,6 +26,6 @@ export const EPISODES: Episode[] = [
   { id: 'case01', number: '第一話', title: '夕凪の空港と消えた灯晶', cover: 'ui/cover_case01.webp', load: () => import('./case01/case').then((m) => m.CASE01) },
   { id: 'case02', number: '第二話', title: '雲市場と二つの灯晶', cover: 'ui/cover_case02.webp', load: () => import('./case02/case').then((m) => m.CASE02) },
   { id: 'case03', number: '第三話', title: '霧の工房と鐘の鳴らない夜', cover: 'ui/cover_case03.webp', load: () => import('./case03/case').then((m) => m.CASE03) },
-  { id: 'case04', number: '第四話', title: '嵐の監獄船とルオーの罪' },
-  { id: 'case05', number: '第五話', title: '暁の空に、六竜の逆転' },
+  { id: 'case04', number: '第四話', title: '嵐の監獄船とルオーの罪', cover: 'ui/cover_case04.webp', load: () => import('./case04/case').then((m) => m.CASE04) },
+  { id: 'case05', number: '第五話', title: '暁の空に、六竜の逆転', cover: 'ui/cover_case05.webp', load: () => import('./case05/case').then((m) => m.CASE05) },
 ];

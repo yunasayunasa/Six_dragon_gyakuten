@@ -140,6 +140,8 @@ export interface AreaDef {
   exits: Array<{ to: string; x: number; z: number; radius: number; markHeight?: number }>;
   /** この場所に来たときの見た目（Look の名前。省略時は sunset） */
   look?: string;
+  /** この場所で操作する人（役者の id。省略時は CaseData.player）。持ち場ごとに主人公が替わる話で使う */
+  player?: string;
 }
 
 export interface CaseData {

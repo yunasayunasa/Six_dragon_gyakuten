@@ -7,7 +7,8 @@ const COLUMNS: Array<{ text: string; faint?: boolean }> = [
   { text: 'カガチ' },
   { text: '偽の灯晶を求む' },
   { text: '星祭り' },
-  { text: '最初の灯りは古き灯りの', faint: true },
+  { text: '最初の灯りは', faint: true },
+  { text: '古き灯りの下に眠る', faint: true },
 ];
 /** 1文字の大きさ（m） */
 const CHAR = 0.24;
@@ -35,7 +36,7 @@ function columnTexture(text: string, faint: boolean): THREE.Texture {
 /**
  * 工房の壁の、光で読む墨の伝言（第三話）。ふだんは何も見えない。
  * 台本の `@演出 墨 浮かぶ` で、守り灯（小さな本物の灯晶）が壁の前に掲げられ、金色の文字が右の行から順に浮かぶ。
- * 4行目（古い墨）はごく薄く、読めないまま残る（第五話で読み解く）。
+ * 4・5行目（古い墨）はごく薄く、読めないまま残る。第五話の `@演出 墨 続き`（院ができる前の古い灯晶の光）で、はっきり浮かぶ。
  */
 export class InkWall extends THREE.Group {
   private columns: THREE.Mesh[] = [];
@@ -79,13 +80,29 @@ export class InkWall extends THREE.Group {
   }
 
   async cue(signal: string): Promise<void> {
-    if (signal !== '浮かぶ') return;
+    if (signal !== '浮かぶ' && signal !== '続き') return;
     if (!this.columns.length) this.build();
     this.charm.visible = true;
     this.charm.ignite();
     this.light.intensity = 3.5;
     this.glow.scale.setScalar(0.9);
     const wait = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
+    if (signal === '続き') {
+      // 読めた半分はもう見えている。古い墨の行が、古い灯晶の光で金色に浮かぶ
+      this.light.intensity = 4.5;
+      COLUMNS.forEach((c, i) => {
+        if (!c.faint) (this.columns[i].material as THREE.MeshBasicMaterial).opacity = 1;
+      });
+      await wait(0.6);
+      for (let i = 0; i < COLUMNS.length; i++) {
+        if (!COLUMNS[i].faint) continue;
+        this.columns[i].material = new THREE.MeshBasicMaterial({ map: columnTexture(COLUMNS[i].text, false), transparent: true, opacity: 0, depthWrite: false, fog: false });
+        this.fading.push({ mesh: this.columns[i], to: 1, t: 0 });
+        await wait(0.7);
+      }
+      await wait(0.4);
+      return;
+    }
     await wait(0.5);
     for (let i = 0; i < this.columns.length; i++) {
       this.fading.push({ mesh: this.columns[i], to: COLUMNS[i].faint ? 0.14 : 1, t: 0 });

@@ -244,6 +244,8 @@ export class InvestigationGame implements Mode {
       this.engine.sound.play('paper');
       await st.fold();
     }
+    // 持ち場ごとに主人公が替わる話では、行き先の主人公に持ち替える（前の主人公はその場所に残る）
+    this.setPlayer(to.player ?? this.data.player);
     st.moveToArea(this.player, to.id);
     const back = to.exits.find((e) => e.to === from);
     if (back) {
@@ -267,6 +269,17 @@ export class InvestigationGame implements Mode {
       await st.assemble();
       this.engine.hud.toast(to.name);
     }
+  }
+
+  /** 操作する人を替える（カメラ・叫びの声・会話の立ち絵の左側もその人になる） */
+  private setPlayer(id: string): void {
+    const next = this.engine.stage.actor(id);
+    if (next === this.player) return;
+    this.player.setWalking(0);
+    this.player = next;
+    this.engine.player = next;
+    this.engine.hud.shoutSpeaker = next.def.name;
+    this.log.push(`player:${id}`);
   }
 
   /** 今いる場所にあって、条件を満たしている調べる所か */
@@ -400,7 +413,10 @@ export class InvestigationGame implements Mode {
       actor.visible = a.visible;
       if (a.area && this.areas.some((x) => x.id === a.area)) this.engine.stage.moveToArea(actor, a.area);
     }
-    if (save.area && this.areas.some((x) => x.id === save.area)) this.showArea(save.area);
+    if (save.area && this.areas.some((x) => x.id === save.area)) {
+      this.showArea(save.area);
+      this.setPlayer(this.areaDef(save.area).player ?? this.data.player);
+    }
     this.log.push('restore');
   }
 

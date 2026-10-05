@@ -2096,5 +2096,686 @@
   "cx": 277,
   "foot": 832,
   "parts": {}
+ },
+ "ilsa_01_normal": {
+  "width": 357,
+  "height": 891,
+  "cx": 174,
+  "foot": 880,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 131,
+    "y": 271,
+    "w": 167,
+    "h": 69
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 131,
+    "y": 271,
+    "w": 167,
+    "h": 69
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 131,
+    "y": 271,
+    "w": 167,
+    "h": 69
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 114,
+    "y": 340,
+    "w": 132,
+    "h": 132
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 114,
+    "y": 340,
+    "w": 132,
+    "h": 132
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 114,
+    "y": 340,
+    "w": 132,
+    "h": 132
+   }
+  }
+ },
+ "ilsa_attack_01_windup": {
+  "width": 463,
+  "height": 883,
+  "cx": 231,
+  "foot": 872,
+  "parts": {}
+ },
+ "ilsa_attack_02_hit": {
+  "width": 678,
+  "height": 883,
+  "cx": 254,
+  "foot": 873,
+  "parts": {}
+ },
+ "ilsa_attack_03_follow_through": {
+  "width": 605,
+  "height": 886,
+  "cx": 255,
+  "foot": 876,
+  "parts": {}
+ },
+ "ilsa_damage_01_hit": {
+  "width": 600,
+  "height": 888,
+  "cx": 323,
+  "foot": 877,
+  "parts": {}
+ },
+ "eustace_01_normal": {
+  "width": 423,
+  "height": 886,
+  "cx": 188,
+  "foot": 875,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 180,
+    "y": 282,
+    "w": 150,
+    "h": 63
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 180,
+    "y": 282,
+    "w": 150,
+    "h": 63
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 180,
+    "y": 282,
+    "w": 150,
+    "h": 63
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 232,
+    "y": 351,
+    "w": 29,
+    "h": 29
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 232,
+    "y": 351,
+    "w": 29,
+    "h": 29
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 232,
+    "y": 351,
+    "w": 29,
+    "h": 29
+   }
+  }
+ },
+ "eustace_attack_01_windup": {
+  "width": 480,
+  "height": 884,
+  "cx": 228,
+  "foot": 873,
+  "parts": {}
+ },
+ "eustace_attack_02_hit": {
+  "width": 646,
+  "height": 869,
+  "cx": 254,
+  "foot": 858,
+  "parts": {}
+ },
+ "eustace_attack_03_follow_through": {
+  "width": 611,
+  "height": 878,
+  "cx": 251,
+  "foot": 867,
+  "parts": {}
+ },
+ "eustace_damage_01_hit": {
+  "width": 534,
+  "height": 877,
+  "cx": 298,
+  "foot": 866,
+  "parts": {}
+ },
+ "zeta_01_normal": {
+  "width": 586,
+  "height": 888,
+  "cx": 293,
+  "foot": 877,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 233,
+    "y": 167,
+    "w": 184,
+    "h": 69
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 233,
+    "y": 167,
+    "w": 184,
+    "h": 69
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 233,
+    "y": 167,
+    "w": 184,
+    "h": 69
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 320,
+    "y": 236,
+    "w": 46,
+    "h": 46
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 320,
+    "y": 236,
+    "w": 46,
+    "h": 46
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 320,
+    "y": 236,
+    "w": 46,
+    "h": 46
+   }
+  }
+ },
+ "zeta_attack_01_windup": {
+  "width": 697,
+  "height": 867,
+  "cx": 332,
+  "foot": 856,
+  "parts": {}
+ },
+ "zeta_attack_02_hit": {
+  "width": 742,
+  "height": 878,
+  "cx": 346,
+  "foot": 867,
+  "parts": {}
+ },
+ "zeta_attack_03_follow_through": {
+  "width": 774,
+  "height": 872,
+  "cx": 365,
+  "foot": 861,
+  "parts": {}
+ },
+ "zeta_damage_01_hit": {
+  "width": 682,
+  "height": 878,
+  "cx": 341,
+  "foot": 868,
+  "parts": {}
+ },
+ "beatrix_01_normal": {
+  "width": 495,
+  "height": 894,
+  "cx": 257,
+  "foot": 883,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 232,
+    "y": 219,
+    "w": 167,
+    "h": 63
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 232,
+    "y": 219,
+    "w": 167,
+    "h": 63
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 232,
+    "y": 219,
+    "w": 167,
+    "h": 63
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 301,
+    "y": 288,
+    "w": 46,
+    "h": 29
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 301,
+    "y": 288,
+    "w": 46,
+    "h": 29
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 301,
+    "y": 288,
+    "w": 46,
+    "h": 29
+   }
+  }
+ },
+ "beatrix_attack_01_windup": {
+  "width": 613,
+  "height": 888,
+  "cx": 313,
+  "foot": 878,
+  "parts": {}
+ },
+ "beatrix_attack_02_hit": {
+  "width": 752,
+  "height": 887,
+  "cx": 325,
+  "foot": 876,
+  "parts": {}
+ },
+ "beatrix_attack_03_follow_through": {
+  "width": 748,
+  "height": 894,
+  "cx": 320,
+  "foot": 883,
+  "parts": {}
+ },
+ "beatrix_damage_01_hit": {
+  "width": 708,
+  "height": 840,
+  "cx": 372,
+  "foot": 829,
+  "parts": {}
+ },
+ "mio_01_normal": {
+  "width": 417,
+  "height": 850,
+  "cx": 206,
+  "foot": 839,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 211,
+    "y": 156,
+    "w": 150,
+    "h": 69
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 211,
+    "y": 156,
+    "w": 150,
+    "h": 69
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 211,
+    "y": 156,
+    "w": 150,
+    "h": 69
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 263,
+    "y": 225,
+    "w": 81,
+    "h": 63
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 263,
+    "y": 225,
+    "w": 81,
+    "h": 63
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 263,
+    "y": 225,
+    "w": 81,
+    "h": 63
+   }
+  }
+ },
+ "mio_attack_01_windup": {
+  "width": 533,
+  "height": 827,
+  "cx": 227,
+  "foot": 816,
+  "parts": {}
+ },
+ "mio_attack_02_hit": {
+  "width": 590,
+  "height": 829,
+  "cx": 235,
+  "foot": 819,
+  "parts": {}
+ },
+ "mio_attack_03_follow_through": {
+  "width": 564,
+  "height": 829,
+  "cx": 237,
+  "foot": 819,
+  "parts": {}
+ },
+ "mio_damage_01_hit": {
+  "width": 582,
+  "height": 834,
+  "cx": 305,
+  "foot": 823,
+  "parts": {}
+ },
+ "belial_01_normal": {
+  "width": 422,
+  "height": 871,
+  "cx": 206,
+  "foot": 860,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 251,
+    "y": 140,
+    "w": 63,
+    "h": 35
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 251,
+    "y": 140,
+    "w": 63,
+    "h": 35
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 251,
+    "y": 140,
+    "w": 63,
+    "h": 35
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 251,
+    "y": 175,
+    "w": 81,
+    "h": 63
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 251,
+    "y": 175,
+    "w": 81,
+    "h": 63
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 251,
+    "y": 175,
+    "w": 81,
+    "h": 63
+   }
+  }
+ },
+ "belial_attack_01_windup": {
+  "width": 500,
+  "height": 871,
+  "cx": 222,
+  "foot": 860,
+  "parts": {}
+ },
+ "belial_attack_02_hit": {
+  "width": 649,
+  "height": 873,
+  "cx": 244,
+  "foot": 862,
+  "parts": {}
+ },
+ "belial_attack_03_follow_through": {
+  "width": 570,
+  "height": 868,
+  "cx": 242,
+  "foot": 857,
+  "parts": {}
+ },
+ "belial_damage_01_hit": {
+  "width": 583,
+  "height": 890,
+  "cx": 261,
+  "foot": 879,
+  "parts": {}
+ },
+ "baishura_01_normal": {
+  "width": 688,
+  "height": 833,
+  "cx": 342,
+  "foot": 822,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 384,
+    "y": 142,
+    "w": 184,
+    "h": 98
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 384,
+    "y": 142,
+    "w": 184,
+    "h": 98
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 384,
+    "y": 142,
+    "w": 184,
+    "h": 98
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 402,
+    "y": 246,
+    "w": 132,
+    "h": 98
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 402,
+    "y": 246,
+    "w": 132,
+    "h": 98
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 402,
+    "y": 246,
+    "w": 132,
+    "h": 98
+   }
+  }
+ },
+ "baishura_attack_01_windup": {
+  "width": 779,
+  "height": 811,
+  "cx": 382,
+  "foot": 800,
+  "parts": {}
+ },
+ "baishura_attack_02_hit": {
+  "width": 870,
+  "height": 824,
+  "cx": 435,
+  "foot": 813,
+  "parts": {}
+ },
+ "baishura_attack_03_follow_through": {
+  "width": 863,
+  "height": 830,
+  "cx": 435,
+  "foot": 819,
+  "parts": {}
+ },
+ "baishura_damage_01_hit": {
+  "width": 765,
+  "height": 831,
+  "cx": 360,
+  "foot": 820,
+  "parts": {}
+ },
+ "beelzebub_01_normal": {
+  "width": 819,
+  "height": 973,
+  "cx": 405,
+  "foot": 963,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 519,
+    "y": 126,
+    "w": 150,
+    "h": 98
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 519,
+    "y": 126,
+    "w": 150,
+    "h": 98
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 519,
+    "y": 126,
+    "w": 150,
+    "h": 98
+   }
+  }
+ },
+ "beelzebub_attack_01_windup": {
+  "width": 824,
+  "height": 976,
+  "cx": 409,
+  "foot": 965,
+  "parts": {}
+ },
+ "beelzebub_attack_02_hit": {
+  "width": 832,
+  "height": 976,
+  "cx": 416,
+  "foot": 966,
+  "parts": {}
+ },
+ "beelzebub_attack_03_follow_through": {
+  "width": 829,
+  "height": 968,
+  "cx": 413,
+  "foot": 958,
+  "parts": {}
+ },
+ "beelzebub_damage_01_hit": {
+  "width": 827,
+  "height": 973,
+  "cx": 411,
+  "foot": 962,
+  "parts": {}
+ },
+ "siete_01_normal": {
+  "width": 438,
+  "height": 884,
+  "cx": 226,
+  "foot": 873,
+  "parts": {
+   "eye_open": {
+    "file": "eye_open.webp",
+    "x": 201,
+    "y": 253,
+    "w": 150,
+    "h": 63
+   },
+   "eye_half": {
+    "file": "eye_half.webp",
+    "x": 201,
+    "y": 253,
+    "w": 150,
+    "h": 63
+   },
+   "eye_closed": {
+    "file": "eye_closed.webp",
+    "x": 201,
+    "y": 253,
+    "w": 150,
+    "h": 63
+   },
+   "mouth_closed": {
+    "file": "mouth_closed.webp",
+    "x": 253,
+    "y": 323,
+    "w": 46,
+    "h": 46
+   },
+   "mouth_half": {
+    "file": "mouth_half.webp",
+    "x": 253,
+    "y": 323,
+    "w": 46,
+    "h": 46
+   },
+   "mouth_open": {
+    "file": "mouth_open.webp",
+    "x": 253,
+    "y": 323,
+    "w": 46,
+    "h": 46
+   }
+  }
+ },
+ "siete_attack_01_windup": {
+  "width": 506,
+  "height": 868,
+  "cx": 252,
+  "foot": 857,
+  "parts": {}
+ },
+ "siete_attack_02_hit": {
+  "width": 784,
+  "height": 876,
+  "cx": 346,
+  "foot": 865,
+  "parts": {}
+ },
+ "siete_attack_03_follow_through": {
+  "width": 692,
+  "height": 870,
+  "cx": 298,
+  "foot": 860,
+  "parts": {}
+ },
+ "siete_damage_01_hit": {
+  "width": 643,
+  "height": 872,
+  "cx": 342,
+  "foot": 861,
+  "parts": {}
  }
 }

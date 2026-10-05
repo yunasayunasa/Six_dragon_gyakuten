@@ -8,6 +8,8 @@ import { CaseState } from '../src/genres/investigation/CaseState';
 import { CASE01 } from '../src/game/case01/case';
 import { CASE02 } from '../src/game/case02/case';
 import { CASE03 } from '../src/game/case03/case';
+import { CASE04 } from '../src/game/case04/case';
+import { CASE05 } from '../src/game/case05/case';
 import type { Engine } from '../src/engine';
 import type { CaseData } from '../src/genres/investigation/types';
 import { LOOKS } from '../src/engine/stage/Look';
@@ -20,9 +22,11 @@ const NAMED: Record<string, string[]> = {
   case01: ['灯台柱', '空魚', '飛空艇', '飛空艇の着く所'],
   case02: ['台座', '水槽', '昇降籠'],
   case03: ['霧', '墨'],
+  case04: ['雨'],
+  case05: ['灯台柱', '空魚', '飛空艇', '飛空艇の着く所', '墨', '台座', '水槽'],
 };
 
-for (const data of [CASE01, CASE02, CASE03]) checkCase(data);
+for (const data of [CASE01, CASE02, CASE03, CASE04, CASE05]) checkCase(data);
 
 function checkCase(data: CaseData): void {
 

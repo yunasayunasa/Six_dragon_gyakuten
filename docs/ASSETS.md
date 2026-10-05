@@ -102,3 +102,15 @@ node tools/voices.mjs generate [名前...]   # 作っていない・変わった
 立ち絵（`tools/prepare_cast56.mjs`）: kagachi(35 ハーゼリーラ)・gen(15 ウーノ)・nio(18)・makira(2)・cagliostro(41)・clarice(42)・watchman(45 帝国兵。兜で目と口のパーツは無し)。
 追加（公開後の所見）: `props/evidence_perfume.webp`（カガチの香水。`case03-materials/add1/`）。カリオストロの目・口は自動の切り出しが髪まで含んでずれたので、
 `node tools/prepare_cast56.mjs <フォルダ> public/assets 41:cagliostro:eye=596,332,784,398:mouth=672,406,738,450` と手で四角を指定して作り直した。
+
+## 第四話・第五話の専用素材（2026-10-05、Codex の画像生成で制作。ユーザー外出中）
+
+依頼文と元の PNG は `コウセイ\asset-work\case04-materials\` と `case05-materials\`。変換は第三話と同じ（小物は `--despeckle`、証拠品は長辺512、壁・背景は `--plain --max 2048`、床は反転して2×2に並べてつなぎ目を消した）。
+第四話の Codex は25点を描き終えたところで利用上限に達し、報告書（REPORT.md）だけ書けなかった（絵はすべてそろっている）。
+
+| 話 | 出力 |
+|---|---|
+| 第四話 | 証拠品 `evidence_{patrol_log,key_record,rope,fur,cargo_ledger,visit_record,old_knot,float}`／小物 `ship_mast` `deck_crates` `barrels` `hanging_lantern` `cell_bars` `guard_desk` `key_cabinet` `visit_table` `hold_furnace` `inst_crate`／壁 `corridor_wall` `visit_wall` `hold_wall`（3枚並べる）／`stage/storm_sky` `deck_planks` `ship_floor`／`ui/cover_case04` |
+| 第五話 | 証拠品 `evidence_{burnt_order,delivery_note,pier_log,seal_match,first_crystal,pier_light}`（封蝋のかけらは第二話の `evidence_seal`）／小物 `council_podium` `council_bench`／壁 `council_wall`／`stage/night_sky` `council_floor`（白と紺の市松。目立つので床の色で沈めた）／`ui/cover_case05` |
+
+第五話の雲市場・霧の工房・凪ノ桟橋は、第二話・第三話・第一話の素材をそのまま使う。
