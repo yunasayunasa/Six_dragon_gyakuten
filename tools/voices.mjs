@@ -129,7 +129,116 @@ const CAST_VOICES = {
       'Low, cool, steady voice with quiet intensity and dignity.',
     style: 'calm, serious, reserved',
   },
+  // ---------- 第三話から（2026-10-05） ----------
+  // 役名（立ち絵はハーゼリーラ）。表向きは丁寧、追いつめられると本性が出る灯晶院の検品官
+  カガチ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her late twenties, native Japanese speaker, an elegant and refined official. Polite, graceful, ladylike voice ' +
+      'with a cold, calculating edge underneath. Composed and haughty, turns sharp and shrill when cornered.',
+    style: 'polite, elegant, cold',
+  },
+  // 夜警・院の番兵・院の見張りは同じ帝国兵の立ち絵なので、声も1つ（VOICE_ALIAS）。ユーザー決定 2026-10-05
+  帝国兵: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his thirties, native Japanese speaker, a soldier in armor. Stiff, formal military way of speaking. ' +
+      'Firm, gruff and slightly muffled voice, as if speaking from inside a helmet. Proud of following orders.',
+    style: 'stiff, formal, gruff',
+  },
+  ニオ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker, with a quiet, soft, calm and gentle voice. ' +
+      'Speaks in short sentences, mysterious and serene, slightly melancholic.',
+    style: 'quiet, calm, serene',
+  },
+  マキラ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker, a shy craftswoman. Soft, timid, gentle voice. ' +
+      'Speaks hesitantly with many pauses, not good at talking, but kind.',
+    style: 'shy, hesitant, soft',
+  },
+  カリオストロ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her twenties, native Japanese speaker, a genius alchemist. Bright, cute, sugary and theatrical voice, ' +
+      'playfully acting adorable, but with a knowing, confident and occasionally sharp undertone.',
+    style: 'cute, playful, confident',
+  },
+  クラリス: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker. Cheerful, energetic and casual voice, ' +
+      'bright and friendly, speaks in a laid-back, slangy way.',
+    style: 'cheerful, energetic, casual',
+  },
+  // ---------- 第四話から（2026-10-05） ----------
+  イルザ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her thirties, native Japanese speaker, a strict prison warden and drill instructor. ' +
+      'Commanding, sharp, low and stern voice. Short, curt, authoritative sentences.',
+    style: 'stern, commanding, curt',
+  },
+  ユーステス: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his twenties, native Japanese speaker, a taciturn guard. Low, quiet, cool and calm voice. Speaks very little, flat and terse.',
+    style: 'quiet, terse, cool',
+  },
+  ゼタ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her late teens to early twenties, native Japanese speaker. Confident, spirited, slightly bossy and proud voice, bright and clear.',
+    style: 'spirited, confident, bossy',
+  },
+  ベアトリクス: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker. Loud, rowdy, energetic tomboyish voice, excitable and boisterous.',
+    style: 'loud, excitable, boisterous',
+  },
+  // 役名（立ち絵はクラーバラ）。カガチを慕う検品見習い
+  ミオ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her early twenties, native Japanese speaker, a polite apprentice. Gentle, earnest, slightly nervous and fragile voice. Very polite.',
+    style: 'polite, earnest, nervous',
+  },
+  ベリアル: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his twenties, native Japanese speaker. Smooth, slick, charming yet mocking voice. ' +
+      'Playful, sly and teasing, never takes anything seriously, with a dangerous undertone.',
+    style: 'sly, mocking, smooth',
+  },
+  // ---------- 第五話から（2026-10-05） ----------
+  ベルゼバブ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his forties, native Japanese speaker, the arrogant head of a powerful order. Deep, cold, imposing and haughty voice. ' +
+      'Speaks with contempt and absolute authority; becomes raw and furious when cornered.',
+    style: 'arrogant, cold, imposing',
+  },
+  バイシュラ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese woman in her thirties, native Japanese speaker, the chairwoman of a council. Gentle, leisurely, polite and easygoing voice, ' +
+      'warm and a little playful, but with quiet authority.',
+    style: 'gentle, leisurely, polite',
+  },
+  シエテ: {
+    provider: 'elevenlabs',
+    description:
+      'A Japanese man in his thirties, native Japanese speaker. Relaxed, easygoing, cheerful and confident voice, always smiling, friendly and charismatic.',
+    style: 'relaxed, cheerful, easygoing',
+  },
 };
+
+/** 同じ声を使う役（話し手の名前 → CAST_VOICES の名前） */
+const VOICE_ALIAS = { 夜警: '帝国兵', 院の番兵: '帝国兵', 院の見張り: '帝国兵' };
 
 /** 消さずに残す声（全話に出る六竜とライバル）。ほかの声は話の声を作り終えたら release で消す */
 const KEEP_VOICES = new Set(['ウィルナス', 'ワムデュス', 'フェディエル', 'ガレヲン', 'ルオー', 'サンダルフォン']);
@@ -218,15 +327,85 @@ const READINGS = [
   ['……いや、この2つは', 'いや……このふたつは'],
   ['語るに落ちて', 'かたるにおちて'],
   ['市場灯', 'いちばとう'],
+  // 第三話から（2026-10-05 ユーザー所見: 候補の試聴で読み・アクセントが変だった）
+  ['ゲン爺', 'げんじい'],
+  ['蝶番', 'ちょうつがい'],
+  ['白燈', 'はくとう'],
+  // 第三〜五話で読み間違えやすい言葉（演技指導を書かせたときに Gemini が挙げた中から、本当に紛らわしいものだけ選んだ）
+  ['堅物', 'かたぶつ'],
+  ['甲板', 'かんぱん'],
+  ['一艘', 'いっそう'],
+  ['撚った', 'よった'],
+  ['縄目', 'なわめ'],
+  ['殺め', 'あやめ'],
+  ['灯って', 'ともって'],
+  ['何刻', 'なんどき'],
+  ['十歩先', 'じっぽさき'],
+  ['霧氷', 'むひょう'],
+  ['打ち子', 'うちこ'],
+  ['御用達', 'ごようたし'],
+  ['手ずから', 'てずから'],
+  ['後生大事', 'ごしょうだいじ'],
+  ['亡骸', 'なきがら'],
+  ['淹れ', 'いれ'],
+  ['鐘楼', 'しょうろう'],
+  ['試し鐘', 'ためしがね'],
+  ['大鐘', 'おおがね'],
+  ['守り灯', 'まもりび'],
+  ['宵', 'よい'],
+  ['最期', 'さいご'],
+  ['待てい', 'まてい'],
+  ['全空一', 'ぜんくういち'],
+  ['五竜', 'ごりゅう'],
+  ['六竜', 'ろくりゅう'],
+  ['一隻', 'いっせき'],
+  ['二隻', 'にせき'],
+  ['騙', 'かた'],
+  ['合い鍵', 'あいかぎ'],
+  ['悪しざま', 'あしざま'],
+  ['院の命', 'いんのめい'],
+  // 第三〜五話の書き起こしで、何度作っても冒頭を繰り返した行（上の読みを当てたあとの文章で書く）
+  ['師匠、げんじい', 'ししょう……げんじい'],
+  ['水時計で計った刻', 'みずどけいではかった、とき'],
+  // 冒頭の『さあ』『ふん』は何度作っても2回読むので、声では言わない（画面の文字は変えない）
+  ['さあ。かねのおと', 'かねのおと'],
+  ['でしたら、別の誰かが', 'でしたら……べつのだれかが'],
+  ['ええ。珍しくも', 'えぇ、めずらしくも'],
+  ['ええ。院では', 'えぇ、いんでは'],
+  ['ふん。何度聞いても', 'なんどきいても'],
+  ['なっ……院より', 'な……いんより'],
+  ['聞いた。……でも、変だった', 'うん、きいた。でも、へんだった'],
+  ['……ゆうべ、よいの鐘', 'ゆうべ……よいの鐘'],
+  ['ああ。嵐の音', 'あらしのおと'],
+  ['はい。わたしが降りた便', 'わたしが降りた便'],
+  ['空の船', 'そらのふね'],
+  ['帰す', 'かえす'],
+  ['帰し', 'かえし'],
+  ['ふん。夜明けまでに', '夜明けまでに'],
+  ['……そもそも、だ', 'そもそも……だ'],
+  ['私は、その場に駆けつけた', 'わたしは、そのばに、かけつけた'],
+  ['霧深し', 'きりふかし'],
+  ['星祭り', 'ほしまつり'],
+  ['積荷', 'つみに'],
+  ['議会の命', 'ぎかいのめい'],
+  ['今の鼎', 'いまの、かなえ'],
+  ['ぬはは、それは何よりである', 'それは何よりである'],
+  ['うむ……。（流れるような', '（流れるような'],
+  ['夜の鐘の刻', 'よるのかねのこく'],
+  ['……私にとって、だ', 'わたしにとってだ。'],
 ];
 
 /** 声を作り終えた話（読み方の決まりを後から変えても作り直さない。トークン節約のためユーザー指示 2026-10-03） */
-const FROZEN_EPISODES = new Set(['case01']);
+// 第二話は、声を消したシェロカルテ・サンチラを第五話のために作り直す（2026-10-05 ユーザー決定）ので、第二話の声が変わらないよう凍結する
+const FROZEN_EPISODES = new Set(['case01', 'case02']);
 
 /** 画面の文章 → 読み上げる文章。l はセリフ（episode・speaker・text） */
+let directionCache;
+const directionOf = (l) => (directionCache ??= loadDirection())[l.key];
+
 function ttsText(l) {
   let t = l.text.replace(/\n/g, '');
-  if (FROZEN_EPISODES.has(l.episode)) {
+  if (l.episode === 'case01') {
     // 第一話：ガレヲンの「熟語（言い足し）」は、熟語のあとに一拍おいて続ける
     t = t.replace(/([^\s（「」]+)（([^）]+)）/g, '$1。$2');
   } else if (l.speaker === 'ガレヲン') {
@@ -360,9 +539,10 @@ async function collect() {
     const player = nameOf(d.player);
     const lines = new Map();
     const add = (speaker, text, style) => {
-      if (!speaker || !CAST_VOICES[speaker]) return;
+      const voice = VOICE_ALIAS[speaker] ?? speaker;
+      if (!speaker || !CAST_VOICES[voice]) return;
       const key = ReadMarks.key(speaker, text);
-      if (!lines.has(key)) lines.set(key, { episode: d.id, key, speaker, text, style });
+      if (!lines.has(key)) lines.set(key, { episode: d.id, key, speaker, voice, text, style });
     };
     const addScript = (src) => {
       if (!src) return;
@@ -439,10 +619,12 @@ async function designEleven(name, v, state, pick) {
   }
   // 試聴文は 100〜1000 文字。そのキャラのセリフをつなぐ
   let text = '';
-  for (const l of (await collect()).filter((l) => l.speaker === name)) {
+  for (const l of (await collect()).filter((l) => l.voice === name)) {
     if (text.length >= 150) break;
     text += ttsText(l);
   }
+  // 台詞の少ない役は、100文字に届くまで繰り返す（試聴文は100文字以上が要る）
+  for (const once = text; text && text.length < 100; ) text += once;
   // シード値を残しておくと、同じ説明・同じ試し文で同じ声を作り直せる（声を消して枠を空けるため）
   const seed = Math.floor(Math.random() * 2147483647);
   const res = await elApi('POST', '/v1/text-to-voice/design?output_format=mp3_44100_128', { voice_description: v.description, model_id: EL_DESIGN_MODEL, text, seed });
@@ -523,60 +705,60 @@ async function generate(names, retake = null) {
   const first = names.includes('--first');
   names = names.filter((n) => n !== '--first');
   const all = await collect();
-  let lines = all.filter((l) => !names.length || names.includes(l.speaker));
+  let lines = all.filter((l) => !names.length || names.includes(l.voice) || names.includes(l.speaker));
   if (retake) lines = lines.filter((l) => retake.has(l.key));
   if (first) {
-    lines = lines.filter((l, i) => lines.findIndex((x) => x.speaker === l.speaker) === i);
+    lines = lines.filter((l, i) => lines.findIndex((x) => x.voice === l.voice) === i);
     for (const l of lines) console.log(`  ${l.speaker}（${l.key}）「${l.text.replace(/\n/g, '')}」`);
   }
   const providerOf = (n) => CAST_VOICES[n].provider ?? 'gemini';
-  const missing = [...new Set(lines.map((l) => l.speaker))].filter((n) => !state.voices[n] || (state.voices[n].provider ?? 'gemini') !== providerOf(n));
+  const missing = [...new Set(lines.map((l) => l.voice))].filter((n) => !state.voices[n] || (state.voices[n].provider ?? 'gemini') !== providerOf(n));
   if (missing.length) throw new Error(`声がまだありません: ${missing.join('、')}（先に design）`);
 
   const sigOf = (l) => {
-    const v = CAST_VOICES[l.speaker];
-    const model = providerOf(l.speaker) === 'elevenlabs' ? EL_MODEL : MODEL;
-    const sv = state.voices[l.speaker];
+    const v = CAST_VOICES[l.voice];
+    const model = providerOf(l.voice) === 'elevenlabs' ? EL_MODEL : MODEL;
+    const sv = state.voices[l.voice];
     const voiceKey = sv.seed !== undefined ? `seed:${sv.seed}:${sv.pick ?? 1}` : sv.id;
-    return fnv([model, voiceKey, v.style, v.pitch ?? 0, l.style ?? '', ttsText(l)].join('|'));
+    return fnv([model, voiceKey, v.style, v.pitch ?? 0, l.style ?? '', directionOf(l)?.dir ?? '', ttsText(l)].join('|'));
   };
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
   // 消してあって作り直せない声（シード値の記録が無い）のセリフは、音声があれば読み方の辞書などが変わっても作り直さない
-  const lost = (l) => state.voices[l.speaker]?.released && state.voices[l.speaker].seed === undefined && fs.existsSync(fileOf(l));
+  const lost = (l) => state.voices[l.voice]?.released && state.voices[l.voice].seed === undefined && fs.existsSync(fileOf(l));
   // 声を作り終えた話（FROZEN_EPISODES）は、音声があれば作り直さない（同じ文のセリフが別の話にあって作り直すときも）
   const frozen = (l) => FROZEN_EPISODES.has(l.episode) && fs.existsSync(fileOf(l));
   const todo = lines.filter((l) => !lost(l) && !frozen(l) && (retake || state.lines[l.key] !== sigOf(l) || !fs.existsSync(fileOf(l))));
   console.log(`作る: ${todo.length} 行 / ${lines.length} 行`);
   // 消してあった声が要るなら、作り直してから
-  for (const n of new Set(todo.map((l) => l.speaker))) if (providerOf(n) === 'elevenlabs') await ensureVoice(n, state);
+  for (const n of new Set(todo.map((l) => l.voice))) if (providerOf(n) === 'elevenlabs') await ensureVoice(n, state);
 
   let done = 0;
   let failed = 0;
   // ElevenLabs：話し方は文頭の音声タグで付ける。16bit・24kHz の生の音で受け取る
   const speakEleven = async (l) => {
-    const tags = [CAST_VOICES[l.speaker].style, STYLE_TAG[l.style]].filter(Boolean).join(', ');
-    const buf = await elApi('POST', `/v1/text-to-speech/${state.voices[l.speaker].id}?output_format=pcm_24000`, {
+    const tags = [CAST_VOICES[l.voice].style, directionOf(l)?.dir ?? STYLE_TAG[l.style]].filter(Boolean).join(', ');
+    const buf = await elApi('POST', `/v1/text-to-speech/${state.voices[l.voice].id}?output_format=pcm_24000`, {
       text: `[${tags}] ${ttsText(l)}`,
       model_id: EL_MODEL,
     });
     return { rate: 24000, pcm: new Int16Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + (buf.length & ~1))) };
   };
   const speakGemini = async (l) => {
-    const style = [CAST_VOICES[l.speaker].style, l.style].filter(Boolean).join('。');
+    const style = [CAST_VOICES[l.voice].style, l.style].filter(Boolean).join('。');
     const res = await api('POST', '/interactions', {
       model: MODEL,
       store: false,
       input: [{ type: 'user_input', content: [{ type: 'text', text: ttsText(l), annotations: [{ type: 'speech_metadata', style }] }] }],
       response_format: { type: 'audio' },
-      generation_config: { speech_config: [{ voice: state.voices[l.speaker].id }] },
+      generation_config: { speech_config: [{ voice: state.voices[l.voice].id }] },
     });
     const audio = res.steps?.flatMap((s) => s.content ?? []).find((c) => c.type === 'audio' && c.data);
     if (!audio) throw new Error('音声が返ってきませんでした');
     return readWav(Buffer.from(audio.data, 'base64'));
   };
   const work = async (l) => {
-    const { rate, pcm } = await (providerOf(l.speaker) === 'elevenlabs' ? speakEleven(l) : speakGemini(l));
-    const mp3 = await toMp3(pitchShift(trimSilence(pcm, rate), rate, CAST_VOICES[l.speaker].pitch ?? 0), rate);
+    const { rate, pcm } = await (providerOf(l.voice) === 'elevenlabs' ? speakEleven(l) : speakGemini(l));
+    const mp3 = await toMp3(pitchShift(trimSilence(pcm, rate), rate, CAST_VOICES[l.voice].pitch ?? 0), rate);
     fs.mkdirSync(path.dirname(fileOf(l)), { recursive: true });
     fs.writeFileSync(fileOf(l), mp3);
     state.lines[l.key] = sigOf(l);
@@ -633,7 +815,7 @@ async function check(args) {
   const names = textAt >= 0 ? args.filter((a, i) => i !== textAt && i !== textAt + 1) : args;
   const fileOf = (l) => path.join(ROOT, 'public/assets/voice', l.episode, `${l.key}.mp3`);
   // 声を作り終えた話（FROZEN_EPISODES）は確かめない（作り直さないため）
-  let lines = (await collect()).filter((l) => !FROZEN_EPISODES.has(l.episode) && (!names.length || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
+  let lines = (await collect()).filter((l) => !FROZEN_EPISODES.has(l.episode) && (!names.length || names.includes(l.voice) || names.includes(l.speaker)) && (!only || l.text.includes(only)) && fs.existsSync(fileOf(l)));
   // --fix … 問題のあった行を作り直して確かめ直す（3回まで。声の作り直しは毎回少し違う読み方になる）
   for (let round = 0; ; round++) {
     console.log(`確かめる: ${lines.length} 行`);
@@ -678,8 +860,64 @@ async function checkLines(lines, fileOf) {
   return bad;
 }
 
+/**
+ * 演技指導（2026-10-05 ユーザー指示「素人っぽい演技が多い。演技指導をきちんと出して」）。
+ * 表情が「通常」しかない脇役などは行ごとの話し方が付かず平板になっていたので、台本の流れを Gemini に読ませて、
+ * 1行ずつ ElevenLabs v4 の音声タグ（英語の演技の指示）と、読み間違えやすい言葉の読みを書かせ、tools/voice_direction.json に残す。
+ * direct [話のid...] [--redo] … 書いていない行だけ書く（--redo は書き直す）。声を作り終えた話（FROZEN_EPISODES）は除く
+ */
+const DIRECTION_FILE = path.join(ROOT, 'tools/voice_direction.json');
+function loadDirection() {
+  return fs.existsSync(DIRECTION_FILE) ? JSON.parse(fs.readFileSync(DIRECTION_FILE, 'utf8')) : {};
+}
+async function direct(args) {
+  const redo = args.includes('--redo');
+  const eps = args.filter((a) => a !== '--redo');
+  const dir = loadDirection();
+  const all = (await collect()).filter((l) => !FROZEN_EPISODES.has(l.episode) && (!eps.length || eps.includes(l.episode)));
+  for (const ep of new Set(all.map((l) => l.episode))) {
+    const lines = all.filter((l) => l.episode === ep);
+    for (let i = 0; i < lines.length; i += 40) {
+      const batch = lines.slice(i, i + 40);
+      if (!redo && batch.every((l) => dir[l.key])) continue;
+      const before = lines.slice(Math.max(0, i - 8), i);
+      const cast = [...new Set(batch.map((l) => l.voice))].map((n) => `- ${n}: ${CAST_VOICES[n].description}`).join('\n');
+      const prompt =
+        'あなたはアニメ・ゲームの音響監督です。逆転裁判風の推理劇の台本（日本語）を渡すので、声優への演技指導を1行ずつ付けてください。\n' +
+        '演技指導は ElevenLabs v4 の音声タグとして、英語の短い指示（2〜6語）にする。例: "furious, shouting" "trembling, on the verge of tears" ' +
+        '"smug, mocking laugh" "whispering to himself" "cold, contemptuous" "desperate, pleading" "relieved sigh, warm"。\n' +
+        '場面の流れ・相手との関係・その行の感情の山を読み、プロの声優が演じるように、行ごとに抑揚と感情を変える。同じ指示の連続は避ける。' +
+        '（ ）で囲まれた行は心の声なので、つぶやくように。証言（style が testimony）は証言台で話す調子で、その人物の思惑をにじませる。' +
+        `登場人物の声:\n${cast}\n\n` +
+        (before.length ? `直前の流れ（指導は不要）:\n${before.map((l) => `${l.speaker}「${l.text.replace(/\n/g, '')}」`).join('\n')}\n\n` : '') +
+        `指導する行:\n${batch.map((l, k) => `${k + 1}. ${l.speaker}${l.style === STATEMENT_STYLE ? '（style: testimony）' : ''}「${l.text.replace(/\n/g, '')}」`).join('\n')}\n\n` +
+        'JSON の配列だけを返す: [{"n":番号,"dir":"英語の演技指導"}]';
+      // 返ってきた JSON が壊れていることがあるので、3回まで頼み直す
+      let out;
+      for (let tries = 0; !out; tries++) {
+        const res = await api('POST', '/models/gemini-3.8-flash:generateContent', {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.4 },
+        });
+        try {
+          out = JSON.parse(res.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') || '[]');
+        } catch (e) {
+          if (tries >= 2) throw e;
+        }
+      }
+      for (const r of out) {
+        const l = batch[r.n - 1];
+        if (!l || !r.dir) continue;
+        dir[l.key] = { speaker: l.speaker, text: l.text.replace(/\n/g, ''), dir: String(r.dir).replace(/[[\]]/g, '') };
+      }
+      fs.writeFileSync(DIRECTION_FILE, `${JSON.stringify(dir, null, 1)}\n`);
+      console.log(`${ep}: ${Math.min(i + 40, lines.length)} / ${lines.length}`);
+    }
+  }
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-const run = { list, design, generate, check, release }[cmd];
+const run = { list, design, generate, check, release, direct }[cmd];
 if (!run) {
   console.log('使い方: node tools/voices.mjs list | design [名前...] | generate [名前...] | check [名前...] [--text 文字列] [--fix] | release [名前...]');
   process.exit(1);
