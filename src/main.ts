@@ -3,7 +3,7 @@ import { Engine } from './engine';
 import type { EpisodeCard, PanelAction } from './engine/ui/Panels';
 import { InvestigationGame } from './genres/investigation/InvestigationGame';
 import type { InvestigationSave } from './genres/investigation/types';
-import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE, TITLE_BGM, TITLE_CALL } from './game/episodes';
+import { EPISODES, GAME_LOGO, GAME_SUBTITLE, GAME_TITLE, isReleased, releaseLabel, TITLE_BGM, TITLE_CALL } from './game/episodes';
 import { TUTORIALS } from './game/tutorials';
 
 /** 端末に残す記録の名前空間（設定・既読・セーブ・説明を見たか・解決した話） */
@@ -32,12 +32,22 @@ const debug = { engine: null as Engine | null, game: null as InvestigationGame |
 (window as unknown as { __paper: unknown }).__paper = debug;
 
 const cleared = (engine: Engine, id: string) => engine.store.get(`clear:${id}`, false);
+/** 作者の確認用：URL に ?preview があれば、公開日と解決の順番を無視して全話を遊べる */
+const PREVIEW = new URLSearchParams(location.search).has('preview');
 
-/** 話の一覧：前の話を解決していれば遊べる */
+/** 話の一覧：公開日を過ぎていて、前の話を解決していれば遊べる */
 function episodeCards(engine: Engine): EpisodeCard[] {
   return EPISODES.map((ep, i) => {
-    const open = !!ep.load && (i === 0 || cleared(engine, EPISODES[i - 1].id));
-    return { id: ep.id, number: ep.number, title: ep.title, state: !open ? 'locked' : cleared(engine, ep.id) ? 'cleared' : 'open', cover: ep.cover && engine.assets.url(ep.cover) };
+    const released = PREVIEW || isReleased(ep);
+    const open = !!ep.load && released && (PREVIEW || i === 0 || cleared(engine, EPISODES[i - 1].id));
+    return {
+      id: ep.id,
+      number: ep.number,
+      title: ep.title,
+      state: !open ? 'locked' : cleared(engine, ep.id) ? 'cleared' : 'open',
+      note: released ? undefined : releaseLabel(ep),
+      cover: ep.cover && engine.assets.url(ep.cover),
+    };
   });
 }
 
@@ -48,6 +58,11 @@ function settingsExtras(engine: Engine): PanelAction[] {
 async function play(engine: Engine, episodeId: string, save?: InvestigationSave): Promise<void> {
   const ep = EPISODES.find((e) => e.id === episodeId);
   if (!ep?.load) throw new Error(`遊べない話です: ${episodeId}`);
+  // 公開日前の話は、セーブから続けようとしても始めない（ホーム画面へ戻す）
+  if (!PREVIEW && !isReleased(ep)) {
+    alert(`${ep.number}は${releaseLabel(ep)}です。お楽しみに！`);
+    return home(engine);
+  }
   showLoading();
   const data = await ep.load();
   const game = new InvestigationGame(data, {

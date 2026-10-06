@@ -30,6 +30,8 @@ export interface EpisodeCard {
   number: string;
   title: string;
   state: 'open' | 'cleared' | 'locked';
+  /** 遊べないときの文（無ければ「準備中」。例: 11月1日 公開） */
+  note?: string;
   /** 扉絵（URL） */
   cover?: string;
 }
@@ -242,7 +244,7 @@ export class Panels {
       const c = el('div', `ep ${ep.state}`, s.body);
       if (ep.cover && ep.state !== 'locked') el('div', 'cover', c).style.backgroundImage = `url("${ep.cover}")`;
       el('div', 'num', c, escapeHtml(ep.number));
-      el('div', 'ttl', c, escapeHtml(ep.state === 'locked' ? '準備中' : ep.title));
+      el('div', 'ttl', c, escapeHtml(ep.state === 'locked' ? (ep.note ?? '準備中') : ep.title));
       if (ep.state === 'cleared') el('div', 'stamp', c, '解決');
       c.addEventListener('click', () => {
         if (ep.state === 'locked') return this.hud.sound.play('cancel');
