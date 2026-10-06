@@ -14,7 +14,7 @@ import type { MusicPlan } from './audio';
 
 /** 曲：前半 0〜38.35 秒、後半は 134.13 秒から（PV の 38.35 秒でつなぐ）。曲の終わり 189.6 秒＝PV の約93.8秒 */
 export const JOIN = 38.35;
-export const MUSIC: MusicPlan = { url: '', joinAt: JOIN, resumeFrom: 134.13, fadeOutAt: 93.2, fadeOut: 0.6 };
+export const MUSIC: MusicPlan = { url: '', segs: [[0, JOIN], [134.13, 999]], fadeOutAt: 93.2, fadeOut: 0.6 };
 export const DURATION = 93.8;
 /** 曲の後半の時刻 → PV の時刻 */
 const fromB = (orig: number) => JOIN + (orig - 134.13);

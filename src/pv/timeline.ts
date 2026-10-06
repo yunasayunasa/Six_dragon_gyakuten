@@ -138,8 +138,12 @@ let fx: CanvasRenderingContext2D;
 /** 文字などより手前に描く（場面転換の墨の帯） */
 let frontCanvas: HTMLCanvasElement;
 let front: CanvasRenderingContext2D;
-type Fx = { start: number; life: number; draw(ctx: CanvasRenderingContext2D, local: number): void; front?: boolean };
+export type Fx = { start: number; life: number; draw(ctx: CanvasRenderingContext2D, local: number): void; front?: boolean; top?: boolean };
 const fxs: Fx[] = [];
+/** 2D キャンバスに描く効果を足す（front で文字より手前） */
+export function addFx(f: Fx): void {
+  fxs.push(f);
+}
 
 function drawFx(): void {
   fx.clearRect(0, 0, W, H);
@@ -153,7 +157,8 @@ function drawFx(): void {
       continue;
     }
   }
-  for (const f of fxs) {
+  // 転換の墨（top）は、ほかの効果より後に描いて必ず覆う
+  for (const f of [...fxs.filter((x) => !x.top), ...fxs.filter((x) => x.top)]) {
     const local = clock.t - f.start;
     if (local >= 0) {
       const ctx = f.front ? front : fx;
@@ -276,15 +281,17 @@ export function embers(seconds: number, opts: { count?: number; color?: string; 
  * 筆で払うような墨の帯が画面を横切る転換（wipe）。dir=1 で左→右。
  * 帯が画面を覆い切った瞬間（at + seconds/2）に場面を切り替えると、つなぎ目が見えない
  */
-export function inkWipe(seconds = 0.7, opts: { color?: string; dir?: 1 | -1; at?: number; seed?: number } = {}): void {
+export function inkWipe(seconds = 0.7, opts: { color?: string; dir?: 1 | -1; at?: number; seed?: number; rows?: number; lag?: number } = {}): void {
   const r = rng(opts.seed ?? 7);
   const color = opts.color ?? '#120c10';
   const dir = opts.dir ?? 1;
-  const rows = Array.from({ length: 9 }, (_, i) => ({ y: (i / 8) * H, lag: r() * 0.18, w: 150 + r() * 120 }));
+  const n = opts.rows ?? 9;
+  const rows = Array.from({ length: n }, (_, i) => ({ y: (i / (n - 1)) * H, lag: r() * (opts.lag ?? 0.18), w: (150 + r() * 120) * (opts.rows ? (9 / n) * 1.3 : 1) }));
   fxs.push({
     start: opts.at ?? clock.t,
     life: seconds,
     front: true,
+    top: true,
     draw(ctx, t) {
       ctx.fillStyle = color;
       const k = t / seconds;

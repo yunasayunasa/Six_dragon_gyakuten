@@ -43,13 +43,16 @@ export const lengthOf = (url: string) => lengths.get(url) ?? 2;
 
 export interface MusicPlan {
   url: string;
-  /** 前半を切る位置（曲の秒）＝PV でつなぐ時刻 */
-  joinAt: number;
-  /** 後半を始める位置（曲の秒） */
-  resumeFrom: number;
+  /**
+   * 曲のどこを使うか（曲の秒 [から, まで] の並び）。PV の0秒から順につなぎ、つなぎ目は短く重ねる。
+   * 最後の区間の「まで」は曲の終わりより先でもよい（曲の終わりで止まる）
+   */
+  segs: [number, number][];
   /** 曲の終わりを PV の何秒で迎えるか（そこから fadeOut 秒で消す） */
   fadeOutAt: number;
   fadeOut: number;
+  /** 曲の大きさ（既定 0.5）。声の間は DUCK まで下げる */
+  base?: number;
 }
 
 /** すべての音をまとめて、16bit ステレオ WAV（base64）で返す */
@@ -69,30 +72,36 @@ export async function mixdown(duration: number, music: MusicPlan, riseUrl: strin
   const master = ctx.createGain();
   master.connect(comp);
 
-  // ---- 曲：前半と後半をクロスフェードでつなぐ。声の間は少し下げる（ダッキング）
-  const fan = await decode(music.url);
+  // ---- 曲：区間を順にクロスフェードでつなぐ。声の間は少し下げる（ダッキング）
+  const song = await decode(music.url);
   const bus = ctx.createGain();
   bus.connect(master);
   const XF = 0.06;
-  const a = ctx.createBufferSource();
-  a.buffer = fan;
-  const ga = ctx.createGain();
-  a.connect(ga).connect(bus);
-  ga.gain.setValueAtTime(1, 0);
-  ga.gain.setValueAtTime(1, music.joinAt - XF);
-  ga.gain.linearRampToValueAtTime(0, music.joinAt);
-  a.start(0, 0);
-  a.stop(music.joinAt + 0.01);
-  const b = ctx.createBufferSource();
-  b.buffer = fan;
-  const gb = ctx.createGain();
-  b.connect(gb).connect(bus);
-  gb.gain.setValueAtTime(0, 0);
-  gb.gain.setValueAtTime(0, music.joinAt - XF);
-  gb.gain.linearRampToValueAtTime(1, music.joinAt);
-  b.start(music.joinAt - XF, music.resumeFrom - XF);
+  let pos = 0;
+  music.segs.forEach(([from, to], i) => {
+    const last = i === music.segs.length - 1;
+    const len = Math.min(to, song.duration) - from;
+    const src = ctx.createBufferSource();
+    src.buffer = song;
+    const g = ctx.createGain();
+    src.connect(g).connect(bus);
+    // 前の区間の終わりに XF 秒だけ重ねて入る
+    const t0 = i ? pos - XF : pos;
+    g.gain.setValueAtTime(i ? 0 : 1, 0);
+    if (i) {
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(1, pos);
+    }
+    if (!last) {
+      g.gain.setValueAtTime(1, pos + len - XF);
+      g.gain.linearRampToValueAtTime(0, pos + len);
+    }
+    src.start(t0, i ? from - XF : from);
+    if (!last) src.stop(pos + len + 0.01);
+    pos += len;
+  });
 
-  const BASE = 0.5;
+  const BASE = music.base ?? 0.5;
   const DUCK = 0.3;
   const speech: [number, number][] = [];
 
