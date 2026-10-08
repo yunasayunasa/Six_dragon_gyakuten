@@ -120,6 +120,7 @@ async function home(engine: Engine): Promise<void> {
       title: GAME_TITLE,
       subtitle: GAME_SUBTITLE,
       logo: engine.assets.url(GAME_LOGO),
+      background: engine.assets.url('ui/title_washi.png'),
       items: [
         { id: 'continue', label: 'つづきから', disabled: !engine.saves.any },
         { id: 'new', label: 'はじめから' },

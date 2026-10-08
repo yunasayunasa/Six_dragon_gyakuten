@@ -2,6 +2,7 @@ import type { Hud } from './Hud';
 import { el, escapeHtml } from './dom';
 import { TEXT_SPEED_LABELS } from '../core/Settings';
 import { SaveSlots, type SaveEntry } from '../core/SaveSlots';
+import { titleEmbers } from './TitleEmbers';
 
 export interface MenuItem {
   label: string;
@@ -20,6 +21,8 @@ export interface HomeOptions {
   subtitle?: string;
   /** 作品名のロゴ画像（URL）。あれば作品名の文字の代わりに出す */
   logo?: string;
+  /** タイトル背景の画像（URL）。指定しなければ和紙の色を使う */
+  background?: string;
   items: Array<{ id: string; label: string; disabled?: boolean }>;
   footer?: string;
 }
@@ -49,6 +52,7 @@ function formatDate(t: number): string {
 export class Panels {
   private homeEl: HTMLElement | null = null;
   private homeMenu: HTMLElement | null = null;
+  private stopEmbers: (() => void) | null = null;
 
   constructor(private hud: Hud) {}
 
@@ -195,14 +199,9 @@ export class Panels {
     if (!this.homeEl) {
       const h = (this.homeEl = el('div', 'home', hud.root));
       const sky = el('div', 'sky', h);
-      // 舞い落ちる紙片
-      for (let i = 0; i < 14; i++) {
-        const p = el('i', 'petal', sky);
-        p.style.left = `${(i / 14) * 100 + Math.random() * 6}%`;
-        p.style.animationDelay = `${-Math.random() * 14}s`;
-        p.style.animationDuration = `${10 + Math.random() * 8}s`;
-        p.style.setProperty('--s', `${0.6 + Math.random() * 0.9}`);
-      }
+      sky.setAttribute('aria-hidden', 'true');
+      if (opts.background) sky.style.backgroundImage = `url("${opts.background}")`;
+      this.stopEmbers = titleEmbers(sky);
       const tb = el('div', 'title-block', h);
       if (opts.logo) {
         const img = el('img', 'logo', tb);
@@ -232,6 +231,8 @@ export class Panels {
   }
 
   closeHome(): void {
+    this.stopEmbers?.();
+    this.stopEmbers = null;
     this.homeEl?.remove();
     this.homeEl = this.homeMenu = null;
   }

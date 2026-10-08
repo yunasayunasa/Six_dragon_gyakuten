@@ -351,26 +351,41 @@ html.rotated #hud {
 /* ---- ホーム画面 ---- */
 .home { position: absolute; inset: 0; overflow: hidden; animation: fade-in .6s; }
 .home .sky {
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(120% 70% at 70% 105%, rgba(255, 196, 120, .95) 0%, rgba(240, 140, 90, .7) 30%, transparent 62%),
-    linear-gradient(180deg, #2a1b3d 0%, #5b2f52 38%, #b8584a 72%, #f0a86a 100%);
+  position: absolute; inset: 0; pointer-events: none;
+  background-color: var(--washi);
+  background-position: center; background-size: cover; background-repeat: no-repeat;
 }
-.home .sky::after {
-  content: ''; position: absolute; left: -10%; right: -10%; bottom: -6%; height: 38%;
-  background: radial-gradient(60% 50% at 30% 60%, rgba(255, 236, 214, .55), transparent 70%), radial-gradient(50% 45% at 78% 70%, rgba(255, 222, 196, .5), transparent 70%);
-  filter: blur(6px); animation: cloud-drift 18s ease-in-out infinite alternate;
+.home .title-embers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.home .ember, .home .ember-pop {
+  position: absolute; display: block; border-radius: 50%; opacity: 0;
+  background: #ffda83;
+  box-shadow: 0 0 3px #e77824, 0 0 8px rgba(199, 62, 18, .65);
 }
-@keyframes cloud-drift { to { transform: translateX(4%); } }
-.home .petal {
-  position: absolute; top: -8%; width: calc(var(--u) * 1.6 * var(--s)); height: calc(var(--u) * 2.2 * var(--s));
-  background: var(--washi); opacity: .75; border-radius: 1px; box-shadow: 0 0 4px rgba(255, 220, 180, .6);
-  animation: petal-fall linear infinite;
+.home .ember {
+  bottom: -6px; width: var(--size); height: calc(var(--size) * 1.6);
+  animation: ember-rise linear infinite;
 }
-@keyframes petal-fall {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  50% { transform: translate(calc(var(--u) * 6), calc(var(--vh) * 55)) rotate(200deg); }
-  100% { transform: translate(calc(var(--u) * -3), calc(var(--vh) * 115)) rotate(400deg); }
+@keyframes ember-rise {
+  0% { opacity: 0; transform: translate(0, 0) scale(.5); }
+  8% { opacity: .85; }
+  24% { opacity: .35; }
+  32% { opacity: .9; }
+  54% { opacity: .45; }
+  62% { opacity: .8; }
+  100% { opacity: 0; transform: translate(var(--drift), calc(-1 * var(--rise))) scale(.2); }
+}
+.home .ember-burst { position: absolute; width: 0; height: 0; }
+.home .ember-pop { width: 3px; height: 3px; animation: ember-pop ease-out infinite; }
+@keyframes ember-pop {
+  0%, 2% { opacity: 0; transform: translate(0, 0) scale(.3); }
+  4% { opacity: 1; transform: translate(0, 0) scale(1.2); }
+  20% { opacity: .7; }
+  30%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.1); }
+}
+.home .title-embers.paused i { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .home .title-embers { display: none; }
+  .home .title-embers i { animation: none; }
 }
 .home .title-block { position: absolute; left: calc(var(--u) * 8 + var(--safe-l)); top: 18%; color: #fff6e8; text-shadow: 0 calc(var(--u) * .4) calc(var(--u) * 2) rgba(20, 8, 20, .6); }
 .home .title-block .sub { font-size: calc(var(--u) * 2.6); letter-spacing: .5em; opacity: .9; }
@@ -390,7 +405,7 @@ html.rotated #hud {
 }
 .home .menu .btn { text-align: center; font-size: calc(var(--u) * 2.6); padding: calc(var(--u) * 1) calc(var(--u) * 2.6); }
 .home .menu .btn[disabled] { opacity: .45; }
-.home .foot { position: absolute; left: calc(var(--u) * 8 + var(--safe-l)); bottom: calc(var(--u) * 3 + var(--safe-b)); font-size: calc(var(--u) * 1.8); color: rgba(255, 246, 232, .7); }
+.home .foot { position: absolute; left: calc(var(--u) * 8 + var(--safe-l)); bottom: calc(var(--u) * 3 + var(--safe-b)); font-size: calc(var(--u) * 1.8); color: var(--ink-soft); }
 
 /* ---- 短い知らせ ---- */
 .toast {
