@@ -1,0 +1,4 @@
+__pycache__/
+# Rendered masters and the synthesized WAV are regenerable (and the grain master exceeds GitHub's 100 MB limit).
+out/*
+!out/six_dragon_mv_share.mp4
